@@ -1,67 +1,109 @@
 "use client"
 
-import { useState, useCallback } from "react"
-import { createNetwork } from "@/lib/network"
-import { Slider } from "@/components/ui/slider"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useCallback, useEffect } from "react";
+import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
+import useStore from "@/hooks/store";
 
-interface HoveredConnection {
-  layerIndex: number
-  fromIndex: number
-  toIndex: number
-  weight: number
-}
-
-interface HoveredNode {
-  layerIndex: number
-  nodeIndex: number
-}
+const DATASET_INFO: { [key: string]: string } = {
+  california_housing: "The California Housing dataset contains information from the 1990 California census. It includes features like median income, housing median age, average rooms, etc.",
+  mnist: "The MNIST dataset is a large database of handwritten digits that is commonly used for training various image processing systems.",
+  iris: "The Iris dataset is a multivariate dataset introduced by Ronald Fisher. It consists of 50 samples from each of three species of Iris flowers."
+};
+const DATASETS = ["california_housing", "mnist", "iris"];
+const ACTIVATION_FUNCTIONS = ["relu", "sigmoid", "tanh", "linear"];
 
 const NeuralNetworkViz = () => {
-  const [inputNodes] = useState<number>(3)
-  const [outputNodes] = useState<number>(2)
-  const [hiddenLayers, setHiddenLayers] = useState<number[]>([4, 4])
-  const [network, setNetwork] = useState(() => createNetwork(inputNodes, outputNodes, hiddenLayers))
-  const [hoveredConnection, setHoveredConnection] = useState<HoveredConnection | null>(null)
-  const [hoveredNode, setHoveredNode] = useState<HoveredNode | null>(null)
-  const [epoch, setEpoch] = useState<number>(0)
-  const [learningRate, setLearningRate] = useState<number>(0.1)
+  const {
+    sessionId,
+    configOpen,
+    hiddenLayers,
+    network,
+    hoveredConnection,
+    hoveredNode,
+    epoch,
+    learningRate,
+    dataset,
+    activations,
+    datasetInfo,
+    setSessionId,
+    setConfigOpen,
+    setHiddenLayers,
+    setNetwork,
+    setHoveredConnection,
+    setHoveredNode,
+    setEpoch,
+    setLearningRate,
+    setDataset,
+    setActivations,
+    setDatasetInfo,
+    initModel,
+    clearSessionAndReset,
+    runTrainingCycle,
+  } = useStore();
 
-  const svgWidth = 800
-  const svgHeight = 400
-  const nodeRadius = 20
-  const layerSpacing = svgWidth / (network.layers.length + 1)
+  const svgWidth = 1000;
+  const svgHeight = 300;
+  const nodeRadius = 20;
 
-  const runTrainingCycle = useCallback(() => {
-    setNetwork((prevNetwork) => {
-      const newNetwork = JSON.parse(JSON.stringify(prevNetwork))
-      // Update weights and biases
-      newNetwork.weights = newNetwork.weights.map((layerWeights: any[]) =>
-        layerWeights.map((nodeWeights) => nodeWeights.map((weight: number) => weight + (Math.random() - 0.5) * learningRate)),
-      )
-      newNetwork.biases = newNetwork.biases.map((layerBiases: any[]) =>
-        layerBiases.map((bias) => bias + (Math.random() - 0.5) * learningRate),
-      )
-      // Update activations
-      newNetwork.activations = newNetwork.activations.map((layerActivations: string[]) =>
-        layerActivations.map(() => Math.random()),
-      )
-      return newNetwork
-    })
-    setEpoch((prevEpoch) => prevEpoch + 1)
-  }, [learningRate])
+  useEffect(() => {
+    if (sessionId) {
+      return () => {
+        fetch(`http://localhost:8000/clear_session?session_id=${sessionId}`, { method: "POST" })
+          .then((response) => response.json())
+          .then((data) => console.log(data.message))
+          .catch((error) => console.error("Error clearing session:", error));
+      };
+    }
+  }, [sessionId]);
+
+  const addHiddenLayer = () => {
+    setHiddenLayers([...hiddenLayers, 4]);
+    setActivations([...activations, "relu"]);
+  };
+
+  const removeHiddenLayer = () => {
+    if (hiddenLayers.length > 1) {
+      setHiddenLayers(hiddenLayers.slice(0, -1));
+      setActivations(activations.slice(0, -1));
+    }
+  };
+
+  const updateHiddenLayer = (index: number, value: number) => {
+    const newHiddenLayers = [...hiddenLayers];
+    newHiddenLayers[index] = value;
+    setHiddenLayers(newHiddenLayers);
+  };
+
+  const updateActivation = (index: number, value: string) => {
+    const newActivations = [...activations];
+    newActivations[index] = value;
+    setActivations(newActivations);
+  };
+
+  const handleDatasetChange = (newDataset: string) => {
+    setDataset(newDataset);
+    setDatasetInfo(DATASET_INFO[newDataset]);
+  };
 
   const renderConnections = () => {
-    return network.weights.flatMap((layerWeights: number[][], layerIndex: number) =>
-      layerWeights.flatMap((nodeWeights: number[], fromIndex: number) =>
+    if (!network) return null;
+    const layerSpacing = svgWidth / (network.layers.length + 1);
+    return network.layers.flatMap((layer, layerIndex) =>
+      layer.weights.flatMap((nodeWeights: number[], fromIndex: number) =>
         nodeWeights.map((weight: number, toIndex: number) => {
-          const fromX = (layerIndex + 1) * layerSpacing
-          const fromY = ((fromIndex + 1) * svgHeight) / (network.layers[layerIndex].nodes + 1)
-          const toX = (layerIndex + 2) * layerSpacing
-          const toY = ((toIndex + 1) * svgHeight) / (network.layers[layerIndex + 1].nodes + 1)
-
+          let fromX = (layerIndex + 1) * layerSpacing;
+          let fromY = ((fromIndex + 1) * svgHeight) / (network.layers[layerIndex].output_size + 1);
+          let toX = (layerIndex + 2) * layerSpacing;
+          let toY = ((toIndex + 1) * svgHeight) / (network.layers[layerIndex + 1]?.output_size + 1);
+          if (isNaN(toY) || isNaN(toX)) {
+            toX = fromX;
+            toY = fromY;
+          }
           return (
             <line
               key={`${layerIndex}-${fromIndex}-${toIndex}`}
@@ -74,18 +116,19 @@ const NeuralNetworkViz = () => {
               onMouseEnter={() => setHoveredConnection({ layerIndex, fromIndex, toIndex, weight })}
               onMouseLeave={() => setHoveredConnection(null)}
             />
-          )
-        }),
-      ),
-    )
-  }
+          );
+        })
+      )
+    );
+  };
 
   const renderNodes = () => {
+    if (!network) return null;
+    const layerSpacing = svgWidth / (network.layers.length + 1);
     return network.layers.flatMap((layer, layerIndex) =>
-      Array.from({ length: layer.nodes }, (_, nodeIndex) => {
-        const cx = (layerIndex + 1) * layerSpacing
-        const cy = ((nodeIndex + 1) * svgHeight) / (layer.nodes + 1)
-
+      Array.from({ length: layer.output_size }, (_, nodeIndex) => {
+        const cx = (layerIndex + 1) * layerSpacing;
+        const cy = ((nodeIndex + 1) * svgHeight) / (layer.output_size + 1);
         return (
           <g key={`${layerIndex}-${nodeIndex}`}>
             <circle
@@ -99,15 +142,17 @@ const NeuralNetworkViz = () => {
               onMouseLeave={() => setHoveredNode(null)}
             />
             <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fontSize="12">
-              {network.activations[layerIndex][nodeIndex].toFixed(2)}
+              {/* {layer.activations[nodeIndex]?.toFixed(2) || "0.00"} */}
             </text>
           </g>
-        )
-      }),
-    )
-  }
+        );
+      })
+    );
+  };
 
   const renderLayerLabels = () => {
+    if (!network) return null;
+    const layerSpacing = svgWidth / network.layers.length;
     return network.layers.map((layer, index) => (
       <text
         key={index}
@@ -117,60 +162,81 @@ const NeuralNetworkViz = () => {
         fontSize="14"
         fontWeight="bold"
       >
-        {layer.name}
+        {/* {layer.name} */}
       </text>
-    ))
-  }
-
-  const updateNetwork = () => {
-    setNetwork(createNetwork(inputNodes, outputNodes, hiddenLayers))
-    setEpoch(0)
-  }
-
-  const addHiddenLayer = () => {
-    setHiddenLayers([...hiddenLayers, 4])
-  }
-
-  const removeHiddenLayer = () => {
-    if (hiddenLayers.length > 1) {
-      setHiddenLayers(hiddenLayers.slice(0, -1))
-    }
-  }
-
-  const updateHiddenLayer = (index: number, value: number) => {
-    const newHiddenLayers = [...hiddenLayers]
-    newHiddenLayers[index] = value
-    setHiddenLayers(newHiddenLayers)
-  }
+    ));
+  };
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Interactive Neural Network Visualization</h1>
-      <div className="mb-4 space-y-4">
-        <div>
-          <Label className="text-lg font-semibold">Hidden Layers</Label>
-          {hiddenLayers.map((nodes, index) => (
-            <div key={index} className="flex items-center gap-2 mt-2">
-              <Input
-                type="number"
-                value={nodes}
-                onChange={(e) => updateHiddenLayer(index, Math.max(1, Number(e.target.value)))}
-                min={1}
-                className="w-20"
-              />
-              <Label>nodes in Hidden Layer {index + 1}</Label>
-            </div>
-          ))}
-          <div className="flex gap-2 mt-2">
-            <Button onClick={addHiddenLayer}>Add Hidden Layer</Button>
-            <Button onClick={removeHiddenLayer} disabled={hiddenLayers.length <= 1}>
-              Remove Hidden Layer
-            </Button>
-          </div>
+    <div className="p-4 max-w-7xl mx-auto">
+      <h1 className="text-3xl font-bold mt-4 mb-4">Interactive Neural Network Visualization</h1>
+      <div className="mb-4 space-y-4 max-w-4xl mx-auto">
+        <div className="flex flex-row justify-between m-6">
+          {configOpen ? (
+            <>
+              <div>
+                <Label className="text-lg font-semibold">Hidden Layers</Label>
+                {hiddenLayers.map((nodes, index) => (
+                  <div key={index} className="flex items-center gap-2 mt-2">
+                    <Input
+                      type="number"
+                      value={nodes}
+                      onChange={(e) => updateHiddenLayer(index, Math.max(1, Number(e.target.value)))}
+                      min={1}
+                      className="w-20"
+                    />
+                    <Label>nodes in Hidden Layer {index + 1}</Label>
+                    <Select value={activations[index]} onValueChange={(value) => updateActivation(index, value)}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Select activation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ACTIVATION_FUNCTIONS.map((af) => (
+                          <SelectItem key={af} value={af}>
+                            {af}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+                <div className="flex gap-2 mt-5">
+                  <Button onClick={addHiddenLayer}>Add Hidden Layer</Button>
+                  <Button onClick={removeHiddenLayer} disabled={hiddenLayers.length <= 1}>
+                    Remove Hidden Layer
+                  </Button>
+                </div>
+              </div>
+              <div className="flex flex-col items-center gap-4 my-auto">
+                <div className="flex items-center gap-4">
+                  <Label>Dataset:</Label>
+                  <Select value={dataset} onValueChange={handleDatasetChange}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Select dataset" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DATASETS.map((ds) => (
+                        <SelectItem key={ds} value={ds}>
+                          {ds}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-sm text-gray-600 mt-2 mx-8">{datasetInfo}</p>
+              </div>
+            </>
+          ) : null}
         </div>
-        <Button onClick={updateNetwork} className="w-full">
-          Update Network Structure
-        </Button>
+        {!configOpen ? (
+          <Button onClick={clearSessionAndReset} className="w-full">
+            {"Change Configuration"}
+          </Button>
+        ) : (
+          <Button onClick={initModel} className="w-full">
+            Initialize Model
+          </Button>
+        )}
         <div className="flex items-center justify-between">
           <p className="font-semibold">Epoch: {epoch}</p>
         </div>
@@ -185,17 +251,18 @@ const NeuralNetworkViz = () => {
           />
           <span>{learningRate.toFixed(2)}</span>
         </div>
-        <Button onClick={runTrainingCycle} className="w-full">
+        <Button onClick={runTrainingCycle} className="w-full" disabled={!sessionId}>
           Run Training Cycle
         </Button>
       </div>
-      <svg width={svgWidth} height={svgHeight} className="border border-gray-300 rounded">
-        {renderConnections()}
-        {renderNodes()}
-        {renderLayerLabels()}
-      </svg>
+      <div className="grid place-items-center w-full mt-8 mb-6">
+        <svg width={svgWidth} height={svgHeight} className="border border-gray-300 rounded">
+          {renderConnections()}
+          {renderNodes()}
+          {renderLayerLabels()}
+        </svg>
+      </div>
       <div className="mt-4 h-20">
-        {" "}
         {hoveredConnection ? (
           <div>
             <p>
@@ -204,14 +271,16 @@ const NeuralNetworkViz = () => {
             </p>
             <p>Weight: {hoveredConnection.weight.toFixed(4)}</p>
           </div>
-        ) : hoveredNode ? (
+        ) : hoveredNode && network ? (
           <div>
             <p>
               Node: Layer {hoveredNode.layerIndex + 1}, Node {hoveredNode.nodeIndex + 1}
             </p>
-            <p>Activation: {network.activations[hoveredNode.layerIndex][hoveredNode.nodeIndex].toFixed(4)}</p>
+            <p>
+              Activation: {network.layers[hoveredNode.layerIndex - 1]?.activations[hoveredNode.layerIndex]?.toFixed(4) || "N/A"}
+            </p>
             {hoveredNode.layerIndex > 0 && (
-              <p>Bias: {network.biases[hoveredNode.layerIndex - 1][hoveredNode.nodeIndex].toFixed(4)}</p>
+              <p>Bias: {network.layers[hoveredNode.layerIndex - 1]?.biases[hoveredNode.nodeIndex]?.toFixed(4) || "N/A"}</p>
             )}
           </div>
         ) : (
@@ -219,8 +288,7 @@ const NeuralNetworkViz = () => {
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default NeuralNetworkViz
-
+export default NeuralNetworkViz;
