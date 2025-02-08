@@ -58,9 +58,16 @@ interface NetworkState {
 
 const DATASETS = ["california_housing", "mnist", "iris"]
 const ACTIVATION_FUNCTIONS = ["relu", "sigmoid", "tanh", "linear"]
+const DATASET_INFO: { [key: string]: string } = {
+  california_housing: "The California Housing dataset contains information from the 1990 California census. It includes features like median income, housing median age, average rooms, etc.",
+  mnist: "The MNIST dataset is a large database of handwritten digits that is commonly used for training various image processing systems.",
+  iris: "The Iris dataset is a multivariate dataset introduced by Ronald Fisher. It consists of 50 samples from each of three species of Iris flowers."
+};
+
 
 const NeuralNetworkViz = () => {
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [configOpen, setConfigOpen] = useState<boolean>(true)
   const [hiddenLayers, setHiddenLayers] = useState<number[]>([4, 4])
   const [network, setNetwork] = useState<NetworkState | null>(null)
   const [hoveredConnection, setHoveredConnection] = useState<HoveredConnection | null>(null)
@@ -68,10 +75,11 @@ const NeuralNetworkViz = () => {
   const [epoch, setEpoch] = useState<number>(0)
   const [learningRate, setLearningRate] = useState<number>(0.1)
   const [dataset, setDataset] = useState<string>(DATASETS[0])
-  const [activations, setActivations] = useState<string[]>(["relu", "relu", "linear"])
+  const [activations, setActivations] = useState<string[]>(["relu", "relu"])
+  const [datasetInfo, setDatasetInfo] = useState<string>(DATASET_INFO[DATASETS[0]])
 
-  const svgWidth = 800
-  const svgHeight = 400
+  const svgWidth = 1000
+  const svgHeight = 300
   const nodeRadius = 20
 
   useEffect(() => {
@@ -112,9 +120,10 @@ const NeuralNetworkViz = () => {
           layer.initWeightsAndBiases()
   
           // Initialize layer with returned weights and biases from backend
+          console.log("data.network.layers", data.network.layers)
           if (data.network.layers[index]) {
             layer.weights = data.network.layers[index].weights || layer.weights
-            layer.biases = data.network.layers[index].biases || layer.biases
+            layer.biases = data.network.layers[index].biases[0] || layer.biases
           }
   
           return layer
@@ -128,6 +137,7 @@ const NeuralNetworkViz = () => {
           title: "Model Initialized",
           description: `Session ID: ${data.session_id}`,
         })
+        setConfigOpen(false)
       } else {
         throw new Error(data.error || "Failed to initialize model")
       }
@@ -140,6 +150,41 @@ const NeuralNetworkViz = () => {
       })
     }
   }
+
+  const clearSessionAndReset = async () => {
+    if (!sessionId) return;
+  
+    try {
+      // Clear session
+      await fetch(`http://localhost:8000/clear_session?session_id=${sessionId}`, { method: "POST" });
+      console.log("Session cleared");
+  
+      // Reset network state
+      setNetwork(null);
+  
+      // Open the config modal
+      setConfigOpen(true);
+      setHoveredConnection(null);
+      setHoveredNode(null);
+      setEpoch(0);
+      setLearningRate(0.1);
+      setDataset(DATASETS[0]);
+      setActivations(["relu", "relu"]);
+      setHiddenLayers([4, 4]);
+  
+      toast({
+        title: "Configuration Reset",
+        description: "Session cleared, network reset, and configuration open.",
+      });
+    } catch (error) {
+      console.error("Error clearing session:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reset configuration. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
   
 
   const runTrainingCycle = useCallback(async () => {
@@ -280,13 +325,13 @@ const NeuralNetworkViz = () => {
 
   const addHiddenLayer = () => {
     setHiddenLayers([...hiddenLayers, 4])
-    setActivations([...activations.slice(0, -1), "relu", activations[activations.length - 1]])
+    setActivations([...activations, "relu"])
   }
 
   const removeHiddenLayer = () => {
     if (hiddenLayers.length > 1) {
       setHiddenLayers(hiddenLayers.slice(0, -1))
-      setActivations([...activations.slice(0, -2), activations[activations.length - 1]])
+      setActivations([...activations.slice(0, -1)])
     }
   }
 
@@ -302,10 +347,18 @@ const NeuralNetworkViz = () => {
     setActivations(newActivations)
   }
 
+  const handleDatasetChange = (newDataset: string) => {
+    setDataset(newDataset)
+    setDatasetInfo(DATASET_INFO[newDataset])
+  }
+
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Interactive Neural Network Visualization</h1>
-      <div className="mb-4 space-y-4">
+    <div className="p-4 max-w-7xl mx-auto">
+      <h1 className="text-3xl font-bold mt-4 mb-4">Interactive Neural Network Visualization</h1>
+      <div className="mb-4 space-y-4 max-w-4xl mx-auto">
+      <div className="flex flex-row justify-between m-6">
+        {configOpen ? (
+        <>
         <div>
           <Label className="text-lg font-semibold">Hidden Layers</Label>
           {hiddenLayers.map((nodes, index) => (
@@ -332,16 +385,17 @@ const NeuralNetworkViz = () => {
               </Select>
             </div>
           ))}
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2 mt-5">
             <Button onClick={addHiddenLayer}>Add Hidden Layer</Button>
             <Button onClick={removeHiddenLayer} disabled={hiddenLayers.length <= 1}>
               Remove Hidden Layer
             </Button>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col items-center gap-4 my-auto">
+          <div className="flex items-center gap-4">
           <Label>Dataset:</Label>
-          <Select value={dataset} onValueChange={setDataset}>
+          <Select value={dataset} onValueChange={handleDatasetChange}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select dataset" />
             </SelectTrigger>
@@ -353,10 +407,18 @@ const NeuralNetworkViz = () => {
               ))}
             </SelectContent>
           </Select>
+          </div>
+          <p className="text-sm text-gray-600 mt-2 mx-8">{datasetInfo}</p>
         </div>
+        </>) : null}
+        </div>
+        {!configOpen ? (<Button onClick={clearSessionAndReset} className="w-full">
+          {"Change Configuration"}
+        </Button>):
         <Button onClick={initModel} className="w-full">
           Initialize Model
         </Button>
+        }
         <div className="flex items-center justify-between">
           <p className="font-semibold">Epoch: {epoch}</p>
         </div>
@@ -375,11 +437,16 @@ const NeuralNetworkViz = () => {
           Run Training Cycle
         </Button>
       </div>
-      <svg width={svgWidth} height={svgHeight} className="border border-gray-300 rounded">
-        {renderConnections()}
-        {renderNodes()}
-        {renderLayerLabels()}
-      </svg>
+      <div className="grid place-items-center w-full mt-8 mb-6">
+        <svg width={svgWidth} height={svgHeight} className="border border-gray-300 rounded">
+          {renderConnections()}
+          {renderNodes()}
+          {renderLayerLabels()}
+        </svg>
+      </div>
+
+
+
       <div className="mt-4 h-20">
         {hoveredConnection ? (
           <div>
@@ -398,7 +465,7 @@ const NeuralNetworkViz = () => {
               Activation: {network.layers[hoveredNode.layerIndex - 1]?.activations[hoveredNode.layerIndex]?.toFixed(4) || "N/A"}
             </p>
             {hoveredNode.layerIndex > 0 && (
-              <p>Bias: {network.layers[hoveredNode.layerIndex - 1]?.biases[hoveredNode.nodeIndex]|| "N/A"}</p>
+              <p>Bias: {network.layers[hoveredNode.layerIndex - 1]?.biases[hoveredNode.nodeIndex]?.toFixed(4)|| "N/A"}</p>
             )}
           </div>
         ) : (
