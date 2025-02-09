@@ -1,59 +1,8 @@
 // store.ts
 import { create } from 'zustand';
 import { toast } from './use-toast'
-
-interface NetworkState {
-  layers: NeuronLayer[];
-}
-
-interface HoveredConnection {
-  layerIndex: number
-  fromIndex: number
-  toIndex: number
-  weight: number
-}
-
-interface HoveredNode {
-  layerIndex: number
-  nodeIndex: number
-}
-
-class NeuronLayer {
-  input_size: number
-  output_size: number
-  activation: string
-  weights: number[][]
-  activations: number[]
-  biases: number[]
-  dW: number[][]
-  db: number[]
-
-  constructor(input_size: number, output_size: number, activation: string) {
-    this.input_size = input_size
-    this.output_size = output_size
-    this.activation = activation
-    this.weights = []
-    this.biases = []
-    this.activations = []
-    this.dW = []
-    this.db = []
-  }
-
-  // Method to initialize weights and biases
-  initWeightsAndBiases() {
-    this.weights = Array(this.output_size)
-      .fill(null)
-      .map(() => Array(this.input_size).fill(0))
-    this.biases = Array(this.output_size).fill(0)
-  }
-}
-
-const DATASETS = ["california_housing", "mnist", "iris"]
-const DATASET_INFO: { [key: string]: string } = {
-  california_housing: "The California Housing dataset contains information from the 1990 California census. It includes features like median income, housing median age, average rooms, etc.",
-  mnist: "The MNIST dataset is a large database of handwritten digits that is commonly used for training various image processing systems.",
-  iris: "The Iris dataset is a multivariate dataset introduced by Ronald Fisher. It consists of 50 samples from each of three species of Iris flowers."
-};
+import { DATASETS, DATASET_INFO } from '@/static/constants';
+import { NetworkState, HoveredConnection, HoveredNode, NeuronLayer} from "@/static/types";
 
 interface TrainingState {
   sessionId: string | null;
@@ -84,6 +33,11 @@ interface TrainingActions {
   initModel: () => Promise<void>;
   clearSessionAndReset: () => Promise<void>;
   runTrainingCycle: () => Promise<void>;
+  addHiddenLayer: () => void;
+  removeHiddenLayer: () => void;
+  updateHiddenLayer: (index: number, value: number) => void;
+  updateActivation: (index: number, value: string) => void;
+  handleDatasetChange: (newDataset: string) => void;
 }
 
 const useStore = create<TrainingState & TrainingActions>((set, get) => ({
@@ -99,7 +53,6 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   configOpen: true,
   datasetInfo: DATASET_INFO[DATASETS[0]],
 
-  setSessionId: (sessionId) => set({ sessionId }),
   setEpoch: (epoch) => set({ epoch }),
   setLearningRate: (learningRate) => set({ learningRate }),
   setDataset: (dataset) => set({ dataset, datasetInfo: DATASET_INFO[dataset] }),
@@ -110,6 +63,19 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   setHoveredNode: (hoveredNode) => set({ hoveredNode }),
   setConfigOpen: (configOpen) => set({ configOpen }),
   setDatasetInfo: (datasetInfo) => set({ datasetInfo }),
+
+  setSessionId: (sessionId) => {
+    const prevSessionId = get().sessionId;
+
+    if (prevSessionId) {
+      fetch(`http://localhost:8000/clear_session?session_id=${prevSessionId}`, { method: "POST" })
+        .then((response) => response.json())
+        .then((data) => console.log("Session Cleared:", data.message))
+        .catch((error) => console.error("Error clearing session:", error));
+    }
+
+    set({ sessionId });
+  },
 
   initModel: async () => {
     const { hiddenLayers, activations, dataset } = get();
@@ -126,11 +92,14 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       const data = await response.json();
       if (response.ok) {
         set({ sessionId: data.session_id });
+        const totalLayers = hiddenLayers.length + 2;
         const layers = data.layer_sizes.map((size: number, index: number) => {
           const layer = new NeuronLayer(
             index === 0 ? size : data.layer_sizes[index - 1],
             size,
-            activations[index] || "relu"
+            activations[index] || "relu",
+            index,
+            totalLayers
           );
           layer.initWeightsAndBiases();
           if (data.network.layers[index]) {
@@ -233,6 +202,44 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         variant: "destructive",
       });
     }
+  },
+  addHiddenLayer: () => {
+    const { hiddenLayers, activations } = get();
+    set({
+      hiddenLayers: [...hiddenLayers, 4],
+      activations: [...activations, "relu"],
+    });
+  },
+
+  removeHiddenLayer: () => {
+    const { hiddenLayers, activations } = get();
+    if (hiddenLayers.length > 1) {
+      set({
+        hiddenLayers: hiddenLayers.slice(0, -1),
+        activations: activations.slice(0, -1),
+      });
+    }
+  },
+
+  updateHiddenLayer: (index: number, value: number) => {
+    const { hiddenLayers } = get();
+    const newHiddenLayers = [...hiddenLayers];
+    newHiddenLayers[index] = value;
+    set({ hiddenLayers: newHiddenLayers });
+  },
+
+  updateActivation: (index: number, value: string) => {
+    const { activations } = get();
+    const newActivations = [...activations];
+    newActivations[index] = value;
+    set({ activations: newActivations });
+  },
+
+  handleDatasetChange: (newDataset: string) => {
+    set({
+      dataset: newDataset,
+      datasetInfo: DATASET_INFO[newDataset],
+    });
   },
 }));
 
