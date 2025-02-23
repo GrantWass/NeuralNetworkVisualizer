@@ -32,12 +32,17 @@ const NeuralNetworkViz = () => {
     removeHiddenLayer,
     updateHiddenLayer,
     updateActivation,
-    handleDatasetChange
+    handleDatasetChange,
+    getExplanation,
   } = useStore();
 
   const svgWidth = 1000;
   const svgHeight = 400;
   const nodeRadius = 20;
+  if (network && hoveredNode) {
+    console.log("Hovered Node Data: ", network.layers[hoveredNode.layerIndex - 1]);
+  }
+
 
   return (
     <div className="p-4 max-w-7xl mx-auto">
@@ -149,7 +154,7 @@ const NeuralNetworkViz = () => {
               Node: Layer {hoveredNode.layerIndex + 1}, Node {hoveredNode.nodeIndex + 1}
             </p>
             <p>
-              Activation: {network.layers[hoveredNode.layerIndex - 1]?.activations[hoveredNode.layerIndex]?.toFixed(4) || "N/A"}
+              Activation: {network.layers[hoveredNode.layerIndex - 1]?.A[hoveredNode.layerIndex]?.toFixed(4) || "N/A"}
             </p>
             {hoveredNode.layerIndex > 0 && (
               <p>Bias: {network.layers[hoveredNode.layerIndex - 1]?.biases[hoveredNode.nodeIndex]?.toFixed(4) || "N/A"}</p>
@@ -158,6 +163,10 @@ const NeuralNetworkViz = () => {
         ) : (
           <p>Hover over a node or connection to see details</p>
         )}
+      </div>
+      <div className="mt-8 p-4 bg-gray-100 rounded-lg">
+        <h2 className="text-xl font-semibold mb-2">Explanation</h2>
+        <p className="whitespace-pre-line">{getExplanation()}</p>
       </div>
     </div>
   );

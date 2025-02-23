@@ -28,10 +28,12 @@ class NeuronLayer {
     output_size: number
     activation: string
     weights: number[][]
-    activations: number[]
     biases: number[]
+    A: number[]
+    Z: number[]
     dW: number[][]
     db: number[]
+    dZ: number[]
     name: string
   
     constructor(input_size: number, output_size: number, activation: string, layerIndex: number, totalLayers: number) {
@@ -40,9 +42,11 @@ class NeuronLayer {
       this.activation = activation
       this.weights = []
       this.biases = []
-      this.activations = []
+      this.A = []
+      this.Z = []
       this.dW = []
       this.db = []
+      this.dZ = []
 
       if (layerIndex === 0) {
         this.name = "Input Layer";

@@ -1,6 +1,5 @@
-// store.ts
 import { create } from 'zustand';
-import { toast } from './use-toast'
+import { toast } from "sonner"
 import { DATASETS, DATASET_INFO } from '@/static/constants';
 import { NetworkState, HoveredConnection, HoveredNode, NeuronLayer} from "@/static/types";
 
@@ -38,6 +37,7 @@ interface TrainingActions {
   updateHiddenLayer: (index: number, value: number) => void;
   updateActivation: (index: number, value: string) => void;
   handleDatasetChange: (newDataset: string) => void;
+  getExplanation: () => string;
 }
 
 const useStore = create<TrainingState & TrainingActions>((set, get) => ({
@@ -96,7 +96,6 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         const layers = data.layer_sizes.map((size: number, index: number) => {
           const input_size = index === 0 ? 0 : data.layer_sizes[index - 1];
           const output_size = size;
-          console.log(input_size, output_size)
           const layer = new NeuronLayer(
             input_size,
             output_size,
@@ -112,8 +111,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
           return layer;
         });
         set({ network: { layers }, configOpen: false });
-        toast({
-          title: "Model Initialized",
+        toast("Model Initialized", {
           description: `Session ID: ${data.session_id}`,
         });
       } else {
@@ -121,10 +119,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       }
     } catch (error) {
       console.error("Error initializing model:", error);
-      toast({
-        title: "Error",
+      toast("Error", {
         description: "Failed to initialize model. Please try again.",
-        variant: "destructive",
       });
     }
   },
@@ -146,16 +142,13 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         activations: ["relu", "relu"],
         hiddenLayers: [4, 4],
       });
-      toast({
-        title: "Configuration Reset",
+      toast("Configuration Reset", {
         description: "Session cleared, network reset, and configuration open.",
       });
     } catch (error) {
       console.error("Error clearing session:", error);
-      toast({
-        title: "Error",
+      toast("Error", {
         description: "Failed to reset configuration. Please try again.",
-        variant: "destructive",
       });
     }
   },
@@ -163,13 +156,12 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   runTrainingCycle: async () => {
     const { sessionId, learningRate } = get();
     if (!sessionId) {
-      toast({
-        title: "Error",
+      toast("Error", {
         description: "Please initialize the model first.",
-        variant: "destructive",
       });
       return;
     }
+
     try {
       const response = await fetch("http://localhost:8000/train", {
         method: "POST",
@@ -180,31 +172,71 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
           epochs: 1,
         }),
       });
+
       const data = await response.json();
       if (response.ok) {
         const result = data.training_results[0];
-        set((state) => ({
-          network: {
-            ...state.network,
-            layers: result.layers || []
-          },
-          epoch: state.epoch + 1,
-        }));
-        toast({
-          title: "Training Cycle Complete",
-          description: `Loss: ${result.loss.toFixed(4)}, Metric: ${result.metric.toFixed(4)}`,
+
+        // Update network layers individually
+        set((state) => {
+          const updatedLayers = state.network?.layers.map((layer, index) => {
+            const resultLayer = result.layers[index];
+            if (resultLayer) {
+              // Update individual layer properties independently
+              layer.weights = resultLayer.weights ? resultLayer.weights : layer.weights;
+              layer.biases = resultLayer.biases ? resultLayer.biases[0] : layer.biases;
+              layer.Z = resultLayer.Z ? resultLayer.Z[0] : layer.Z; // TODO Keep all samples of Z and handle in UI
+              layer.A = resultLayer.A ? resultLayer.A[0] : layer.A; // TODO Keep all samples of Z and handle in UI
+              layer.dW = resultLayer.dW ? resultLayer.dW : layer.dW;
+              layer.db = resultLayer.db ? resultLayer.db : layer.db;
+              layer.dZ = resultLayer.dZ ? resultLayer.dZ : layer.dZ; // TODO Keep all samples of Z and handle in UI
+              layer.activation = resultLayer.activation ? resultLayer.activation : layer.activation;
+            }
+            return layer;
+          }) || [];
+
+          return {
+            ...state,
+            network: {
+              ...state.network,
+              layers: updatedLayers,  // Update layers with new data
+            },
+            epoch: state.epoch + 1
+          };
+        });
+
+        toast("Training Cycle Complete", {
+          description: `Loss: ${result.loss.toFixed(4)}, Metric (${result.name}): ${result.metric.toFixed(4)}`,
         });
       } else {
         throw new Error(data.error || "Failed to run training cycle");
       }
     } catch (error) {
       console.error("Error running training cycle:", error);
-      toast({
-        title: "Error",
+      toast("Error", {
         description: "Failed to run training cycle. Please try again.",
-        variant: "destructive",
       });
     }
+  },
+
+  getExplanation: () => {
+    if (!get().network) {
+      return "The neural network has not been initialized yet. Configure the network and click 'Initialize Model' to start."
+    }
+
+    if (get().epoch === 0) {
+      return "The model has been initialized with random weights and biases. Each node represents a neuron, and each line represents a connection between neurons. The thickness of the line represents the strength of the connection (weight)."
+    }
+
+    return `
+      Training Cycle ${get().epoch} completed:
+      1. Forward Propagation: Input data is fed through the network, layer by layer. Each neuron computes a weighted sum of its inputs and applies an activation function.
+      2. Loss Calculation: The network's output is compared to the actual target values, and a loss is calculated.
+      3. Backward Propagation: The error is propagated backwards through the network, calculating gradients for each weight and bias.
+      4. Parameter Update: Weights and biases are updated using the calculated gradients and the current learning rate (${get().learningRate}).
+      
+      Hover over nodes and connections to see their current values. As training progresses, you should see the network adjust its weights to better fit the data.
+    `
   },
   addHiddenLayer: () => {
     const { hiddenLayers, activations } = get();
