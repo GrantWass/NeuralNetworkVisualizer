@@ -139,7 +139,7 @@ const NeuralNetworkViz = () => {
         {renderLayerLabels({ network, svgWidth, svgHeight, nodeRadius, setHoveredConnection, setHoveredNode })}
         </svg>
       </div>
-      <div className="mt-4 h-20">
+      <div className="mt-4 h-50">
         {hoveredConnection ? (
           <div>
             <p>
@@ -151,14 +151,29 @@ const NeuralNetworkViz = () => {
         ) : hoveredNode && network ? (
           <div>
             <p>
-              Node: Layer {hoveredNode.layerIndex + 1}, Node {hoveredNode.nodeIndex + 1}
+              <strong>Node Details:</strong>
             </p>
             <p>
-              Activation: {network.layers[hoveredNode.layerIndex - 1]?.A[hoveredNode.layerIndex]?.toFixed(4) || "N/A"}
+              Node: Layer {hoveredNode.layerIndex + 1}, Node {hoveredNode.nodeIndex + 1}
             </p>
+            {/* <p>
+              Activation (A): {network.layers[hoveredNode.layerIndex]?.A[hoveredNode.nodeIndex]?.toFixed(4) || "N/A"}
+            </p>
+            <p>
+              Z (Linear Input): {network.layers[hoveredNode.layerIndex]?.Z[hoveredNode.nodeIndex]?.toFixed(4) || "N/A"}
+            </p> */}
             {hoveredNode.layerIndex > 0 && (
-              <p>Bias: {network.layers[hoveredNode.layerIndex - 1]?.biases[hoveredNode.nodeIndex]?.toFixed(4) || "N/A"}</p>
-            )}
+              <>
+              <p>
+                Bias: {network.layers[hoveredNode.layerIndex - 1]?.biases[hoveredNode.nodeIndex]?.toFixed(4) || "N/A"}
+              </p>
+              {/* <p>
+                db (Gradient for Bias): {network.layers[hoveredNode.layerIndex]?.db[hoveredNode.nodeIndex]?.toFixed(4) || "N/A"}
+              </p>
+              <p>
+                dZ (Gradient for Z): {network.layers[hoveredNode.layerIndex]?.dZ[hoveredNode.nodeIndex]?.toFixed(4) || "N/A"}
+              </p> */}
+              </>)}
           </div>
         ) : (
           <p>Hover over a node or connection to see details</p>
