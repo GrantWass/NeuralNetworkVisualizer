@@ -94,9 +94,12 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         set({ sessionId: data.session_id });
         const totalLayers = hiddenLayers.length + 2;
         const layers = data.layer_sizes.map((size: number, index: number) => {
+          const input_size = index === 0 ? 0 : data.layer_sizes[index - 1];
+          const output_size = size;
+          console.log(input_size, output_size)
           const layer = new NeuronLayer(
-            index === 0 ? size : data.layer_sizes[index - 1],
-            size,
+            input_size,
+            output_size,
             activations[index] || "relu",
             index,
             totalLayers
@@ -168,7 +171,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       return;
     }
     try {
-      const response = await fetch("/api/train", {
+      const response = await fetch("http://localhost:8000/train", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

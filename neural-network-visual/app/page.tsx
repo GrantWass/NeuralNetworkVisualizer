@@ -36,7 +36,7 @@ const NeuralNetworkViz = () => {
   } = useStore();
 
   const svgWidth = 1000;
-  const svgHeight = 300;
+  const svgHeight = 400;
   const nodeRadius = 20;
 
   return (

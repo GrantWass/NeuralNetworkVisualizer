@@ -10,16 +10,33 @@ interface RenderNetworkProps {
   setHoveredNode: (hovered: HoveredNode | null) => void;
 }
 
+const maxNodes = 6;
+
 export const renderConnections = ({ network, svgWidth, svgHeight, nodeRadius, setHoveredConnection, setHoveredNode }: RenderNetworkProps) => {
   if (!network) return null;
+  if (network.layers.some((layer) => layer.output_size > maxNodes)) {
+    svgHeight = svgHeight - 30;
+  }
   const layerSpacing = svgWidth / (network.layers.length + 1);
-  return network.layers.flatMap((layer, layerIndex) =>
+  return network.layers.flatMap((layer, layerIndex) => 
     layer.weights.flatMap((nodeWeights: number[], fromIndex: number) =>
       nodeWeights.map((weight: number, toIndex: number) => {
+        const layerFromSize = layer.output_size;
+        const layerToSize = network.layers[layerIndex + 1]?.output_size
+        let additionalFromSpace = 0;
+        let additionalToSpace = 0;
+
+        if (layerFromSize > maxNodes && (fromIndex >=3)){
+            additionalFromSpace = 30;
+        }
+        if (layerToSize > maxNodes && (toIndex >=3)){
+            additionalToSpace = 30;
+        }
+        if (fromIndex >= 6 || toIndex >= 6) return null; 
         let fromX = (layerIndex + 1) * layerSpacing;
-        let fromY = ((fromIndex + 1) * svgHeight) / (network.layers[layerIndex].output_size + 1);
+        let fromY = ((fromIndex + 1) * svgHeight) / (Math.min(layerFromSize, 6) + 1) + additionalFromSpace;
         let toX = (layerIndex + 2) * layerSpacing;
-        let toY = ((toIndex + 1) * svgHeight) / (network.layers[layerIndex + 1]?.output_size + 1);
+        let toY = ((toIndex + 1) * svgHeight) / (Math.min(network.layers[layerIndex + 1]?.output_size, 6) + 1) + additionalToSpace;
         if (isNaN(toY) || isNaN(toX)) {
           toX = fromX;
           toY = fromY;
@@ -32,23 +49,31 @@ export const renderConnections = ({ network, svgWidth, svgHeight, nodeRadius, se
             x2={toX}
             y2={toY}
             stroke={Math.abs(weight) < 0.5 ? "#94a3b8" : "#475569"}
-            strokeWidth={Math.abs(weight) * 3}
+            strokeWidth={Math.abs(weight) * 3 + 1}
             onMouseEnter={() => setHoveredConnection({ layerIndex, fromIndex, toIndex, weight })}
             onMouseLeave={() => setHoveredConnection(null)}
           />
         );
       })
-    )
+    ).filter(Boolean)
   );
 };
 
-export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHoveredConnection, setHoveredNode }: RenderNetworkProps) => {
+export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHoveredNode }: RenderNetworkProps) => {
   if (!network) return null;
+  if (network.layers.some((layer) => layer.output_size > maxNodes)) {
+    svgHeight = svgHeight - 30;
+  }
   const layerSpacing = svgWidth / (network.layers.length + 1);
-  return network.layers.flatMap((layer, layerIndex) =>
-    Array.from({ length: layer.output_size }, (_, nodeIndex) => {
+  return network.layers.flatMap((layer, layerIndex) => {
+    const totalNodes = layer.output_size;
+    let additionalSpace = 0;
+    return Array.from({ length: Math.min(totalNodes, maxNodes) }, (_, nodeIndex) => {
+      if (totalNodes > maxNodes && nodeIndex >= 3) {
+        additionalSpace = 30;
+      }
       const cx = (layerIndex + 1) * layerSpacing;
-      const cy = ((nodeIndex + 1) * svgHeight) / (layer.output_size + 1);
+      const cy = (((nodeIndex + 1) * svgHeight) / (Math.min(totalNodes, maxNodes) + 1)) + additionalSpace;
       return (
         <g key={`${layerIndex}-${nodeIndex}`}>
           <circle
@@ -61,13 +86,35 @@ export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHover
             onMouseEnter={() => setHoveredNode({ layerIndex, nodeIndex })}
             onMouseLeave={() => setHoveredNode(null)}
           />
-          <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fontSize="12">
-            {/* {layer.activations[nodeIndex]?.toFixed(2) || "0.00"} */}
-          </text>
         </g>
       );
-    })
-  );
+    }).concat(
+      totalNodes > maxNodes
+        ? [
+            <text
+              key={`${layerIndex}-more`}
+              x={(layerIndex + 1) * layerSpacing - (layerIndex + 1 === network.layers.length ? -30 : 30)}
+              y={svgHeight / 2 + 20}
+              textAnchor="middle"
+              fontSize="14"
+              fontWeight="bold"
+            >
+              {`+${totalNodes - maxNodes}`}
+            </text>,
+            <text
+              key={`${layerIndex}-dots`}
+              x={(layerIndex + 1) * layerSpacing}
+              y={svgHeight / 2 + 20}
+              textAnchor="middle"
+              fontSize="14"
+              fontWeight="bold"
+            >
+              ⋮
+            </text>
+          ]
+        : []
+    );
+  });
 };
 
 export const renderLayerLabels = ({ network, svgWidth, svgHeight, nodeRadius, setHoveredConnection, setHoveredNode }: RenderNetworkProps) => {
