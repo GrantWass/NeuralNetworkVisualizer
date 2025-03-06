@@ -10,19 +10,19 @@ interface RenderNetworkProps {
   setHoveredNode: (hovered: HoveredNode | null) => void;
 }
 
-const maxNodes = 6;
+export const maxNodes = 6;
 
 export const renderConnections = ({ network, svgWidth, svgHeight, nodeRadius, setHoveredConnection, setHoveredNode }: RenderNetworkProps) => {
   if (!network) return null;
-  if (network.layers.some((layer) => layer.output_size > maxNodes)) {
+  if (network.layers.some((layer) => layer.size > maxNodes)) {
     svgHeight = svgHeight - 30;
   }
   const layerSpacing = svgWidth / (network.layers.length + 1);
   return network.layers.flatMap((layer, layerIndex) => 
     layer.weights.flatMap((nodeWeights: number[], fromIndex: number) =>
       nodeWeights.map((weight: number, toIndex: number) => {
-        const layerFromSize = layer.output_size;
-        const layerToSize = network.layers[layerIndex + 1]?.output_size
+        const layerFromSize = layer.size;
+        const layerToSize = network.layers[layerIndex + 1]?.size
         let additionalFromSpace = 0;
         let additionalToSpace = 0;
 
@@ -36,7 +36,7 @@ export const renderConnections = ({ network, svgWidth, svgHeight, nodeRadius, se
         let fromX = (layerIndex + 1) * layerSpacing;
         let fromY = ((fromIndex + 1) * svgHeight) / (Math.min(layerFromSize, 6) + 1) + additionalFromSpace;
         let toX = (layerIndex + 2) * layerSpacing;
-        let toY = ((toIndex + 1) * svgHeight) / (Math.min(network.layers[layerIndex + 1]?.output_size, 6) + 1) + additionalToSpace;
+        let toY = ((toIndex + 1) * svgHeight) / (Math.min(network.layers[layerIndex + 1]?.size, 6) + 1) + additionalToSpace;
         if (isNaN(toY) || isNaN(toX)) {
           toX = fromX;
           toY = fromY;
@@ -61,12 +61,12 @@ export const renderConnections = ({ network, svgWidth, svgHeight, nodeRadius, se
 
 export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHoveredNode }: RenderNetworkProps) => {
   if (!network) return null;
-  if (network.layers.some((layer) => layer.output_size > maxNodes)) {
+  if (network.layers.some((layer) => layer.size > maxNodes)) {
     svgHeight = svgHeight - 30;
   }
   const layerSpacing = svgWidth / (network.layers.length + 1);
   return network.layers.flatMap((layer, layerIndex) => {
-    const totalNodes = layer.output_size;
+    const totalNodes = layer.size;
     let additionalSpace = 0;
     return Array.from({ length: Math.min(totalNodes, maxNodes) }, (_, nodeIndex) => {
       if (totalNodes > maxNodes && nodeIndex >= 3) {

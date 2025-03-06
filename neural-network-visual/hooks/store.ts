@@ -15,21 +15,19 @@ interface TrainingState {
   hoveredNode: HoveredNode | null;
   configOpen: boolean;
   datasetInfo: string;
+  runModel: boolean;
 }
 
 interface TrainingActions {
   setSessionId: (sessionId: string | null) => void;
   setEpoch: (epoch: number) => void;
   setLearningRate: (learningRate: number) => void;
-  setDataset: (dataset: string) => void;
-  setActivations: (activations: string[]) => void;
-  setHiddenLayers: (hiddenLayers: number[]) => void;
   setNetwork: (network: NetworkState | null) => void;
   setHoveredConnection: (hoveredConnection: HoveredConnection | null) => void;
   setHoveredNode: (hoveredNode: HoveredNode | null) => void;
   setConfigOpen: (configOpen: boolean) => void;
-  setDatasetInfo: (datasetInfo: string) => void;
   initModel: () => Promise<void>;
+  initModelFrontend: () => void;  
   clearSessionAndReset: () => Promise<void>;
   runTrainingCycle: () => Promise<void>;
   addHiddenLayer: () => void;
@@ -38,6 +36,7 @@ interface TrainingActions {
   updateActivation: (index: number, value: string) => void;
   handleDatasetChange: (newDataset: string) => void;
   getExplanation: () => string;
+  setRunModel: (runModel: boolean) => void;
 }
 
 const useStore = create<TrainingState & TrainingActions>((set, get) => ({
@@ -52,17 +51,15 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   hoveredNode: null,
   configOpen: true,
   datasetInfo: DATASET_INFO[DATASETS[0]],
+  runModel: false,
 
   setEpoch: (epoch) => set({ epoch }),
   setLearningRate: (learningRate) => set({ learningRate }),
-  setDataset: (dataset) => set({ dataset, datasetInfo: DATASET_INFO[dataset] }),
-  setActivations: (activations) => set({ activations }),
-  setHiddenLayers: (hiddenLayers) => set({ hiddenLayers }),
   setNetwork: (network) => set({ network }),
   setHoveredConnection: (hoveredConnection) => set({ hoveredConnection }),
   setHoveredNode: (hoveredNode) => set({ hoveredNode }),
   setConfigOpen: (configOpen) => set({ configOpen }),
-  setDatasetInfo: (datasetInfo) => set({ datasetInfo }),
+  setRunModel: (runModel) => set({ runModel }),
 
   setSessionId: (sessionId) => {
     const prevSessionId = get().sessionId;
@@ -94,16 +91,12 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         set({ sessionId: data.session_id });
         const totalLayers = hiddenLayers.length + 2;
         const layers = data.layer_sizes.map((size: number, index: number) => {
-          const input_size = index === 0 ? 0 : data.layer_sizes[index - 1];
-          const output_size = size;
           const layer = new NeuronLayer(
-            input_size,
-            output_size,
+            size,
             activations[index] || "relu",
             index,
             totalLayers
           );
-          layer.initWeightsAndBiases();
           if (data.network.layers[index]) {
             layer.weights = data.network.layers[index].weights || layer.weights;
             layer.biases = data.network.layers[index].biases[0] || layer.biases;
@@ -123,6 +116,35 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         description: "Failed to initialize model. Please try again.",
       });
     }
+  },
+
+  initModelFrontend: () => {
+    const { hiddenLayers, activations, dataset } = get();
+    var inputSize = 0;
+    var outputSize = 0;
+
+    if (dataset === "mnist") {
+      inputSize = 784;
+      outputSize = 10;
+    } else if (dataset === "iris") {
+      inputSize = 4;
+      outputSize = 3;
+    } else if (dataset === "california_housing") {
+      inputSize = 8;
+      outputSize = 1;
+    }
+
+    const layerSizes = [inputSize, ...hiddenLayers, outputSize];
+    const totalLayers = layerSizes.length;
+    const layers = layerSizes.map((size, index) => {
+      const activation = index === totalLayers - 1 ? "softmax" : activations[index] || "relu";
+      
+      const layer = new NeuronLayer(size, activation, index, totalLayers);
+      layer.initWeightsAndBiases(size, index + 1 == layerSizes.length ? 0 : layerSizes[index + 1]);
+      return layer;
+    });
+    set({ network: { layers }, configOpen: true });
+    get().clearSessionAndReset();
   },
 
   clearSessionAndReset: async () => {
@@ -145,6 +167,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       toast("Configuration Reset", {
         description: "Session cleared, network reset, and configuration open.",
       });
+      get().setSessionId(null);
     } catch (error) {
       console.error("Error clearing session:", error);
       toast("Error", {
@@ -161,6 +184,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       });
       return;
     }
+    
+    get().setRunModel(true);
 
     try {
       const response = await fetch("http://localhost:8000/train", {
@@ -244,6 +269,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       hiddenLayers: [...hiddenLayers, 4],
       activations: [...activations, "relu"],
     });
+    get().initModelFrontend();
   },
 
   removeHiddenLayer: () => {
@@ -254,6 +280,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         activations: activations.slice(0, -1),
       });
     }
+    get().initModelFrontend();
   },
 
   updateHiddenLayer: (index: number, value: number) => {
@@ -261,6 +288,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     const newHiddenLayers = [...hiddenLayers];
     newHiddenLayers[index] = value;
     set({ hiddenLayers: newHiddenLayers });
+    get().initModelFrontend();
   },
 
   updateActivation: (index: number, value: string) => {
@@ -268,6 +296,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     const newActivations = [...activations];
     newActivations[index] = value;
     set({ activations: newActivations });
+    get().initModelFrontend();
   },
 
   handleDatasetChange: (newDataset: string) => {
@@ -275,6 +304,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       dataset: newDataset,
       datasetInfo: DATASET_INFO[newDataset],
     });
+    get().initModelFrontend();
   },
 }));
 

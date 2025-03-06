@@ -24,8 +24,7 @@ interface RenderNetworkProps {
 }
 
 class NeuronLayer {
-    input_size: number
-    output_size: number
+    size: number
     activation: string
     weights: number[][]
     biases: number[]
@@ -36,9 +35,8 @@ class NeuronLayer {
     dZ: number[]
     name: string
   
-    constructor(input_size: number, output_size: number, activation: string, layerIndex: number, totalLayers: number) {
-      this.input_size = input_size
-      this.output_size = output_size
+    constructor(size: number, activation: string, layerIndex: number, totalLayers: number) {
+      this.size = size
       this.activation = activation
       this.weights = []
       this.biases = []
@@ -57,11 +55,11 @@ class NeuronLayer {
       }
     }
 
-    initWeightsAndBiases() {
-        this.weights = Array(this.output_size)
+    initWeightsAndBiases(size: number, nextSize: number) {
+        this.weights = Array(size)
           .fill(null)
-          .map(() => Array(this.input_size).fill(0))
-        this.biases = Array(this.output_size).fill(0)
+          .map(() => Array(nextSize).fill(0))
+        this.biases = Array(size).fill(0)
     }
 }
 

@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import useStore from "@/hooks/store";
 import { DATASETS, ACTIVATION_FUNCTIONS } from "@/static/constants";
 
-
 const Config = () => {
   const {
     sessionId,
@@ -31,90 +30,81 @@ const Config = () => {
 
   return (
     <div className="mb-4 space-y-4 max-w-4xl mx-auto">
-        <div className="flex flex-row justify-between m-6">
-          {configOpen ? (
-            <>
-              <div>
-                <Label className="text-lg font-semibold">Hidden Layers</Label>
-                {hiddenLayers.map((nodes, index) => (
-                  <div key={index} className="flex items-center gap-2 mt-2">
-                    <Input
-                      type="number"
-                      value={nodes}
-                      onChange={(e) => updateHiddenLayer(index, Math.max(1, Number(e.target.value)))}
-                      min={1}
-                      className="w-20"
-                    />
-                    <Label>nodes in Hidden Layer {index + 1}</Label>
-                    <Select value={activations[index]} onValueChange={(value) => updateActivation(index, value)}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select activation" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ACTIVATION_FUNCTIONS.map((af) => (
-                          <SelectItem key={af} value={af}>
-                            {af}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
-                <div className="flex gap-2 mt-5">
-                  <Button onClick={addHiddenLayer}>Add Hidden Layer</Button>
-                  <Button onClick={removeHiddenLayer} disabled={hiddenLayers.length <= 1}>
-                    Remove Hidden Layer
-                  </Button>
-                </div>
-              </div>
-              <div className="flex flex-col items-center gap-4 my-auto">
-                <div className="flex items-center gap-4">
-                  <Label>Dataset:</Label>
-                  <Select value={dataset} onValueChange={handleDatasetChange}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Select dataset" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DATASETS.map((ds) => (
-                        <SelectItem key={ds} value={ds}>
-                          {ds}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <p className="text-sm text-gray-600 mt-2 mx-8">{datasetInfo}</p>
-              </div>
-            </>
-          ) : null}
+      <div className="flex flex-row justify-between items-center p-4">
+        <div>
+          <Label className="text-lg font-semibold">Dataset</Label>
+          <Select value={dataset} onValueChange={handleDatasetChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select dataset" />
+            </SelectTrigger>
+            <SelectContent>
+              {DATASETS.map((ds) => (
+                <SelectItem key={ds} value={ds}>
+                  {ds}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        {!configOpen ? (
-          <Button onClick={clearSessionAndReset} className="w-full">
-            Change Configuration
-          </Button>
-        ) : (
-          <Button onClick={initModel} className="w-full">
-            Initialize Model
-          </Button>
-        )}
-        <div className="flex items-center justify-between">
-          <p className="font-semibold">Epoch: {epoch}</p>
+        <div className="flex gap-4">
+          {!configOpen ?
+          <Button onClick={clearSessionAndReset}>Change Model</Button>
+          :
+          <Button onClick={initModel}>Initialize Model</Button>}
+          <Button onClick={runTrainingCycle} disabled={configOpen}>Run Model</Button>
         </div>
-        <div className="flex items-center gap-4">
-          <Label>Learning Rate:</Label>
-          <Slider
-            value={[learningRate]}
-            onValueChange={(value) => setLearningRate(value[0])}
-            max={1}
-            step={0.01}
-            className="w-64"
-          />
-          <span>{learningRate.toFixed(2)}</span>
-        </div>
-        <Button onClick={runTrainingCycle} className="w-full" disabled={!sessionId}>
-          Run Training Cycle
-        </Button>
       </div>
+      {configOpen ? (
+        <div className="flex flex-row justify-between items-start p-4 border-t">
+          <Button onClick={removeHiddenLayer} disabled={hiddenLayers.length <= 1}>Remove Hidden Layer</Button>
+          <div className="flex flex-col gap-2">
+            <Label className="text-lg font-semibold">Hidden Layers</Label>
+            {hiddenLayers.map((nodes, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  value={nodes}
+                  onChange={(e) => updateHiddenLayer(index, Math.max(1, Number(e.target.value)))}
+                  min={1}
+                  className="w-20"
+                />
+                <Label>Layer {index + 1}</Label>
+                <Select value={activations[index]} onValueChange={(value) => updateActivation(index, value)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select activation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACTIVATION_FUNCTIONS.map((af) => (
+                      <SelectItem key={af} value={af}>
+                        {af}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+          <Button onClick={addHiddenLayer}>Add Hidden Layer</Button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4 p-4 border-t">
+          <div className="flex items-center gap-4">
+            <Label>Learning Rate:</Label>
+            <Slider
+              value={[learningRate]}
+              onValueChange={(value) => setLearningRate(value[0])}
+              max={1}
+              step={0.01}
+              className="w-64"
+            />
+            <span>{learningRate.toFixed(2)}</span>
+          </div>
+          <Button onClick={runTrainingCycle} className="w-full" disabled={!sessionId}>
+            Run Training Cycle
+          </Button>
+        </div>
+      )}
+    </div>
   );
 };
 
