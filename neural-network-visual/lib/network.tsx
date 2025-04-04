@@ -1,5 +1,6 @@
 import React from "react";
 import { NetworkState, HoveredConnection, HoveredNode } from "@/static/types";
+import { motion } from "framer-motion";
 
 interface RenderNetworkProps {
   network: NetworkState | null;
@@ -42,17 +43,26 @@ export const renderConnections = ({ network, svgWidth, svgHeight, nodeRadius, se
           toY = fromY;
         }
         return (
-          <line
-            key={`${layerIndex}-${fromIndex}-${toIndex}`}
-            x1={fromX}
-            y1={fromY}
-            x2={toX}
-            y2={toY}
-            stroke={Math.abs(weight) < 0.5 ? "#94a3b8" : "#475569"}
-            strokeWidth={Math.abs(weight) * 3 + 1}
-            onMouseEnter={() => setHoveredConnection({ layerIndex, fromIndex, toIndex, weight })}
-            onMouseLeave={() => setHoveredConnection(null)}
-          />
+          <g key={`${layerIndex}-${fromIndex}-${toIndex}`}>
+            <line
+              x1={fromX}
+              y1={fromY}
+              x2={toX}
+              y2={toY}
+              stroke={Math.abs(weight) < 0.5 ? "#94a3b8" : "#475569"}
+              strokeWidth={Math.abs(weight) * 3 + 1}
+            />
+            <line
+              x1={fromX}
+              y1={fromY}
+              x2={toX}
+              y2={toY}
+              stroke="transparent"
+              strokeWidth={15} /* Invisible hover area */
+              cursor={"pointer"}
+              onClick={() => setHoveredConnection({ layerIndex, fromIndex, toIndex, weight })}
+            />
+          </g>
         );
       })
     ).filter(Boolean)
@@ -68,23 +78,29 @@ export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHover
   return network.layers.flatMap((layer, layerIndex) => {
     const totalNodes = layer.size;
     let additionalSpace = 0;
+    const isInputLayer = layerIndex === 0;
+    const isOutputLayer = layerIndex === network.layers.length - 1;
+
     return Array.from({ length: Math.min(totalNodes, maxNodes) }, (_, nodeIndex) => {
       if (totalNodes > maxNodes && nodeIndex >= 3) {
         additionalSpace = 30;
       }
       const cx = (layerIndex + 1) * layerSpacing;
       const cy = (((nodeIndex + 1) * svgHeight) / (Math.min(totalNodes, maxNodes) + 1)) + additionalSpace;
+
+      const fillColor = isInputLayer ? "#3b82f6" : isOutputLayer ? "#b91c1c" : "#cbd5e1";
+      const strokeColor = isOutputLayer ? "#7f1d1d" : "#475569";
+
       return (
         <g key={`${layerIndex}-${nodeIndex}`}>
+          <circle cx={cx} cy={cy} r={nodeRadius} fill={fillColor} stroke={strokeColor} strokeWidth="2" />
           <circle
             cx={cx}
             cy={cy}
-            r={nodeRadius}
-            fill="#e2e8f0"
-            stroke="#475569"
-            strokeWidth="2"
-            onMouseEnter={() => setHoveredNode({ layerIndex, nodeIndex })}
-            onMouseLeave={() => setHoveredNode(null)}
+            r={nodeRadius + 10} /* Invisible hover area */
+            fill="transparent"
+            onClick={() => setHoveredNode({ layerIndex, nodeIndex })}
+            cursor="pointer"
           />
         </g>
       );
@@ -117,10 +133,12 @@ export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHover
   });
 };
 
+
 export const renderLayerLabels = ({ network, svgWidth, svgHeight, nodeRadius, setHoveredConnection, setHoveredNode }: RenderNetworkProps) => {
   if (!network) return null;
   const layerSpacing = svgWidth / (network.layers.length + 1);
   return network.layers.map((layer, index) => (
+    <>
     <text
       key={index}
       x={(index + 1) * layerSpacing}
@@ -131,5 +149,17 @@ export const renderLayerLabels = ({ network, svgWidth, svgHeight, nodeRadius, se
     >
       {layer.name}
     </text>
+    {network.initialized &&
+    <text
+      key={index + "activation"}
+      x={(index + 1) * layerSpacing}
+      y={20}
+      textAnchor="middle"
+      fontSize="14"
+      fontWeight="bold"
+    >
+      {network.layers[index - 1]?.activation}
+    </text>}
+    </>
   ));
 };

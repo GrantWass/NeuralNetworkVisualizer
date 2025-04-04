@@ -1,5 +1,7 @@
 interface NetworkState {
+  input: number[][]
   layers: NeuronLayer[];
+  initialized: boolean
 }
 
 interface HoveredConnection {
@@ -28,11 +30,11 @@ class NeuronLayer {
     activation: string
     weights: number[][]
     biases: number[]
-    A: number[]
-    Z: number[]
+    A: number[][]
+    Z: number[][]
     dW: number[][]
     db: number[]
-    dZ: number[]
+    dZ: number[][]
     name: string
   
     constructor(size: number, activation: string, layerIndex: number, totalLayers: number) {
