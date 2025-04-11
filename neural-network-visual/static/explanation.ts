@@ -3,10 +3,6 @@ import useStore from "@/hooks/store";
 export const getExplanationText = () => {
   const { network, epoch, learningRate, dataset, loss, metric, name } = useStore();
   
-  if (!network) {
-    return "The neural network has not been initialized yet. Configure the network and click 'Initialize Model' to start.";
-  }
-
   let datasetExplanation = "";
   let lossExplanation = "";
   let accuracyExplanation = "";
@@ -48,6 +44,12 @@ export const getExplanationText = () => {
     `
   }
 
+  if (!network || !network.initialized) {
+    return `The neural network has not been initialized yet. Configure the network and click 'Initialize Model' to start.
+
+    ${datasetExplanation}`;
+  }
+
   if (epoch === 0) {
     return `The model has been initialized with random weights and biases.  
       - Each node represents a neuron, and each line represents a connection (weight).  
@@ -56,8 +58,7 @@ export const getExplanationText = () => {
 
       ${datasetExplanation}
       ${lossExplanation}
-      ${accuracyExplanation}
-    `;
+      ${accuracyExplanation}`;
   }
 
   return `Training Cycle ${epoch} Completed:  
@@ -69,6 +70,7 @@ export const getExplanationText = () => {
     ${datasetExplanation}
     ${lossExplanation}
     ${accuracyExplanation}
+    
     Current Metrics:  
     - Loss: ${loss ? loss.toFixed(4) : "N/A"}  
     - Metric (${name}): ${metric ? metric.toFixed(2) : "N/A"}${name == "accuracy" ? "%": ""}

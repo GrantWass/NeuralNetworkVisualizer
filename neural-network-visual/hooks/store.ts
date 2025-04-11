@@ -20,6 +20,8 @@ interface TrainingState {
   loss: number;
   metric: number;
   name: string;
+  losses: number[];
+  accuracies: number[];
 }
 
 interface TrainingActions {
@@ -59,6 +61,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   loss: 0,
   metric: 0,
   name: "",
+  losses: [],
+  accuracies: [],
 
   setEpoch: (epoch) => set({ epoch }),
   setLearningRate: (learningRate) => set({ learningRate }),
@@ -160,8 +164,9 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       layer.initWeightsAndBiases(size, index + 1 == layerSizes.length ? 0 : layerSizes[index + 1]);
       return layer;
     });
-    set({ network: { input: [[]], layers, initialized: false }, configOpen: true });
+    set({ network: { input: [[]], layers, initialized: false }, configOpen: true, });
     get().clearSessionAndReset();
+
   },
 
   clearSessionAndReset: async () => {
@@ -171,7 +176,6 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       await fetch(`http://localhost:8000/clear_session?session_id=${sessionId}`, { method: "POST" });
       set({
         sessionId: null,
-        network: null,
         configOpen: true,
         hoveredConnection: null,
         hoveredNode: null,
@@ -180,6 +184,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         dataset: DATASETS[0],
         activations: ["relu", "relu"],
         hiddenLayers: [4, 4],
+        losses: [],
+        accuracies: []
       });
       toast("Configuration Reset", {
         description: "Session cleared, network reset, and configuration open.",
@@ -231,7 +237,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
               layer.A = resultLayer.A ? resultLayer.A : layer.A;
               layer.dW = resultLayer.dW ? resultLayer.dW : layer.dW;
               layer.db = resultLayer.db ? resultLayer.db[0] : layer.db;
-              layer.dZ = resultLayer.dZ ? resultLayer.dZ : layer.dZ; // TODO Keep all samples of Z and handle in UI
+              layer.dZ = resultLayer.dZ ? resultLayer.dZ : layer.dZ;
               layer.activation = resultLayer.activation ? resultLayer.activation : layer.activation;
             }
             return layer;
@@ -248,6 +254,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
             loss: result.loss,
             metric: result.metric,
             name: result.name,
+            losses: [...state.losses, result.loss],
+            accuracies: [...state.accuracies, result.metric],
 
           };
         });
