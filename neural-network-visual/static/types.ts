@@ -35,6 +35,8 @@ class NeuronLayer {
     dW: number[][]
     db: number[]
     dZ: number[][]
+    prevBias: number[]
+    prevWeights: number[][]
     name: string
   
     constructor(size: number, activation: string, layerIndex: number, totalLayers: number) {
@@ -47,6 +49,8 @@ class NeuronLayer {
       this.dW = []
       this.db = []
       this.dZ = []
+      this.prevBias = []
+      this.prevWeights = []
 
       if (layerIndex === 0) {
         this.name = "Input Layer";

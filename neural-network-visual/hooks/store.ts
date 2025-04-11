@@ -217,13 +217,15 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         body: JSON.stringify({
           session_id: sessionId,
           learning_rate: learningRate,
-          epochs: 1,
+          epochs: 2,
         }),
       });
 
       const data = await response.json();
       if (response.ok) {
-        const result = data.training_results[0];
+        const result = data.training_results[1];
+        const resultPrev = data.training_results[0];
+        console.log("Training Results:", result);
 
         // Update network layers individually
         set((state) => {
@@ -239,6 +241,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
               layer.db = resultLayer.db ? resultLayer.db[0] : layer.db;
               layer.dZ = resultLayer.dZ ? resultLayer.dZ : layer.dZ;
               layer.activation = resultLayer.activation ? resultLayer.activation : layer.activation;
+              layer.prevBias = resultPrev.layers[index]?.biases ? resultPrev.layers[index].biases[0] : layer.prevBias;
+              layer.prevWeights = resultPrev.layers[index]?.weights ? resultPrev.layers[index].weights : layer.prevWeights;
             }
             return layer;
           }) || [];

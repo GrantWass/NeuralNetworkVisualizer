@@ -1,7 +1,6 @@
 "use client"
 
 import useStore from "@/hooks/store";
-import { useEffect, useState } from "react";
 import { renderConnections, renderNodes, renderLayerLabels, maxNodes } from "@/lib/network";
 
 
@@ -11,10 +10,8 @@ const Graph = () => {
     const nodeRadius = 20;
     const {
         network,
-        runModel,
         setHoveredConnection,
         setHoveredNode,
-        setRunModel,
         hoveredConnection,
         hoveredNode,
     } = useStore();
@@ -43,9 +40,21 @@ const Graph = () => {
                         </p>
                         {hoveredNode.layerIndex > 0 && (
                             <>
-                                <p>
-                                    Bias: {network.layers[hoveredNode.layerIndex - 1]?.biases[hoveredNode.nodeIndex]?.toFixed(4) || "N/A"}
-                                </p>
+                                {network.layers[hoveredNode.layerIndex - 1]?.biases?.[hoveredNode.nodeIndex] !== undefined && (
+                                    <p>
+                                        Bias: {network.layers[hoveredNode.layerIndex - 1].biases[hoveredNode.nodeIndex].toFixed(4)}
+                                    </p>
+                                )}
+                                {network.layers[hoveredNode.layerIndex - 1]?.Z?.[hoveredNode.nodeIndex]?.[0] !== undefined && (
+                                    <p>
+                                        Preactivation Value: {network.layers[hoveredNode.layerIndex - 1].Z[0][hoveredNode.nodeIndex].toFixed(2)}
+                                    </p>
+                                )}
+                                {network.layers[hoveredNode.layerIndex - 1]?.A?.[hoveredNode.nodeIndex]?.[0] !== undefined && (
+                                    <p>
+                                        Postactivation Value: {network.layers[hoveredNode.layerIndex - 1].A[0][hoveredNode.nodeIndex].toFixed(2)}
+                                    </p>
+                                )}
                             </>
                         )}
                     </div>

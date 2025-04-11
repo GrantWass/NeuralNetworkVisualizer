@@ -77,7 +77,7 @@ const Explain = () => {
         }
     };
 
-    const renderMatrix = (matrix: number[][] | undefined, label: string, subLabel?: string) => (
+    const renderMatrix = (matrix: number[][] | undefined, label: string, subLabel?: string, extendDecimal?: boolean) => (
         matrix && matrix.length > 0 ? (
             <div className="inline-block p-1 mx-1">
                 <p className="text-sm text-gray-600 text-center mb-1">{label}</p>
@@ -86,7 +86,7 @@ const Explain = () => {
                     {matrix.map((row, rowIndex) => (
                         row.map((val, colIndex) => (
                             <span key={`${rowIndex}-${colIndex}`} className="px-1.5 py-0.5">
-                                {val.toFixed(2)}
+                                {val.toFixed(extendDecimal ? 3 : 2)}
                             </span>
                         ))
                     ))}
@@ -95,14 +95,14 @@ const Explain = () => {
         ) : null
     );
 
-    const renderVector = (vector: number[] | undefined | null, label: string, subLabel?: string) => (
+    const renderVector = (vector: number[] | undefined | null, label: string, subLabel?: string, extendDecimal?: boolean) => (
         vector && vector.length > 0 ? (
             <div className="inline-block px-1 mx-1">
                 <p className="text-sm text-gray-600 text-center mb-1">{label}</p>
                 {subLabel && <p className="text-xs text-gray-500 text-center mb-1">{subLabel}</p>}
                 <div className="flex flex-row justify-center border border-gray-400 px-1 py-0.5 rounded bg-white shadow-sm">
                     {vector.map((val, index) => (
-                        <span key={index} className="px-1 py-0.5">{val.toFixed(2)}</span>
+                        <span key={index} className="px-1 py-0.5">{val.toFixed(extendDecimal ? 3 : 2)}</span>
                     ))}
                 </div>
             </div>
@@ -116,7 +116,7 @@ const Explain = () => {
 
     return (
         <div className="mt-8 p-6 bg-gray-100 rounded-lg mx-8 shadow-md">
-            {/* View Toggle */}
+            {dataset != "mnist" && network?.layers && network?.layers[0].A?.length > 0 && (
             <div className="flex justify-center mb-6">
                 <div className="inline-flex rounded-md shadow-sm" role="group">
                     <button
@@ -142,37 +142,16 @@ const Explain = () => {
                         Backward Propagation
                     </button>
                 </div>
-            </div>
+            </div>)}
 
             {dataset != "mnist" && network?.layers && network?.layers[0].A?.length > 0 && (
                 <div className="text-center">
                     {view === 'forward' ? (
                         <>
                             <p className="mt-4 mb-2 text-lg font-bold">Layer-by-layer computation</p>
-                            {/* <div className="flex flex-col justify-center items-center flex-wrap gap-4">
-                                {network?.layers.map((layer: NeuronLayer, layerIndex: number) => (
-                                    <div key={layerIndex} className="flex flex-row justify-center items-center">
-                                        {layerIndex < network.layers.length - 1 ? (
-                                            <>  
-                                                {renderVector((layerIndex == 0 ? network?.input[sampleIndex] : network?.layers[layerIndex- 1].A[sampleIndex]), (layerIndex == 0 ? "Input Vector": `Layer ${layerIndex} Output`))}
-                                                <span className="text-lg mt-5">×</span>
-                                                {renderMatrix(layer.weights, `Layer ${layerIndex + 1} Weights`)}
-                                                <span className="text-lg mt-5">+</span>
-                                                {renderVector(layer.biases, `Layer ${layerIndex + 1} Biases`)}
-                                                <span className="text-lg mt-5">=</span>
-                                                <div className="flex flex-col">
-                                                {renderVector(layer.Z[sampleIndex], (layerIndex === network.layers.length - 2) ? `Output Preactivations` : `Layer ${layerIndex + 1} Preactivations`)}
-                                                <span className="text-lg">↓</span>
-                                                {renderVector(layer.A[sampleIndex], (layerIndex === network.layers.length - 2) ? `Output` : `Layer ${layerIndex + 1} Activations`)}
-                                                </div>
-                                            </>
-                                        ) : null}
-                                    </div>
-                                ))}
-                            </div> */}
                             <div className="flex flex-col justify-center items-center flex-wrap gap-4">
                                 {network?.layers.map((layer: NeuronLayer, layerIndex: number) => (
-                                    <div key={layerIndex} className="flex flex-col items-center">
+                                    <div key={layerIndex} className="flex flex-col items-center border-t border-gray-300 pt-4">
                                         {/* Layer Header */}
                                         {layerIndex < network.layers.length - 1 && (
                                             <h4 className="text-md font-semibold mb-2 text-gray-700">
@@ -247,16 +226,42 @@ const Explain = () => {
                         <>
                             <p className="mt-6 mb-2 text-lg font-bold">Gradient calculations</p>
                             <div className="flex flex-col justify-center items-center flex-wrap gap-4">
-                                {network?.layers.slice().reverse().map((layer: NeuronLayer, reversedIndex: number) => {
-                                    const layerIndex = network.layers.length +1 - reversedIndex;
-                                    return (
-                                        <div key={layerIndex + "backprop"} className="flex flex-row justify-center items-center">
-                                            {renderVector(layer.dZ[sampleIndex], `Layer ${layerIndex - 1} dZ`, "Gradient with respect to activations")}
-                                            {renderMatrix(layer.dW, `Layer ${layerIndex - 1} dW`, "Gradient with respect to weights")}
-                                            {renderVector(layer.db, `Layer ${layerIndex - 1} dB`, "Gradient with respect to biases")}
-                                        </div>
-                                    );
-                                })}
+                            {network?.layers.slice().reverse().map((layer: NeuronLayer, reversedIndex: number) => {
+
+                                const layerIndex = network.layers.length - reversedIndex;
+
+                                if (reversedIndex === 0) {
+                                    return null; 
+                                }
+
+                                return (
+                                <div key={`layer-${reversedIndex}-backprop`} className="flex flex-col gap-4 items-center border-t border-gray-300 pt-4">
+                                    {layerIndex === network.layers.length - 1 ?
+                                    <h2 className="text-lg font-semibold text-center">Output Layer</h2>
+                                    : <h2 className="text-lg font-semibold text-center">Layer {layerIndex}</h2>}
+
+                                    {/* Weights Equation */}
+                                    <div className="flex flex-row items-center gap-2 flex-wrap justify-center">
+                                    {renderMatrix(layer.prevWeights, `Layer ${layerIndex} prevWeight`, "Previous Weights", true)}
+                                    <span className="text-xxl mt-8">-</span>
+                                    <span className="text-sm mt-8 text-gray-600">η ×</span>
+                                    {renderMatrix(layer.dW, `Layer ${layerIndex} dW`, "dW (∇Weights)", true)}
+                                    <span className="text-xl mt-8">=</span>
+                                    {renderMatrix(layer.weights, `Layer ${layerIndex} Weight`, "Current Weights", true)}
+                                    </div>
+
+                                    {/* Biases Equation */}
+                                    <div className="flex flex-row items-center gap-2 flex-wrap justify-center">
+                                    {renderVector(layer.prevBias, `Layer ${layerIndex} prevBias`, "Previous Biases", true)}
+                                    <span className="text-xxl mt-8">-</span>
+                                    <span className="text-sm mt-8 text-gray-600">η ×</span>
+                                    {renderVector(layer.db, `Layer ${layerIndex} dB`, "dB (∇Biases)", true)}
+                                    <span className="text-xl mt-8">=</span>
+                                    {renderVector(layer.biases, `Layer ${layerIndex} Bias`, "Current Biases", true)}
+                                    </div>
+                                </div>
+                                );
+                            })}
                             </div>
                         </>
                     )}
