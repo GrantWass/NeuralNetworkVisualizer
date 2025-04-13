@@ -14,7 +14,6 @@ const Config = () => {
     sessionId,
     configOpen,
     hiddenLayers,
-    epoch,
     learningRate,
     dataset,
     activations,
@@ -28,7 +27,9 @@ const Config = () => {
     updateHiddenLayer,
     updateActivation,
     handleDatasetChange,
-    initModelFrontend
+    initModelFrontend,
+    sampleIndex,
+    setSampleIndex
   } = useStore();
 
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -133,7 +134,16 @@ const Config = () => {
               className="w-64"
             />
             <span>{learningRate.toFixed(2)}</span>
-          </div>
+            <Label className="ml-10">Input Sample Number:</Label>
+            <Input
+                type="number"
+                value={sampleIndex}
+                onChange={(e) => setSampleIndex(Math.max(1, Number(e.target.value)))}
+                min={0}
+                max={50}
+                className="w-15 text-center border border-gray-400 rounded-md shadow-sm"
+            />
+          </div>            
           <Button onClick={runTrainingCycle} className="w-full" disabled={!sessionId}>
             Run Training Cycle
           </Button>

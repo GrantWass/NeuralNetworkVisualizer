@@ -1,7 +1,7 @@
 import useStore from "@/hooks/store";
 
 export const getExplanationText = () => {
-  const { network, epoch, learningRate, dataset, loss, metric, name } = useStore();
+  const { network, epoch, learningRate, dataset, loss, metric, name } = useStore()
   
   let datasetExplanation = "";
   let lossExplanation = "";
@@ -44,7 +44,7 @@ export const getExplanationText = () => {
     `
   }
 
-  if (!network || !network.initialized) {
+  if (!network) {
     return `The neural network has not been initialized yet. Configure the network and click 'Initialize Model' to start.
 
     ${datasetExplanation}`;

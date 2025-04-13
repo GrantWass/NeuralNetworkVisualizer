@@ -14,13 +14,14 @@ const Graph = () => {
         setHoveredNode,
         hoveredConnection,
         hoveredNode,
+        sampleIndex
     } = useStore();
     
   return (
     <div className="grid place-items-center w-full mt-8 mb-6">
         <svg width={svgWidth} height={svgHeight} className="border border-gray-300 rounded">
         {renderConnections({ network, svgWidth, svgHeight, nodeRadius, setHoveredConnection, setHoveredNode })}
-        {renderNodes({ network, svgWidth, svgHeight, nodeRadius, setHoveredConnection, setHoveredNode })}
+        {renderNodes({ network, svgWidth, svgHeight, nodeRadius, setHoveredConnection, setHoveredNode, sampleIndex })}
         {renderLayerLabels({ network, svgWidth, svgHeight, nodeRadius, setHoveredConnection, setHoveredNode })}
         </svg>
         <div className="mt-4 h-50">

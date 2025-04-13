@@ -22,6 +22,7 @@ interface TrainingState {
   name: string;
   losses: number[];
   accuracies: number[];
+  sampleIndex: number;
 }
 
 interface TrainingActions {
@@ -43,6 +44,7 @@ interface TrainingActions {
   handleDatasetChange: (newDataset: string) => void;
   getExplanation: () => string;
   setRunModel: (runModel: boolean) => void;
+  setSampleIndex: (sampleIndex: number) => void;
 }
 
 const useStore = create<TrainingState & TrainingActions>((set, get) => ({
@@ -63,8 +65,10 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   name: "",
   losses: [],
   accuracies: [],
+  sampleIndex: 0,
 
   setEpoch: (epoch) => set({ epoch }),
+  setSampleIndex: (sampleIndex) => set({ sampleIndex }),
   setLearningRate: (learningRate) => set({ learningRate }),
   setNetwork: (network) => set({ network }),
   setHoveredConnection: (hoveredConnection) => {
@@ -124,7 +128,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
           }
           return layer;
         });
-        set({ network: { input: [[]], layers, initialized: false }, configOpen: false });
+        set({ network: { input: [[]], layers, initialized: true }, configOpen: false });
         toast("Model Initialized", {
           description: `Session ID: ${data.session_id}`,
         });
@@ -200,7 +204,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   },
 
   runTrainingCycle: async () => {
-    const { sessionId, learningRate } = get();
+    const { sessionId, learningRate, dataset } = get();
     if (!sessionId) {
       toast("Error", {
         description: "Please initialize the model first.",
@@ -211,21 +215,22 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     get().setRunModel(true);
 
     try {
+      const epochs = dataset === "mnist" ? 1 : 2; // Set epochs based on dataset
+
       const response = await fetch("http://localhost:8000/train", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           session_id: sessionId,
           learning_rate: learningRate,
-          epochs: 2,
+          epochs: epochs,
         }),
       });
 
       const data = await response.json();
       if (response.ok) {
-        const result = data.training_results[1];
-        const resultPrev = data.training_results[0];
-        console.log("Training Results:", result);
+        const result = data.training_results[epochs - 1]; // Always get the last one
+        const resultPrev = epochs > 1 ? data.training_results[epochs - 2] : null;
 
         // Update network layers individually
         set((state) => {
@@ -241,8 +246,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
               layer.db = resultLayer.db ? resultLayer.db[0] : layer.db;
               layer.dZ = resultLayer.dZ ? resultLayer.dZ : layer.dZ;
               layer.activation = resultLayer.activation ? resultLayer.activation : layer.activation;
-              layer.prevBias = resultPrev.layers[index]?.biases ? resultPrev.layers[index].biases[0] : layer.prevBias;
-              layer.prevWeights = resultPrev.layers[index]?.weights ? resultPrev.layers[index].weights : layer.prevWeights;
+              layer.prevBias = resultPrev?.layers[index]?.biases ? resultPrev.layers[index].biases[0] : layer.prevBias;
+              layer.prevWeights = resultPrev?.layers[index]?.weights ? resultPrev.layers[index].weights : layer.prevWeights;
             }
             return layer;
           }) || [];

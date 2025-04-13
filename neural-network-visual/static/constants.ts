@@ -14,5 +14,27 @@ const HIDDEN_LAYER_INFO = `Hidden layers in a neural network enable the model to
 
 const HIDDEN_LAYER_LEARN_MORE = `- More hidden layers allow for deeper learning but may require more training data and computational power.\n- Each hidden layer has a set number of neurons, which determine how much information is processed.\n- Activation functions decide how the weighted sum of inputs is transformed before passing to the next layer. \n \n Hidden layers act as feature extractors, learning increasingly abstract representations of input data as information passes through each layer.\n\n- Lower layers capture simple patterns, like edges in image recognition, while deeper layers learn complex features.\n- Too many layers can lead to overfitting, meaning the model memorizes training data rather than generalizing well.\n- Techniques like dropout and batch normalization help improve performance and stability.`;
 
+const DATASET_INPUT_FEATURES: { [key: string]: string[] } = {
+  california_housing: [
+    "Median income",
+    "Median house age",
+    "Average rooms per household",
+    "Average bedrooms per household",
+    "Population",
+    "Average household occupancy",
+    "Latitude",
+    "Longitude"
+  ],
+  mnist: [
+    "784 grayscale pixel values (28x28 image)"
+  ],
+  iris: [
+    "Sepal length",
+    "Sepal width",
+    "Petal length",
+    "Petal width"
+  ]
+};
 
-export { DATASETS, DATASET_INFO, ACTIVATION_FUNCTIONS, HIDDEN_LAYER_INFO, HIDDEN_LAYER_LEARN_MORE };
+
+export { DATASETS, DATASET_INFO, ACTIVATION_FUNCTIONS, HIDDEN_LAYER_INFO, HIDDEN_LAYER_LEARN_MORE, DATASET_INPUT_FEATURES };

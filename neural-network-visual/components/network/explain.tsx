@@ -30,8 +30,7 @@ ChartJS.register(
 type PropagationView = 'forward' | 'backward';
 
 const Explain = () => {
-    const { network, getExplanation, dataset, losses, accuracies } = useStore();
-    const [sampleIndex, setSampleIndex] = useState(0);
+    const { network, getExplanation, dataset, losses, accuracies, learningRate, sampleIndex, setSampleIndex, name } = useStore();
     const [expanded, setExpanded] = useState(false);
     const [view, setView] = useState<PropagationView>('forward');
 
@@ -54,7 +53,7 @@ const Explain = () => {
         labels: accuracies.map((_, index) => `Epoch ${index + 1}`),
         datasets: [
             {
-                label: 'Accuracy',
+                label: name === "accuracy" ? 'Accuracy' : 'Mean Absolute Error',
                 data: accuracies,
                 borderColor: 'rgb(54, 162, 235)',
                 backgroundColor: 'rgba(54, 162, 235, 0.5)',
@@ -114,6 +113,41 @@ const Explain = () => {
     const explanationPreview = fullExplanation.split('\n').slice(0, 5).join('\n');
     const hasMoreContent = fullExplanation.split('\n').length > 5;
 
+    const inputComponent = <div className="flex items-center gap-1">
+        Input Features
+        <div className="relative group">
+            <span className="cursor-pointer text-sm text-gray-500">ⓘ</span>
+            <div className="absolute z-10 hidden group-hover:block w-64 p-2 text-xs text-white bg-gray-700 rounded shadow-md top-6 left-0">
+            {dataset === "california_housing" && (
+                <>
+                <strong>California Housing Features:</strong>
+                <ul className="list-disc ml-4 mt-1">
+                    <li>MedInc</li>
+                    <li>HouseAge</li>
+                    <li>AveRooms</li>
+                    <li>AveBedrms</li>
+                    <li>Population</li>
+                    <li>AveOccup</li>
+                    <li>Latitude</li>
+                    <li>Longitude</li>
+                </ul>
+                </>
+            )}
+            {dataset === "iris" && (
+                <>
+                <strong>Iris Features:</strong>
+                <ul className="list-disc ml-4 mt-1">
+                    <li>Sepal length</li>
+                    <li>Sepal width</li>
+                    <li>Petal length</li>
+                    <li>Petal width</li>
+                </ul>
+                </>
+            )}
+            </div>
+        </div>
+        </div>
+
     return (
         <div className="mt-8 p-6 bg-gray-100 rounded-lg mx-8 shadow-md">
             {dataset != "mnist" && network?.layers && network?.layers[0].A?.length > 0 && (
@@ -149,6 +183,7 @@ const Explain = () => {
                     {view === 'forward' ? (
                         <>
                             <p className="mt-4 mb-2 text-lg font-bold">Layer-by-layer computation</p>
+                            <p className="text-sm text-gray-600 mb-2">Forward Propagation: Input to Output</p>
                             <div className="flex flex-col justify-center items-center flex-wrap gap-4">
                                 {network?.layers.map((layer: NeuronLayer, layerIndex: number) => (
                                     <div key={layerIndex} className="flex flex-col items-center border-t border-gray-300 pt-4">
@@ -163,12 +198,82 @@ const Explain = () => {
                                             {layerIndex < network.layers.length - 1 ? (
                                                 <>  
                                                     {/* Input/Previous Layer */}
-                                                    <div className="flex flex-col items-center">
+                                                    {/* <div className="flex flex-col items-center">
                                                         {renderVector(
                                                             (layerIndex == 0 ? network?.input[sampleIndex] : network?.layers[layerIndex- 1].A[sampleIndex]), 
-                                                            (layerIndex == 0 ? "Input Features" : `Layer ${layerIndex} Activations`),
+                                                            (layerIndex == 0 ? inputComponent : `Layer ${layerIndex} Activations`),
                                                             layerIndex == 0 ? "Original input data" : "Output from previous layer"
                                                         )}
+                                                    </div> */}
+                                                    <div className="flex flex-col items-center">
+                                                    {layerIndex === 0 ? (
+                                                        <>
+                                                        <div className="flex items-center gap-1 text-sm text-gray-600 mb-1 relative group">
+                                                            <span>Input Features</span>
+                                                            <span className="cursor-pointer text-gray-500 hover:text-gray-700 transition-colors duration-150">
+                                                            <svg
+                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                className="h-4 w-4"
+                                                                fill="none"
+                                                                viewBox="0 0 24 24"
+                                                                stroke="currentColor"
+                                                                strokeWidth={2}
+                                                            >
+                                                                <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"
+                                                                />
+                                                            </svg>
+                                                            </span>
+
+                                                            {/* Tooltip */}
+                                                            <div className="absolute z-10 hidden group-hover:block w-32 p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-6 left-1/2 transform -translate-x-1/2 transition-all duration-200">
+                                                            {dataset === "california_housing" && (
+                                                                <>
+                                                                <p className="font-semibold mb-1">Dataset Features:</p>
+                                                                <p className=" mb-1">{`(Normalized)`}</p>
+                                                                <ul className="list-disc pl-5 space-y-1 text-sm text-gray-100 text-left">
+                                                                    <li>MedInc</li>
+                                                                    <li>HouseAge</li>
+                                                                    <li>AveRooms</li>
+                                                                    <li>AveBedrms</li>
+                                                                    <li>Population</li>
+                                                                    <li>AveOccup</li>
+                                                                    <li>Latitude</li>
+                                                                    <li>Longitude</li>
+                                                                </ul>
+                                                                </>
+                                                            )}
+                                                            {dataset === "iris" && (
+                                                                <>
+                                                                <p className="font-semibold mb-1">Iris Features:</p>
+                                                                <p className=" mb-1">{`(Normalized)`}</p>
+                                                                <ul className="list-disc pl-5 space-y-1 text-sm text-gray-100 text-left">
+                                                                    <li>Sepal length</li>
+                                                                    <li>Sepal width</li>
+                                                                    <li>Petal length</li>
+                                                                    <li>Petal width</li>
+                                                                </ul>
+                                                                </>
+                                                            )}
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 text-center mb-1">Original input data</p>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                        <p className="text-sm text-gray-600 text-center mb-1">{`Layer ${layerIndex} Activations`}</p>
+                                                        <p className="text-xs text-gray-500 text-center mb-1">Output from previous layer</p>
+                                                        </>
+                                                    )}
+                                                    {renderVector(
+                                                        layerIndex === 0
+                                                        ? network?.input[sampleIndex]
+                                                        : network?.layers[layerIndex - 1].A[sampleIndex],
+                                                        "",
+                                                        ""
+                                                    )}
                                                     </div>
 
                                                     <span className="text-lg mt-5 mx-2">×</span>
@@ -225,6 +330,13 @@ const Explain = () => {
                     ) : (
                         <>
                             <p className="mt-6 mb-2 text-lg font-bold">Gradient calculations</p>
+                            <p className="text-sm text-gray-600 mb-2">Backpropagation: Adjusting weights and biases</p>
+                            <p className="text-sm text-gray-600 mb-2">
+                                <strong className="text-xl text-gray-600">η</strong>
+                                {` represents leanring rate (`}
+                                <strong className="text-l text-gray-600">{learningRate}</strong>
+                                {`)`}
+                            </p>
                             <div className="flex flex-col justify-center items-center flex-wrap gap-4">
                             {network?.layers.slice().reverse().map((layer: NeuronLayer, reversedIndex: number) => {
 
@@ -244,7 +356,7 @@ const Explain = () => {
                                     <div className="flex flex-row items-center gap-2 flex-wrap justify-center">
                                     {renderMatrix(layer.prevWeights, `Layer ${layerIndex} prevWeight`, "Previous Weights", true)}
                                     <span className="text-xxl mt-8">-</span>
-                                    <span className="text-sm mt-8 text-gray-600">η ×</span>
+                                    <span className="text-sm mt-8 text-gray-600"><strong className="text-xl text-gray-600">η</strong> ×</span>
                                     {renderMatrix(layer.dW, `Layer ${layerIndex} dW`, "dW (∇Weights)", true)}
                                     <span className="text-xl mt-8">=</span>
                                     {renderMatrix(layer.weights, `Layer ${layerIndex} Weight`, "Current Weights", true)}
@@ -254,11 +366,11 @@ const Explain = () => {
                                     <div className="flex flex-row items-center gap-2 flex-wrap justify-center">
                                     {renderVector(layer.prevBias, `Layer ${layerIndex} prevBias`, "Previous Biases", true)}
                                     <span className="text-xxl mt-8">-</span>
-                                    <span className="text-sm mt-8 text-gray-600">η ×</span>
+                                    <span className="text-sm mt-8 text-gray-600"><strong className="text-xl text-gray-600">η</strong> ×</span>
                                     {renderVector(layer.db, `Layer ${layerIndex} dB`, "dB (∇Biases)", true)}
                                     <span className="text-xl mt-8">=</span>
                                     {renderVector(layer.biases, `Layer ${layerIndex} Bias`, "Current Biases", true)}
-                                    </div>
+                                     </div>
                                 </div>
                                 );
                             })}
@@ -275,7 +387,7 @@ const Explain = () => {
                     <Line data={lossData} options={chartOptions} />
                 </div>
                 <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-                    <h3 className="text-lg font-medium mb-2">Accuracy</h3>
+                    <h3 className="text-lg font-medium mb-2">{name === "accuracy" ? 'Accuracy' : 'Mean Absolute Error'}</h3>
                     <Line data={accuracyData} options={chartOptions} />
                 </div>
             </div>
@@ -303,13 +415,3 @@ const Explain = () => {
 
 export default Explain;
 
-
-//     <p className="mb-2">Sample Index:</p>
-//     <Input
-//         type="number"
-//         value={sampleIndex}
-//         onChange={(e) => setSampleIndex(Math.max(1, Number(e.target.value)))}
-//         min={0}
-//         max={network?.input.length - 1}
-//         className="w-20 text-center border border-gray-400 rounded-md shadow-sm"
-//     />
