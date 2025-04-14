@@ -3,7 +3,6 @@
 import useStore from "@/hooks/store";
 import { NeuronLayer } from "@/static/types";
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -15,6 +14,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import { InputInfo, OutputInfo } from "@/components/tooltips";
 
 // Register ChartJS components
 ChartJS.register(
@@ -94,10 +94,13 @@ const Explain = () => {
         ) : null
     );
 
-    const renderVector = (vector: number[] | undefined | null, label: string, subLabel?: string, extendDecimal?: boolean) => (
+    const renderVector = (vector: number[] | undefined | null, label: string, subLabel?: string, extendDecimal?: boolean, tooltip?: React.ReactNode) => (
         vector && vector.length > 0 ? (
             <div className="inline-block px-1 mx-1">
+                <div className="flex flex-row items-center justify-center gap-1 relative group">
                 <p className="text-sm text-gray-600 text-center mb-1">{label}</p>
+                {tooltip as React.ReactNode}
+                </div>
                 {subLabel && <p className="text-xs text-gray-500 text-center mb-1">{subLabel}</p>}
                 <div className="flex flex-row justify-center border border-gray-400 px-1 py-0.5 rounded bg-white shadow-sm">
                     {vector.map((val, index) => (
@@ -112,41 +115,6 @@ const Explain = () => {
     const fullExplanation = getExplanation() || '';
     const explanationPreview = fullExplanation.split('\n').slice(0, 5).join('\n');
     const hasMoreContent = fullExplanation.split('\n').length > 5;
-
-    const inputComponent = <div className="flex items-center gap-1">
-        Input Features
-        <div className="relative group">
-            <span className="cursor-pointer text-sm text-gray-500">ⓘ</span>
-            <div className="absolute z-10 hidden group-hover:block w-64 p-2 text-xs text-white bg-gray-700 rounded shadow-md top-6 left-0">
-            {dataset === "california_housing" && (
-                <>
-                <strong>California Housing Features:</strong>
-                <ul className="list-disc ml-4 mt-1">
-                    <li>MedInc</li>
-                    <li>HouseAge</li>
-                    <li>AveRooms</li>
-                    <li>AveBedrms</li>
-                    <li>Population</li>
-                    <li>AveOccup</li>
-                    <li>Latitude</li>
-                    <li>Longitude</li>
-                </ul>
-                </>
-            )}
-            {dataset === "iris" && (
-                <>
-                <strong>Iris Features:</strong>
-                <ul className="list-disc ml-4 mt-1">
-                    <li>Sepal length</li>
-                    <li>Sepal width</li>
-                    <li>Petal length</li>
-                    <li>Petal width</li>
-                </ul>
-                </>
-            )}
-            </div>
-        </div>
-        </div>
 
     return (
         <div className="mt-8 p-6 bg-gray-100 rounded-lg mx-8 shadow-md">
@@ -197,82 +165,15 @@ const Explain = () => {
                                         <div className="flex flex-row justify-center items-center">
                                             {layerIndex < network.layers.length - 1 ? (
                                                 <>  
-                                                    {/* Input/Previous Layer */}
-                                                    {/* <div className="flex flex-col items-center">
-                                                        {renderVector(
-                                                            (layerIndex == 0 ? network?.input[sampleIndex] : network?.layers[layerIndex- 1].A[sampleIndex]), 
-                                                            (layerIndex == 0 ? inputComponent : `Layer ${layerIndex} Activations`),
-                                                            layerIndex == 0 ? "Original input data" : "Output from previous layer"
-                                                        )}
-                                                    </div> */}
                                                     <div className="flex flex-col items-center">
-                                                    {layerIndex === 0 ? (
-                                                        <>
-                                                        <div className="flex items-center gap-1 text-sm text-gray-600 mb-1 relative group">
-                                                            <span>Input Features</span>
-                                                            <span className="cursor-pointer text-gray-500 hover:text-gray-700 transition-colors duration-150">
-                                                            <svg
-                                                                xmlns="http://www.w3.org/2000/svg"
-                                                                className="h-4 w-4"
-                                                                fill="none"
-                                                                viewBox="0 0 24 24"
-                                                                stroke="currentColor"
-                                                                strokeWidth={2}
-                                                            >
-                                                                <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"
-                                                                />
-                                                            </svg>
-                                                            </span>
-
-                                                            {/* Tooltip */}
-                                                            <div className="absolute z-10 hidden group-hover:block w-32 p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-6 left-1/2 transform -translate-x-1/2 transition-all duration-200">
-                                                            {dataset === "california_housing" && (
-                                                                <>
-                                                                <p className="font-semibold mb-1">Dataset Features:</p>
-                                                                <p className=" mb-1">{`(Normalized)`}</p>
-                                                                <ul className="list-disc pl-5 space-y-1 text-sm text-gray-100 text-left">
-                                                                    <li>MedInc</li>
-                                                                    <li>HouseAge</li>
-                                                                    <li>AveRooms</li>
-                                                                    <li>AveBedrms</li>
-                                                                    <li>Population</li>
-                                                                    <li>AveOccup</li>
-                                                                    <li>Latitude</li>
-                                                                    <li>Longitude</li>
-                                                                </ul>
-                                                                </>
-                                                            )}
-                                                            {dataset === "iris" && (
-                                                                <>
-                                                                <p className="font-semibold mb-1">Iris Features:</p>
-                                                                <p className=" mb-1">{`(Normalized)`}</p>
-                                                                <ul className="list-disc pl-5 space-y-1 text-sm text-gray-100 text-left">
-                                                                    <li>Sepal length</li>
-                                                                    <li>Sepal width</li>
-                                                                    <li>Petal length</li>
-                                                                    <li>Petal width</li>
-                                                                </ul>
-                                                                </>
-                                                            )}
-                                                            </div>
-                                                        </div>
-                                                        <p className="text-xs text-gray-500 text-center mb-1">Original input data</p>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                        <p className="text-sm text-gray-600 text-center mb-1">{`Layer ${layerIndex} Activations`}</p>
-                                                        <p className="text-xs text-gray-500 text-center mb-1">Output from previous layer</p>
-                                                        </>
-                                                    )}
                                                     {renderVector(
                                                         layerIndex === 0
                                                         ? network?.input[sampleIndex]
                                                         : network?.layers[layerIndex - 1].A[sampleIndex],
-                                                        "",
-                                                        ""
+                                                        (layerIndex == 0 ? "Input Features" : `Layer ${layerIndex} Activations`),
+                                                        layerIndex == 0 ? "Original input data" : "Output from previous layer",
+                                                        false,
+                                                        layerIndex == 0 ? <InputInfo dataset={dataset} input={network?.input[sampleIndex]} /> : null
                                                     )}
                                                     </div>
 
@@ -316,7 +217,10 @@ const Explain = () => {
                                                             </>)}
                                                             {renderVector(
                                                                 layer.A[sampleIndex], 
-                                                                (layerIndex === network.layers.length - 2) ? "Final Output" : `Activations`
+                                                                (layerIndex === network.layers.length - 2) ? "Final Output" : `Activations`,
+                                                                "",
+                                                                false,
+                                                                (layerIndex === network.layers.length - 2) ? <OutputInfo dataset={dataset} output={layer.A[sampleIndex]} />: null
                                                             )}
                                                         </div>
                                                     </div>

@@ -104,10 +104,11 @@ export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHover
 
       const dynamicRadius = nodeRadius + clampedValue * 3; // Slightly larger for high activation
       const fillColor = isInputLayer
-        ? "#3b82f6"
-        : isOutputLayer
-        ? `hsl(0, 70%, ${80 - clampedValue * 40}%)`  // light red to dark red
-        : `hsl(215, 30%, ${85 - clampedValue * 50}%)`; // gray to dark slate
+      ? `hsl(210, 100%, ${85 - clampedValue * 50}%)`  // light blue to dark blue
+      : isOutputLayer
+      ? `hsl(0, 70%, ${80 - clampedValue * 40}%)`     // light red to dark red
+      : `hsl(215, 30%, ${85 - clampedValue * 50}%)`;  // gray to dark slate
+    
 
       const strokeColor = isOutputLayer ? "#7f1d1d" : "#475569";
       const nodeKey = `node-${layerIndex}-${nodeIndex}`;

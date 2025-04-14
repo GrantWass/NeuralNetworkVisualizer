@@ -17,20 +17,18 @@ export const getExplanationText = () => {
       The loss measures the difference between the predicted probabilities and the actual class labels. A lower loss means the model's predictions are closer to the true labels. The model aims to minimize this value during training.
     `;
     accuracyExplanation = `Accuracy:  
-      Accuracy is calculated as the percentage of correct predictions. In classification tasks like MNIST, a higher accuracy indicates that the model is correctly identifying more digits.
-    `;
+      Accuracy is calculated as the percentage of correct predictions. In classification tasks like MNIST, a higher accuracy indicates that the model is correctly identifying more digits.`;
   } else if (dataset === "iris") {
     datasetExplanation = `Dataset: Iris Flower Dataset  
       Task: Multi-class classification (3 species)  
       Output: A probability distribution over the 3 classes (Setosa, Versicolor, Virginica).  
       Interpretation: The network is learning patterns in petal and sepal measurements to correctly classify flower species.
-    `;
+      `;
     lossExplanation = `Loss Function: Cross-entropy loss  
       The loss here measures the difference between the predicted probabilities and the true class labels for the flowers.
     `;
     accuracyExplanation = `Accuracy:  
-      The model's accuracy is determined by how often it correctly classifies the flowers into the correct species based on the input features (sepal and petal dimensions). The accuracy metric will increase as the model correctly classifies more samples.
-    `;
+      The model's accuracy is determined by how often it correctly classifies the flowers into the correct species based on the input features (sepal and petal dimensions). The accuracy metric will increase as the model correctly classifies more samples.`;
   } else if (dataset === "california_housing") {
     datasetExplanation = `Dataset: California Housing Prices  
       Task: Regression (Predicting continuous values)  
@@ -40,8 +38,7 @@ export const getExplanationText = () => {
     lossExplanation = `Loss Function: Mean Squared Error (MSE)  
       MSE calculates the average squared difference between the predicted and actual house prices. The model tries to minimize this value during training to improve predictions.
     `;
-    accuracyExplanation=`Our accuracy metric for this dataset is Mean Absolute Error (MAE). This is the average difference between predicted and actual house prices. For regression tasks like this, MAE will decrease as the predicted house prices become closer to the actual prices.
-    `
+    accuracyExplanation=`Our accuracy metric for this dataset is Mean Absolute Error (MAE). This is the average difference between predicted and actual house prices. For regression tasks like this, MAE will decrease as the predicted house prices become closer to the actual prices.`
   }
 
   if (!network) {
