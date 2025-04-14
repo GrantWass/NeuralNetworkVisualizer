@@ -30,7 +30,7 @@ ChartJS.register(
 type PropagationView = 'forward' | 'backward';
 
 const Explain = () => {
-    const { network, getExplanation, dataset, losses, accuracies, learningRate, sampleIndex, setSampleIndex, name } = useStore();
+    const { network, getExplanation, dataset, losses, accuracies, learningRate, sampleIndex, originalData, name } = useStore();
     const [expanded, setExpanded] = useState(false);
     const [view, setView] = useState<PropagationView>('forward');
 
@@ -173,7 +173,7 @@ const Explain = () => {
                                                         (layerIndex == 0 ? "Input Features" : `Layer ${layerIndex} Activations`),
                                                         layerIndex == 0 ? "Original input data" : "Output from previous layer",
                                                         false,
-                                                        layerIndex == 0 ? <InputInfo dataset={dataset} input={network?.input[sampleIndex]} /> : null
+                                                        layerIndex == 0 ? <InputInfo dataset={dataset} input={network?.input[sampleIndex]} originalInput={originalData[sampleIndex]} /> : null
                                                     )}
                                                     </div>
 
@@ -220,7 +220,7 @@ const Explain = () => {
                                                                 (layerIndex === network.layers.length - 2) ? "Final Output" : `Activations`,
                                                                 "",
                                                                 false,
-                                                                (layerIndex === network.layers.length - 2) ? <OutputInfo dataset={dataset} output={layer.A[sampleIndex]} />: null
+                                                                (layerIndex === network.layers.length - 2) ? <OutputInfo dataset={dataset} output={layer.A[sampleIndex]} actual={originalData[sampleIndex]} />: null
                                                             )}
                                                         </div>
                                                     </div>

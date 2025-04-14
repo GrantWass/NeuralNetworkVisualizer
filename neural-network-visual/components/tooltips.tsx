@@ -1,6 +1,6 @@
 import { DATASET_INPUT_FEATURES } from "@/static/constants";
 
-const InputInfo = ({ dataset, input }: { dataset: string; input: number[] }) => {        
+const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: number[], originalInput: number[] }) => {        
   
     const features = DATASET_INPUT_FEATURES[dataset] || [];
   
@@ -25,7 +25,7 @@ const InputInfo = ({ dataset, input }: { dataset: string; input: number[] }) => 
           </span>
   
           {/* Tooltip */}
-          <div className="absolute z-10 hidden group-hover:block w-48 p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-6 left-1/2 transform -translate-x-1/2 transition-all duration-200">
+          <div className="absolute z-10 hidden w-max group-hover:block p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-6 left-1/2 transform -translate-x-1/2 transition-all duration-200">
             {features.length > 0 && (
               <>
                 <p className="font-semibold mb-1">Features & Input:</p>
@@ -34,7 +34,10 @@ const InputInfo = ({ dataset, input }: { dataset: string; input: number[] }) => 
                   {features.map((feature, idx) => (
                     <li key={feature} className="flex justify-between">
                       <span>{feature}</span>
-                      <span className="font-mono">{input[idx]?.toFixed(3) ?? "N/A"}</span>
+                      <div className="ml-5">
+                      <span className="font-mono">{originalInput[idx]?.toFixed(3) ?? "N/A"}</span>
+                      <span className="ml-2 font-mono">{`(${input[idx]?.toFixed(3)})` ?? "N/A"}</span>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -46,13 +49,13 @@ const InputInfo = ({ dataset, input }: { dataset: string; input: number[] }) => 
     );
   };
 
-  const OutputInfo = ({ dataset, output }: { dataset: string; output: number[] }) => {
+  const OutputInfo = ({ dataset, output, actual }: { dataset: string; output: number[]; actual: number[] }) => {
     const outputMap: { [key: string]: string[] } = {
       california_housing: ["Median House Value"],
       iris: ["Setosa", "Versicolor", "Virginica"],
     };
   
-    const formatValue = (value: number, dataset: string, index: number) => {
+    const formatValue = (value: number, dataset: string) => {
       if (dataset === "iris") {
         return `${(value * 100).toFixed(1)}%`;
       }
@@ -65,6 +68,18 @@ const InputInfo = ({ dataset, input }: { dataset: string; input: number[] }) => 
         });
       }
       return value.toFixed(3);
+    };
+
+    const formatActual = () => {
+      if (dataset === "iris") {
+        const actualResults = actual.slice(-3)
+        const index = actualResults.findIndex((v) => v === 1);
+        return outputMap[dataset]?.[index] ?? "Unknown";
+      } else if (dataset === "california_housing") {
+        const actualResults = actual.slice(-1)
+        return formatValue(actualResults[0], dataset);
+      }
+      return "N/A";
     };
   
     const outputs = outputMap[dataset] || [];
@@ -99,13 +114,14 @@ const InputInfo = ({ dataset, input }: { dataset: string; input: number[] }) => 
                     <li key={label} className="flex justify-between">
                       <span>{label}</span>
                       <span className="font-mono">
-                        {formatValue(output[idx], dataset, idx)}
+                        {formatValue(output[idx], dataset)}
                       </span>
                     </li>
                   ))}
                 </ul>
               </>
             )}
+          <p className="font-semibold">Actual Result: <span className="font-mono text-white">{formatActual()}</span></p>
           </div>
         </div>
       </>

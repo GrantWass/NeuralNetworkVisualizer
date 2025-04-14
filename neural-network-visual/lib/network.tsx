@@ -92,6 +92,7 @@ export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHover
 
       const hasActivations = Array.isArray(network.layers[layerIndex - 1]?.A) && network.layers[layerIndex - 1]?.A.length > 0;
       const inputSample = network?.input?.[sampleIndex ?? 0];
+      
       var activationValue = 0;
       if (hasActivations) {
         activationValue = network.layers[layerIndex - 1].A?.[sampleIndex ?? 0][nodeIndex] ?? 0;
@@ -100,7 +101,7 @@ export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHover
         activationValue = inputSample[nodeIndex] ?? 0;
       }
 
-      const clampedValue = Math.max(0, Math.min(1, activationValue)); // Clamp to [0,1] (change to normalizing?)
+      const clampedValue = Math.min(1, Math.abs(activationValue));
 
       const dynamicRadius = nodeRadius + clampedValue * 3; // Slightly larger for high activation
       const fillColor = isInputLayer

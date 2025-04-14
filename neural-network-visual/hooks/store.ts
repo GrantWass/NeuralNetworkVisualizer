@@ -23,6 +23,7 @@ interface TrainingState {
   losses: number[];
   accuracies: number[];
   sampleIndex: number;
+  originalData: number[][];
 }
 
 interface TrainingActions {
@@ -66,6 +67,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   losses: [],
   accuracies: [],
   sampleIndex: 0,
+  originalData: [],
 
   setEpoch: (epoch) => set({ epoch }),
   setSampleIndex: (sampleIndex) => set({ sampleIndex }),
@@ -128,7 +130,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
           }
           return layer;
         });
-        set({ network: { input: [[]], layers, initialized: true }, configOpen: false });
+        set({ network: { input: [[]], layers, initialized: true }, originalData: data.original_train_data, configOpen: false });
         toast("Model Initialized", {
           description: `Session ID: ${data.session_id}`,
         });
@@ -147,16 +149,19 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     const { hiddenLayers, activations, dataset } = get();
     var inputSize = 0;
     var outputSize = 0;
+    var accuracyMetric = "accuracy";
 
     if (dataset === "mnist") {
       inputSize = 784;
       outputSize = 10;
+      accuracyMetric = "mae"
     } else if (dataset === "iris") {
       inputSize = 4;
       outputSize = 3;
     } else if (dataset === "california_housing") {
       inputSize = 8;
       outputSize = 1;
+      accuracyMetric = "mae";
     }
 
     const layerSizes = [inputSize, ...hiddenLayers, outputSize];
@@ -168,7 +173,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       layer.initWeightsAndBiases(size, index + 1 == layerSizes.length ? 0 : layerSizes[index + 1]);
       return layer;
     });
-    set({ network: { input: [[]], layers, initialized: false }, configOpen: true, });
+    set({ network: { input: [[]], layers, initialized: false }, name: accuracyMetric, configOpen: true, });
     get().clearSessionAndReset();
 
   },
@@ -185,11 +190,11 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         hoveredNode: null,
         epoch: 0,
         learningRate: 0.1,
-        dataset: DATASETS[0],
         activations: ["relu", "relu"],
         hiddenLayers: [4, 4],
         losses: [],
-        accuracies: []
+        accuracies: [],
+        originalData: [],
       });
       toast("Configuration Reset", {
         description: "Session cleared, network reset, and configuration open.",
@@ -259,7 +264,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
               initialized: true,
               layers: updatedLayers,  // Update layers with new data
             },
-            epoch: state.epoch + 1,
+            epoch: state.epoch + epochs,
             loss: result.loss,
             metric: result.metric,
             name: result.name,
