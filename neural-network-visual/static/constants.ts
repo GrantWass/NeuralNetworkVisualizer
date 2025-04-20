@@ -1,7 +1,8 @@
-const DATASETS = ["california_housing", "mnist", "iris"];
+const DATASETS = ["california_housing", "iris"];
+// const DATASETS = ["california_housing", "mnist", "iris"];
 
 const DATASET_INFO: { [key: string]: string } = {
-  california_housing: `The California Housing dataset contains information from the 1990 California census.\n\n- Inputs (Features): Median income, Housing median age, Average rooms per household, Average bedrooms per household, Population, Households, Latitude, Longitude.\n- Output (Target): Median house value (continuous numeric value).`,
+  california_housing: `The California Housing dataset contains information from the 1990 California census.\n\n- Inputs (Features): Median income, Housing median age, Average rooms per household, Average bedrooms per household, Population, Household occupancy, Latitude, Longitude.\n- Output (Target): Median house value (continuous numeric value).`,
 
   mnist: `The MNIST dataset is a large database of handwritten digits, commonly used for training image processing and deep learning models.\n\n- Inputs (Features): 28x28 grayscale images of handwritten digits (784 pixels in total, each represented as a value between 0 and 255).\n- Output (Target): A digit label (0-9), representing the digit in the image.`,
 
@@ -18,10 +19,10 @@ const DATASET_INPUT_FEATURES: { [key: string]: string[] } = {
   california_housing: [
     "Median income",
     "Median house age",
-    "Average rooms per household",
-    "Average bedrooms per household",
+    "Average rooms (qty)",
+    "Average bedrooms (qty)",
     "Population",
-    "Average household occupancy",
+    "Average occupancy",
     "Latitude",
     "Longitude"
   ],

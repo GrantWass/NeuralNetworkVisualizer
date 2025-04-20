@@ -41,6 +41,12 @@ const Config = () => {
     initModelFrontend()
   }, []); 
 
+
+  const onChangeModel = () => {
+    handleDatasetChange("iris")
+    clearSessionAndReset();
+  }
+
   return (
     <div className="mb-4 space-y-4 max-w-4xl mx-auto">
       <div className="flex flex-col justify-between justify-center p-4">
@@ -62,7 +68,7 @@ const Config = () => {
         </div>
         <div className="flex gap-4">
           {!configOpen ?
-          <Button onClick={clearSessionAndReset}>Change Model</Button>
+          <Button onClick={onChangeModel}>Change Model</Button>
           :
           <Button onClick={initModel}>Initialize Model</Button>}
         </div>

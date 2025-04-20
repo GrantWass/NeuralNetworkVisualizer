@@ -1,25 +1,38 @@
 import React from "react";
 import { NetworkState, HoveredConnection, HoveredNode } from "@/static/types";
 import { motion } from "framer-motion";
+import { DATASET_INPUT_FEATURES } from "@/static/constants";
 
 interface RenderNetworkProps {
   network: NetworkState | null;
-  svgWidth: number;
-  svgHeight: number;
-  nodeRadius: number; 
   setHoveredConnection: (hovered: HoveredConnection | null) => void;
   setHoveredNode: (hovered: HoveredNode | null) => void;
   sampleIndex?: number; // Optional prop for sample index
+  dataset?: string;
+  original?: number[];
 }
 
 export const maxNodes = 6;
+var SHIFT = 0
+const INPUTLABELOFFSET = 110
+export const SVGHEIGHT = 500;
+export const svgWidth = 1000;
+const nodeRadius = 20;
+const outputMap: { [key: string]: string[] } = {
+  california_housing: ["Median House Value"],
+  iris: ["Setosa", "Versicolor", "Virginica"],
+};
+var layerSpacing = 0
 
-export const renderConnections = ({ network, svgWidth, svgHeight, nodeRadius, setHoveredConnection, setHoveredNode }: RenderNetworkProps) => {
+
+export const renderConnections = ({ network, setHoveredConnection, setHoveredNode }: RenderNetworkProps) => {
   if (!network) return null;
+  var svgHeight = SVGHEIGHT
   if (network.layers.some((layer) => layer.size > maxNodes)) {
     svgHeight = svgHeight - 30;
   }
-  const layerSpacing = svgWidth / (network.layers.length + 1);
+  layerSpacing = svgWidth / (network.layers.length + 1) - (network.layers.length > 4 ? 15 : 0);
+  SHIFT = (network.layers.length > 4 ? 40 : 0)
 
   return network.layers.flatMap((layer, layerIndex) => 
     layer.weights.flatMap((nodeWeights: number[], fromIndex: number) =>
@@ -33,9 +46,9 @@ export const renderConnections = ({ network, svgWidth, svgHeight, nodeRadius, se
         if (layerToSize > maxNodes && toIndex >= 3) additionalToSpace = 30;
         if (fromIndex >= maxNodes || toIndex >= maxNodes) return null;
 
-        let fromX = (layerIndex + 1) * layerSpacing;
+        let fromX = (layerIndex + 1) * layerSpacing + SHIFT;
         let fromY = ((fromIndex + 1) * svgHeight) / (Math.min(layerFromSize, 6) + 1) + additionalFromSpace;
-        let toX = (layerIndex + 2) * layerSpacing;
+        let toX = (layerIndex + 2) * layerSpacing + SHIFT;
         let toY = ((toIndex + 1) * svgHeight) / (Math.min(layerToSize ?? 6, 6) + 1) + additionalToSpace;
 
         if (isNaN(toY) || isNaN(toX)) {
@@ -71,13 +84,54 @@ export const renderConnections = ({ network, svgWidth, svgHeight, nodeRadius, se
   );
 };
 
-export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHoveredNode, sampleIndex}: RenderNetworkProps) => {
+export const renderNodes = ({ network, setHoveredNode, sampleIndex, dataset, original}: RenderNetworkProps) => {
   if (!network) return null;
+  var svgHeight = SVGHEIGHT
   if (network.layers.some((layer) => layer.size > maxNodes)) {
     svgHeight = svgHeight - 30;
   }
 
-  const layerSpacing = svgWidth / (network.layers.length + 1);
+  var features = DATASET_INPUT_FEATURES[dataset ?? ""] || [];
+
+  //This is hardcoded for now for california datasets
+  //This accounts for the fact not all nodes are shown
+  if (dataset === "california_housing" && original != null) {
+    features = features.slice(0,3).concat(features.slice(5))
+    original = original.slice(0, 10)
+    original = original.slice(0,3).concat(original.slice(5))
+  } 
+
+  //could move this in a separate file (same logic as in tooltip)
+  const formatValue = (value: number, dataset: string) => {
+    if (dataset === "iris") {
+      return `${(value * 100).toFixed(1)}%`;
+    }
+    if (dataset === "california_housing") {
+      const dollars = value * 100000; // adjust scale
+      return dollars.toLocaleString("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+      });
+    }
+    return value.toFixed(3);
+  };
+  
+  const formatActual = () => {
+    if (!original || original.length < 3){
+      return;
+    }
+    if (dataset === "iris") {
+      const actualResults = original.slice(-3)
+      const index = actualResults.findIndex((v) => v === 1);
+      return outputMap[dataset]?.[index] ?? "Unknown";
+    } else if (dataset === "california_housing") {
+      const actualResults = original.slice(-1)
+      return formatValue(actualResults[0], dataset);
+    }
+    return "N/A";
+  };
+
   return network.layers.flatMap((layer, layerIndex) => {
     const totalNodes = layer.size;
     let additionalSpace = 0;
@@ -87,12 +141,12 @@ export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHover
     const nodes = Array.from({ length: Math.min(totalNodes, maxNodes) }, (_, nodeIndex) => {
       if (totalNodes > maxNodes && nodeIndex >= 3) additionalSpace = 30;
 
-      const cx = (layerIndex + 1) * layerSpacing;
+      const cx = (layerIndex + 1) * layerSpacing + SHIFT;
       const cy = (((nodeIndex + 1) * svgHeight) / (Math.min(totalNodes, maxNodes) + 1)) + additionalSpace;
 
       const hasActivations = Array.isArray(network.layers[layerIndex - 1]?.A) && network.layers[layerIndex - 1]?.A.length > 0;
       const inputSample = network?.input?.[sampleIndex ?? 0];
-      
+
       var activationValue = 0;
       if (hasActivations) {
         activationValue = network.layers[layerIndex - 1].A?.[sampleIndex ?? 0][nodeIndex] ?? 0;
@@ -132,14 +186,117 @@ export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHover
             onClick={() => setHoveredNode({ layerIndex, nodeIndex })}
             cursor="pointer"
           />
-          {/* <circle
-            cx={cx}
-            cy={cy}
-            r={dynamicRadius + clampedValue * 5}
-            fill="black"
-            opacity={clampedValue * 0.3}
-            stroke="none"
-          /> */}
+          {isInputLayer &&
+            <text 
+              x={cx - INPUTLABELOFFSET}
+              y={cy}
+              className=""
+              textAnchor="middle"
+              fontSize="14"
+              fontWeight="bold"
+            >
+              {features[nodeIndex]}
+            </text>
+          }
+          {isInputLayer && original && activationValue && original.length > 0 &&
+          <>
+            <text
+              x={cx - INPUTLABELOFFSET- 22}
+              y={cy + 20}
+              className=""
+              textAnchor="middle"
+              fontSize="14"
+            >
+              {original[nodeIndex].toFixed(2)}
+            </text>
+            <text
+              x={cx - INPUTLABELOFFSET + 22}
+              y={cy + 20}
+              className=""
+              textAnchor="middle"
+              fontSize="14"
+            >
+              {`(${activationValue.toFixed(3)})`}
+            </text>
+          </>
+          }
+          {isInputLayer &&
+            <text 
+              x={cx - INPUTLABELOFFSET}
+              y={cy}
+              className=""
+              textAnchor="middle"
+              fontSize="14"
+              fontWeight="bold"
+            > 
+              {features[nodeIndex]}
+            </text>
+          }
+          {isOutputLayer && dataset && activationValue &&
+          <>
+            <text
+              x={cx + 110}
+              y={dataset === "iris" ? cy : cy - 60}
+              className=""
+              textAnchor="middle"
+              fontSize="16"
+              fontWeight="bold"
+            >
+              {outputMap[dataset][nodeIndex]}
+            </text>
+            {dataset === "california_housing" &&
+            <>
+              <text
+                x={cx + 110}
+                y={cy - 30}
+                className=""
+                textAnchor="middle"
+                fontSize="16"
+              >
+                Predicted Value:
+              </text>
+              <text
+              x={cx + 110}
+              y={cy + 20}
+              className=""
+              textAnchor="middle"
+              fontSize="16"
+              >
+                Actual Value:
+              </text>
+              <text
+                x={cx + 110}
+                y={cy + 40}
+                className=""
+                textAnchor="middle"
+                fontSize="16"
+              >
+                {formatActual()}
+              </text>
+            </>
+            }
+            {dataset === "iris" &&
+              <text
+                x={cx + 110}
+                y={cy + 40}
+                className=""
+                textAnchor="middle"
+                fontSize="16"
+              >
+                {formatActual() === outputMap[dataset][nodeIndex] ? "Actual Answer" : false}
+              </text>
+            }
+            <text
+              x={cx + 110}
+              y={(dataset === "iris" ? cy : cy - 30) + 20}
+              className=""
+              textAnchor="middle"
+              fontSize="16"
+            >
+              {formatValue(activationValue, dataset)}
+            </text>
+          </>
+          }
         </g>
       );
     });
@@ -149,7 +306,7 @@ export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHover
         ? [
             <text
               key={`more-${layerIndex}`}
-              x={(layerIndex + 1) * layerSpacing - (layerIndex + 1 === network.layers.length ? -30 : 30)}
+              x={(layerIndex + 1) * layerSpacing + SHIFT - (layerIndex + 1 === network.layers.length ? -20 : 20)}
               y={svgHeight / 2 + 20}
               textAnchor="middle"
               fontSize="14"
@@ -159,7 +316,7 @@ export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHover
             </text>,
             <text
               key={`dots-${layerIndex}`}
-              x={(layerIndex + 1) * layerSpacing}
+              x={(layerIndex + 1) * layerSpacing + SHIFT}
               y={svgHeight / 2 + 20}
               textAnchor="middle"
               fontSize="14"
@@ -174,17 +331,16 @@ export const renderNodes = ({ network, svgWidth, svgHeight, nodeRadius, setHover
   });
 };
 
-export const renderLayerLabels = ({ network, svgWidth, svgHeight }: RenderNetworkProps) => {
+export const renderLayerLabels = ({ network }: RenderNetworkProps) => {
   if (!network) return null;
-  const layerSpacing = svgWidth / (network.layers.length + 1);
   return network.layers.flatMap((layer, index) => {
     const labelKey = `label-${index}`;
     const activationKey = `activation-${index}`;
     const elements = [
       <text
         key={labelKey}
-        x={(index + 1) * layerSpacing}
-        y={svgHeight - 10}
+        x={(index + 1) * layerSpacing + SHIFT}
+        y={SVGHEIGHT - 10}
         textAnchor="middle"
         fontSize="14"
         fontWeight="bold"
@@ -197,13 +353,27 @@ export const renderLayerLabels = ({ network, svgWidth, svgHeight }: RenderNetwor
       elements.push(
         <text
           key={activationKey}
-          x={(index + 1) * layerSpacing}
+          x={(index + 1) * layerSpacing + SHIFT}
+          y={20}
+          textAnchor="middle"
+          fontSize="14"
+        >
+          {network.layers[index - 1].activation}
+        </text>
+      );
+    }
+
+    if (network) {
+      elements.push(
+        <text
+          key={`inputlabel-${index}`}
+          x={100}
           y={20}
           textAnchor="middle"
           fontSize="14"
           fontWeight="bold"
         >
-          {network.layers[index - 1].activation}
+          {`Input Values (Normalized)`}
         </text>
       );
     }

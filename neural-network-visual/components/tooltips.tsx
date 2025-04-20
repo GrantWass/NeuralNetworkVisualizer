@@ -26,7 +26,7 @@ const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: 
   
           {/* Tooltip */}
           <div className="absolute z-10 hidden w-max group-hover:block p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-6 left-1/2 transform -translate-x-1/2 transition-all duration-200">
-            {features.length > 0 && (
+            {features.length > 0 && originalInput && originalInput.length > 0 && (
               <>
                 <p className="font-semibold mb-1">Features & Input:</p>
                 <p className="mb-1">(Normalized)</p>
@@ -71,6 +71,9 @@ const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: 
     };
 
     const formatActual = () => {
+      if (!actual || actual.length < 3){
+        return;
+      }
       if (dataset === "iris") {
         const actualResults = actual.slice(-3)
         const index = actualResults.findIndex((v) => v === 1);
