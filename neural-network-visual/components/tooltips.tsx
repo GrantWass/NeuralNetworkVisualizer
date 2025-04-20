@@ -36,7 +36,7 @@ const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: 
                       <span>{feature}</span>
                       <div className="ml-5">
                       <span className="font-mono">{originalInput[idx]?.toFixed(3) ?? "N/A"}</span>
-                      <span className="ml-2 font-mono">{`(${input[idx]?.toFixed(3)})` ?? "N/A"}</span>
+                      <span className="ml-2 font-mono">{`(${input[idx]?.toFixed(3)})` }</span>
                       </div>
                     </li>
                   ))}
