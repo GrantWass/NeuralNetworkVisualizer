@@ -1,6 +1,5 @@
 import React from "react";
 import { NetworkState, HoveredConnection, HoveredNode } from "@/static/types";
-import { motion } from "framer-motion";
 import { DATASET_INPUT_FEATURES } from "@/static/constants";
 
 interface RenderNetworkProps {
@@ -13,7 +12,7 @@ interface RenderNetworkProps {
 }
 
 export const maxNodes = 6;
-var SHIFT = 0
+let SHIFT = 0
 const INPUTLABELOFFSET = 110
 export const SVGHEIGHT = 500;
 export const svgWidth = 1000;
@@ -22,12 +21,12 @@ const outputMap: { [key: string]: string[] } = {
   california_housing: ["Median House Value"],
   iris: ["Setosa", "Versicolor", "Virginica"],
 };
-var layerSpacing = 0
+let layerSpacing = 0
 
 
-export const renderConnections = ({ network, setHoveredConnection, setHoveredNode }: RenderNetworkProps) => {
+export const renderConnections = ({ network, setHoveredConnection }: RenderNetworkProps) => {
   if (!network) return null;
-  var svgHeight = SVGHEIGHT
+  let svgHeight = SVGHEIGHT
   if (network.layers.some((layer) => layer.size > maxNodes)) {
     svgHeight = svgHeight - 30;
   }
@@ -46,8 +45,8 @@ export const renderConnections = ({ network, setHoveredConnection, setHoveredNod
         if (layerToSize > maxNodes && toIndex >= 3) additionalToSpace = 30;
         if (fromIndex >= maxNodes || toIndex >= maxNodes) return null;
 
-        let fromX = (layerIndex + 1) * layerSpacing + SHIFT;
-        let fromY = ((fromIndex + 1) * svgHeight) / (Math.min(layerFromSize, 6) + 1) + additionalFromSpace;
+        const fromX = (layerIndex + 1) * layerSpacing + SHIFT;
+        const fromY = ((fromIndex + 1) * svgHeight) / (Math.min(layerFromSize, 6) + 1) + additionalFromSpace;
         let toX = (layerIndex + 2) * layerSpacing + SHIFT;
         let toY = ((toIndex + 1) * svgHeight) / (Math.min(layerToSize ?? 6, 6) + 1) + additionalToSpace;
 
@@ -86,12 +85,12 @@ export const renderConnections = ({ network, setHoveredConnection, setHoveredNod
 
 export const renderNodes = ({ network, setHoveredNode, sampleIndex, dataset, original}: RenderNetworkProps) => {
   if (!network) return null;
-  var svgHeight = SVGHEIGHT
+  let svgHeight = SVGHEIGHT
   if (network.layers.some((layer) => layer.size > maxNodes)) {
     svgHeight = svgHeight - 30;
   }
 
-  var features = DATASET_INPUT_FEATURES[dataset ?? ""] || [];
+  let features = DATASET_INPUT_FEATURES[dataset ?? ""] || [];
 
   //This is hardcoded for now for california datasets
   //This accounts for the fact not all nodes are shown
@@ -147,7 +146,7 @@ export const renderNodes = ({ network, setHoveredNode, sampleIndex, dataset, ori
       const hasActivations = Array.isArray(network.layers[layerIndex - 1]?.A) && network.layers[layerIndex - 1]?.A.length > 0;
       const inputSample = network?.input?.[sampleIndex ?? 0];
 
-      var activationValue = 0;
+      let activationValue = 0;
       if (hasActivations) {
         activationValue = network.layers[layerIndex - 1].A?.[sampleIndex ?? 0][nodeIndex] ?? 0;
       }

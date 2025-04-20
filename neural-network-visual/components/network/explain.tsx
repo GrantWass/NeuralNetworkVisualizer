@@ -359,7 +359,7 @@ const Explain = () => {
                                             <span className="text-2xl mt-6">×</span>
                                             <div className="inline-block px-1 mx-1 text-center">
                                                 <p className="text-sm text-gray-600 mb-1">{"Activation Derivative (σ′(Z))"}</p>
-                                                <p className="text-xs text-gray-500 mb-1">{`Derivative for this layer's activation`}</p>
+                                                <p className="text-xs text-gray-500 mb-1">Derivative of the activation function at this layer</p>
                                                 <div className="border border-gray-400 rounded px-2 py-1 bg-white shadow-sm">
                                                     <span className="text-2xl">{`σ′(Z) `} </span>
                                                     <span className="text-xl text-gray-700 italic" >{`(${network.layers[outputLayerIndex - index ].activation})`} </span>
@@ -376,7 +376,7 @@ const Explain = () => {
 
                                 {/* dW Calculation */}
                                 <div className="flex flex-col items-center gap-2">
-                                    <p className="text-sm text-gray-600">Gradient of weights (dW) is based on current layer's dZ and previous activations:</p>
+                                    <p className="text-sm text-gray-600">Gradient of weights (dW) is based on current layer&apos;s dZ and previous activations:</p>
                                     <p className="text-xs text-gray-600 italic">*Note that is is done with all samples at once, opposed to one sample as seen here*</p>
                                     <div className="flex flex-row items-center gap-2 flex-wrap justify-center">
                                     {renderMatrix(reshapeTo2D(outputLayerIndex - index === -1 ? network.input[sampleIndex] :network.layers[outputLayerIndex - index].A[sampleIndex]), `Previous Activations`, "Aᵀ from layer below", false)}

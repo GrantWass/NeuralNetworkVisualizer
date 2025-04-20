@@ -1,7 +1,7 @@
 "use client"
 
 import useStore from "@/hooks/store";
-import { renderConnections, renderNodes, renderLayerLabels, maxNodes, SVGHEIGHT, svgWidth } from "@/lib/network";
+import { renderConnections, renderNodes, renderLayerLabels, SVGHEIGHT, svgWidth } from "@/lib/network";
 
 
 const Graph = () => {

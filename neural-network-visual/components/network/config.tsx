@@ -39,7 +39,7 @@ const Config = () => {
 
   useEffect(() => {
     initModelFrontend()
-  }, []); 
+  }, [initModelFrontend]); 
 
 
   const onChangeModel = () => {
