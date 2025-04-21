@@ -48,6 +48,8 @@ interface TrainingActions {
   setSampleIndex: (sampleIndex: number) => void;
 }
 
+const URL = process.env.NEXT_PUBLIC_API_URL;
+
 const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   sessionId: null,
   epoch: 0,
@@ -92,7 +94,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     const prevSessionId = get().sessionId;
 
     if (prevSessionId) {
-      fetch(`http://localhost:8000/clear_session?session_id=${prevSessionId}`, { method: "POST" })
+      fetch(`${URL}/clear_session?session_id=${prevSessionId}`, { method: "POST" })
         .then((response) => response.json())
         .then((data) => console.log("Session Cleared:", data.message))
         .catch((error) => console.error("Error clearing session:", error));
@@ -104,7 +106,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   initModel: async () => {
     const { hiddenLayers, activations, dataset } = get();
     try {
-      const response = await fetch("http://localhost:8000/init_model", {
+      const response = await fetch(`${URL}/init_model`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -182,7 +184,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     const { sessionId } = get();
     if (!sessionId) return;
     try {
-      await fetch(`http://localhost:8000/clear_session?session_id=${sessionId}`, { method: "POST" });
+      await fetch(`${URL}/clear_session?session_id=${sessionId}`, { method: "POST" });
       set({
         sessionId: null,
         configOpen: true,
@@ -222,7 +224,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     try {
       const epochs = dataset === "mnist" ? 1 : 2; // Set epochs based on dataset
 
-      const response = await fetch("http://localhost:8000/train", {
+      const response = await fetch(`${URL}/train`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
