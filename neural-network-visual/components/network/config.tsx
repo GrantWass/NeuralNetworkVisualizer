@@ -144,9 +144,9 @@ const Config = () => {
             <Input
                 type="number"
                 value={sampleIndex}
-                onChange={(e) => setSampleIndex(Math.max(0, Math.min(Number(e.target.value),50)))}
+                onChange={(e) => setSampleIndex(Math.max(0, Math.min(Number(e.target.value),25)))}
                 min={0}
-                max={50}
+                max={25}
                 className="w-15 text-center border border-gray-400 rounded-md shadow-sm"
             />
           </div>            
