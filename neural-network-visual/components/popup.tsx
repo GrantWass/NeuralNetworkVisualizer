@@ -18,7 +18,7 @@ const InfoPopup: React.FC<InfoPopupProps> = ({ title, message, onClose }) => {
         <ReactMarkdown
             rehypePlugins={[rehypeRaw]}
             components={{
-              a: ({ node, ...props }) => (
+              a: ({ ...props }) => (
                 <a
                   {...props}
                   className="text-blue-500 underline font-medium hover:text-blue-600"
@@ -26,10 +26,10 @@ const InfoPopup: React.FC<InfoPopupProps> = ({ title, message, onClose }) => {
                   rel="noopener noreferrer"
                 />
               ),
-              ul: ({ node, ...props }) => (
+              ul: ({...props }) => (
                 <ul {...props} className="list-disc pl-5 mt-[-30] mb-[-10]" />
               ),
-              li: ({ node, ...props }) => (
+              li: ({ ...props }) => (
                 <li {...props} className="mb-[-15]" />
               ),
             }}
