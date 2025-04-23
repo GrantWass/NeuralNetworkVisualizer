@@ -90,10 +90,10 @@ const Config = () => {
               />
             ),
             ul: ({...props }) => (
-              <ul {...props} className="list-disc pl-5 mt-[-30] mb-[-10]" />
+              <ul {...props} className="list-disc pl-5 mt-[-30px] mb-[-10px]" />
             ),
             li: ({...props }) => (
-              <li {...props} className="mb-[-15]" />
+              <li {...props} className="mb-[-15px]" />
             ),
           }}
         >
@@ -155,10 +155,10 @@ const Config = () => {
                 />
               ),
               ul: ({...props }) => (
-                <ul {...props} className="list-disc pl-5 mt-[-30] mb-[-10]" />
+                <ul {...props} className="list-disc pl-5 mt-[-30px] mb-[-10px]" />
               ),
               li: ({...props }) => (
-                <li {...props} className="mb-[-15]" />
+                <li {...props} className="mb-[-15px]" />
               ),
             }}
           >
