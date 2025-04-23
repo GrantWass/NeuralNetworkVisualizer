@@ -16,6 +16,8 @@ import {
 } from 'chart.js';
 import { InputInfo, OutputInfo } from "@/components/tooltips";
 import { reshapeTo2D, transpose, multiplyMatrices } from "@/lib/utils"
+import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 
 // Register ChartJS components
 ChartJS.register(
@@ -429,7 +431,28 @@ const Explain = () => {
             <div className="mt-6">
                 <div className={`whitespace-pre-line text-gray-700 bg-white p-4 rounded shadow-sm border border-gray-300 ${!expanded ? 'max-h-34 overflow-hidden' : ''}`}>
                     <h3 className="text-xl font-semibold mb-4">Explanation</h3>
-                    {expanded ? fullExplanation : explanationPreview}
+                    <ReactMarkdown
+                        rehypePlugins={[rehypeRaw]}
+                        components={{
+                            a: ({ node, ...props }) => (
+                            <a
+                                {...props}
+                                className="text-blue-500 underline font-medium hover:text-blue-600"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            />
+                            ),
+                            ul: ({ node, ...props }) => (
+                            <ul {...props} className="list-disc pl-5 mt-[-30] mb-[-10]" />
+                            ),
+                            li: ({ node, ...props }) => (
+                            <li {...props} className="mb-[-15]" />
+                            ),
+                        }}
+                    >
+                        {expanded ? fullExplanation : explanationPreview}
+                    </ReactMarkdown>
+                    
                     {hasMoreContent && (
                     <div>
                         <button 

@@ -6,8 +6,11 @@ import { Label } from "@/components/ui/label";
 import InfoPopup from "@/components/popup"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import useStore from "@/hooks/store";
-import { DATASETS, ACTIVATION_FUNCTIONS, HIDDEN_LAYER_INFO, HIDDEN_LAYER_LEARN_MORE } from "@/static/constants";
+import { DATASETS, ACTIVATION_FUNCTIONS } from "@/static/constants";
+import { HIDDEN_LAYER_INFO, HIDDEN_LAYER_LEARN_MORE } from "@/static/explanation";
 import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 
 const Config = () => {
   const {
@@ -70,11 +73,33 @@ const Config = () => {
           {!configOpen ?
           <Button onClick={onChangeModel}>Change Model</Button>
           :
-          <Button onClick={initModel}>Initialize Model</Button>}
+          <Button onClick={initModel}>INITIALIZE MODEL</Button>}
         </div>
       </div>
       <div className="p-4 bg-gray-100 rounded-lg">
-      <p className="whitespace-pre-wrap">{datasetInfo}</p>
+      <div className="whitespace-pre-wrap prose">
+      <ReactMarkdown
+          rehypePlugins={[rehypeRaw]}
+          components={{
+            a: ({ node, ...props }) => (
+              <a
+                {...props}
+                className="text-blue-500 underline font-medium hover:text-blue-600"
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            ),
+            ul: ({ node, ...props }) => (
+              <ul {...props} className="list-disc pl-5 mt-[-30] mb-[-10]" />
+            ),
+            li: ({ node, ...props }) => (
+              <li {...props} className="mb-[-15]" />
+            ),
+          }}
+        >
+          {datasetInfo}
+        </ReactMarkdown>
+      </div>
       </div>
       </div>
       
@@ -117,7 +142,29 @@ const Config = () => {
             ))}
           </div>
           <div className="p-4 bg-gray-100 rounded-lg">
-            <p className="whitespace-pre-wrap">{HIDDEN_LAYER_INFO}</p>
+          <div className="whitespace-pre-wrap prose">
+            <ReactMarkdown
+            rehypePlugins={[rehypeRaw]}
+            components={{
+              a: ({ node, ...props }) => (
+                <a
+                  {...props}
+                  className="text-blue-500 underline font-medium hover:text-blue-600"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              ),
+              ul: ({ node, ...props }) => (
+                <ul {...props} className="list-disc pl-5 mt-[-30] mb-[-10]" />
+              ),
+              li: ({ node, ...props }) => (
+                <li {...props} className="mb-[-15]" />
+              ),
+            }}
+          >
+            {HIDDEN_LAYER_INFO}
+          </ReactMarkdown>
+          </div>
             <p className="font-bold cursor-pointer" onClick={openPopup} >Learn More</p> 
           </div>
           {isPopupOpen && (

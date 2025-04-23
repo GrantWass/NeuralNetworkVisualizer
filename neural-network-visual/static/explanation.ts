@@ -1,79 +1,117 @@
 import useStore from "@/hooks/store";
 
 export const getExplanationText = () => {
-  const { network, epoch, learningRate, dataset, loss, metric, name } = useStore()
-  
+  const { network, epoch, learningRate, dataset, loss, metric, name } = useStore();
+
   let datasetExplanation = "";
   let lossExplanation = "";
   let accuracyExplanation = "";
 
   if (dataset === "mnist") {
-    datasetExplanation = `Dataset: MNIST (Handwritten Digits)  
-      Task: Multi-class classification (10 classes, digits 0-9)  
-      Output: A probability distribution over the 10 digits. The highest probability corresponds to the predicted digit.  
-      Interpretation: The network is learning to recognize handwritten numbers by adjusting weights to minimize classification errors.
-    `;
-    lossExplanation = `Loss Function: Cross-entropy loss  
-      The loss measures the difference between the predicted probabilities and the actual class labels. A lower loss means the model's predictions are closer to the true labels. The model aims to minimize this value during training.
-    `;
+    datasetExplanation = `Dataset: [**MNIST (Handwritten Digits)**](https://en.wikipedia.org/wiki/MNIST_database)  
+Task: **Multi-class classification** (10 classes: digits 0-9)  
+Output: A **probability distribution** over 10 digits. The highest probability is the predicted digit.  
+Interpretation: The network learns to recognize **handwritten digits** by adjusting weights to reduce **classification errors**.`;
+
+    lossExplanation = `Loss Function: [**Cross-Entropy Loss**](https://en.wikipedia.org/wiki/Cross_entropy)  
+**Cross-entropy** measures the difference between predicted probabilities and true labels. **Lower values** indicate better predictions.`;
+
     accuracyExplanation = `Accuracy:  
-      Accuracy is calculated as the percentage of correct predictions. In classification tasks like MNIST, a higher accuracy indicates that the model is correctly identifying more digits.`;
+Calculated as the percentage of **correct predictions**. A higher value indicates the model is correctly identifying more digits.`;
   } else if (dataset === "iris") {
-    datasetExplanation = `Dataset: Iris Flower Dataset  
-      Task: Multi-class classification (3 species)  
-      Output: A probability distribution over the 3 classes (Setosa, Versicolor, Virginica).  
-      Interpretation: The network is learning patterns in petal and sepal measurements to correctly classify flower species.
-      `;
-    lossExplanation = `Loss Function: Cross-entropy loss  
-      The loss here measures the difference between the predicted probabilities and the true class labels for the flowers.
-    `;
+    datasetExplanation = `Dataset: [**Iris Flower Dataset**](https://en.wikipedia.org/wiki/Iris_flower_data_set)  
+Task: **Multi-class classification** (3 species)  
+Output: **Probability distribution** over 3 classes (Setosa, Versicolor, Virginica)  
+Interpretation: The model learns patterns in **sepal/petal measurements** to classify flower species.`;
+
+    lossExplanation = `Loss Function: [**Cross-Entropy Loss**](https://en.wikipedia.org/wiki/Cross_entropy)  
+Measures the difference between predicted and actual species labels. **Lower values** indicate more accurate predictions.`;
+
     accuracyExplanation = `Accuracy:  
-      The model's accuracy is determined by how often it correctly classifies the flowers into the correct species based on the input features (sepal and petal dimensions). The accuracy metric will increase as the model correctly classifies more samples.`;
+Indicates how often the model correctly classifies **flower species** based on input features.`;
   } else if (dataset === "california_housing") {
-    datasetExplanation = `Dataset: California Housing Prices  
-      Task: Regression (Predicting continuous values)  
-      Output: A single numerical value representing the predicted house price.  
-      Interpretation: The network is learning relationships between features like median income, house age, and population density to estimate home prices.
-    `;
-    lossExplanation = `Loss Function: Mean Squared Error (MSE)  
-      MSE calculates the average squared difference between the predicted and actual house prices. The model tries to minimize this value during training to improve predictions.
-    `;
-    accuracyExplanation=`Our accuracy metric for this dataset is Mean Absolute Error (MAE). This is the average difference between predicted and actual house prices. For regression tasks like this, MAE will decrease as the predicted house prices become closer to the actual prices.`
+    datasetExplanation = `Dataset: [**California Housing Dataset**](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.fetch_california_housing.html)  
+Task: **Regression** (Predicting house prices)  
+Output: A single **numeric value** representing predicted price  
+Interpretation: The model finds patterns in features like **income**, **location**, and **house age** to predict home prices.`;
+
+    lossExplanation = `Loss Function: [**Mean Squared Error (MSE)**](https://en.wikipedia.org/wiki/Mean_squared_error)  
+**MSE** calculates the average squared difference between predicted and actual prices. The model tries to **minimize** this.`;
+
+    accuracyExplanation = `Metric: **Mean Absolute Error (MAE)**  
+**MAE** is the average of absolute differences between predicted and true values. **Lower MAE** means better predictions.`;
   }
 
   if (!network) {
-    return `The neural network has not been initialized yet. Configure the network and click 'Initialize Model' to start.
+    return `The neural network has not been initialized yet.  
+Configure the network and click "Initialize Model" to begin.
 
-    ${datasetExplanation}`;
+${datasetExplanation}`;
   }
 
   if (epoch === 0) {
-    return `The model has been initialized with random weights and biases.  
-      - Each node represents a neuron, and each line represents a connection (weight).  
-      - The thickness of each connection represents the strength of the weight.  
-      The network is not yet trained. Once training starts, the model will adjust its parameters to fit the data.
+    return `The model has been initialized with **random weights** and biases.  
+- **Nodes**: Neurons in the network  
+- **Connections**: Weights between neurons  
+- **Thickness**: Strength of each connection  
 
-      ${datasetExplanation}
-      ${lossExplanation}
-      ${accuracyExplanation}`;
+The model is not trained yet. Once training begins, the weights will adjust to fit the data.
+
+${datasetExplanation}
+
+${lossExplanation}
+
+${accuracyExplanation}`;
   }
 
-  return `Training Cycle ${epoch} Completed:  
-    1. Forward Propagation: The input is processed through the network, with each neuron applying a weighted sum and an activation function.  
-    2. Loss Calculation: The difference between the predicted and actual values is computed using the loss function. For classification tasks, the loss is typically cross-entropy loss, and for regression tasks, it is MSE.  
-    3. Backward Propagation: The error is propagated backward to adjust weights using gradient descent.  
-    4. Parameter Update: Weights and biases are updated using the learning rate (${learningRate}).
+  return `Training Cycle **${epoch}** Completed  
 
-    ${datasetExplanation}
-    ${lossExplanation}
-    ${accuracyExplanation}
-    
-    Current Metrics:  
-    - Loss: ${loss ? loss.toFixed(4) : "N/A"}  
-    - Metric (${name}): ${metric ? metric.toFixed(2) : "N/A"}${name == "accuracy" ? "%": ""}
+1. [**Forward Propagation**](https://en.wikipedia.org/wiki/Feedforward_neural_network): Inputs pass through the network, each neuron computes a **weighted sum** and applies an **activation function**.  
+2. [**Loss Calculation**](https://en.wikipedia.org/wiki/Loss_function): Measures how far predictions are from actual values.  
+3. [**Backward Propagation**](https://en.wikipedia.org/wiki/Backpropagation): The error is **back-propagated** to update weights.  
+4. **Parameter Update**: Weights and biases are adjusted using the **learning rate** (${learningRate}).
 
-    How to Interpret Results:  
-    - If training is successful, the network will gradually reduce its loss and improve predictions.  
-    - For classification tasks, the highest output probability is the predicted class.  
-    - For regression tasks, the output is a continuous value that should approach real-world values.`;
-}
+${datasetExplanation}
+
+${lossExplanation}
+
+${accuracyExplanation}
+
+Current Metrics:  
+- **Loss**: ${loss ? loss.toFixed(4) : "N/A"}  
+- **Metric** (${name}): ${metric ? metric.toFixed(2) : "N/A"}${name === "accuracy" ? "%" : ""}
+
+How to Interpret Results:  
+- A **lower loss** means better performance.  
+- In **classification tasks**, the class with the highest probability is the prediction.  
+- In **regression tasks**, the output value should approach **real-world targets**.`;
+};
+
+// Hidden layer info
+export const HIDDEN_LAYER_INFO = `**Hidden layers** allow the model to learn **abstract features** by transforming inputs through weights and activation functions.`;
+
+// Hidden layer detailed explanation
+export const HIDDEN_LAYER_LEARN_MORE = `More hidden layers support **deeper learning** but may require more data and computation.  
+Each layer has **neurons** that process information before passing it to the next layer.  
+**Activation functions** transform outputs between layers.  
+
+Hidden layers act as **feature detectors**:  
+- **Early layers** capture simple patterns  
+- **Deeper layers** recognize complex features  
+
+Too many layers can lead to **overfitting** (memorizing data).  
+Regularization techniques like **dropout** and **batch normalization** help mitigate this.`;
+
+export const DATASET_INFO: { [key: string]: string } = {
+  california_housing: `The [**California Housing dataset**](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.fetch_california_housing.html) is based on **1990 census data**.  
+- **Inputs:** Median income, House age, Average rooms/bedrooms, Population, Latitude, Longitude  
+- **Output:** Median house value (numeric)`,
+
+  mnist: `The [**MNIST dataset**](https://en.wikipedia.org/wiki/MNIST_database) is a collection of **handwritten digit images**.  
+- ** Inputs:** 28x28 grayscale images (784 pixels)  
+- ** Output:** A digit label (0–9)`,
+
+  iris: `The [**Iris dataset**](https://en.wikipedia.org/wiki/Iris_flower_data_set) is a classic dataset with **flower measurements**.  
+- **Inputs:** Sepal length**, Sepal width, Petal length, Petal width  
+- **Output:** Class label (0 = Setosa, 1 = Versicolor, 2 = Virginica)`
+};

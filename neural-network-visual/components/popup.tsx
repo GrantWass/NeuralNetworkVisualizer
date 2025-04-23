@@ -1,5 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
+import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 
 interface InfoPopupProps {
   title: string;
@@ -12,7 +14,29 @@ const InfoPopup: React.FC<InfoPopupProps> = ({ title, message, onClose }) => {
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50">
       <div className="bg-white p-6 rounded-lg max-w-lg w-full">
         <h3 className="text-xl font-semibold mb-4">{title}</h3>
-        <p className="whitespace-pre-wrap mb-4">{message}</p>
+        <p className="whitespace-pre-wrap prose">
+        <ReactMarkdown
+            rehypePlugins={[rehypeRaw]}
+            components={{
+              a: ({ node, ...props }) => (
+                <a
+                  {...props}
+                  className="text-blue-500 underline font-medium hover:text-blue-600"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              ),
+              ul: ({ node, ...props }) => (
+                <ul {...props} className="list-disc pl-5 mt-[-30] mb-[-10]" />
+              ),
+              li: ({ node, ...props }) => (
+                <li {...props} className="mb-[-15]" />
+              ),
+            }}
+          >
+            {message}
+          </ReactMarkdown>
+        </p>
         <div className="flex justify-end">
           <Button onClick={onClose}>Close</Button>
         </div>

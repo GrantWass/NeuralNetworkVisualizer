@@ -1,6 +1,7 @@
 import Config from "@/components/network/config";
 import Graph from "@/components/network/graph";
 import Explain from "@/components/network/explain";
+import ContactInfo from "./contact";
 
 
 export const metadata = {
@@ -42,15 +43,19 @@ export const metadata = {
 };
 
 const NeuralNetworkViz = () => {
-
   return (
-    <div className="p-4 max-w-9xl mx-auto">
+    <div className="p-4 max-w-9xl mx-auto relative">
       <h1 className="text-3xl font-bold mt-4 mb-4">Interactive Neural Network Visualization</h1>
-      <Config/>
+      
+      {/* Visualization Components */}
+      <Config />
       <Graph />
       <Explain />
-    </div>
+      <ContactInfo />
+
+     </div>
   );
 };
+
 
 export default NeuralNetworkViz;
