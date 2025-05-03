@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Linkedin, Mail, ExternalLink, Copy, Check, MessageSquare } from "lucide-react"
+import { Linkedin, Mail, Copy, Check, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
