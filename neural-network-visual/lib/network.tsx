@@ -364,16 +364,27 @@ export const renderLayerLabels = ({ network }: RenderNetworkProps) => {
 
     if (network) {
       elements.push(
+        <>
         <text
           key={`inputlabel-${index}`}
-          x={100}
+          x={65}
           y={20}
           textAnchor="middle"
           fontSize="14"
           fontWeight="bold"
         >
-          {`Input Values (Normalized)`}
+          {`Input Values`}
         </text>
+        <text
+          key={`inputlabel2-${index}`}
+          x={150}
+          y={20}
+          textAnchor="middle"
+          fontSize="14"
+        >
+          {`(Normalized)`}
+        </text>
+        </>
       );
     }
 
