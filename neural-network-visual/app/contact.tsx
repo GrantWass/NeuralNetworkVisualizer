@@ -101,7 +101,7 @@ export default function ContactInfo() {
         "fixed bottom-4 right-4 shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 transition-all duration-300 z-50 w-82 p-0"
       )}
     >
-      <CardHeader className="pb-1 pt-3">
+      <CardHeader className="pb-1 pt-1">
         <CardTitle className="mt-2 text-base font-bold text-gray-800 dark:text-gray-100">Connect with Me</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 p-2">

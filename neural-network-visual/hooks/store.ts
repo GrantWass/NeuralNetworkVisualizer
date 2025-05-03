@@ -222,7 +222,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     get().setRunModel(true);
 
     try {
-      const epochs = dataset === "mnist" ? 1 : 2; // Set epochs based on dataset
+      const epochs = 1
 
       const response = await fetch(`${URL}/train`, {
         method: "POST",
@@ -243,6 +243,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         set((state) => {
           const updatedLayers = state.network?.layers.map((layer, index) => {
             const resultLayer = result.layers[index];
+            const currBiases = layer.biases;
+            const currWeights = layer.weights;
             if (resultLayer) {
               // Update individual layer properties independently
               layer.weights = resultLayer.weights ? resultLayer.weights : layer.weights;
@@ -253,8 +255,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
               layer.db = resultLayer.db ? resultLayer.db[0] : layer.db;
               layer.dZ = resultLayer.dZ ? resultLayer.dZ : layer.dZ;
               layer.activation = resultLayer.activation ? resultLayer.activation : layer.activation;
-              layer.prevBias = resultPrev?.layers[index]?.biases ? resultPrev.layers[index].biases[0] : layer.prevBias;
-              layer.prevWeights = resultPrev?.layers[index]?.weights ? resultPrev.layers[index].weights : layer.prevWeights;
+              layer.prevBias = resultPrev?.layers[index]?.biases ? resultPrev.layers[index].biases[0] : currBiases;
+              layer.prevWeights = resultPrev?.layers[index]?.weights ? resultPrev.layers[index].weights : currWeights;
             }
             return layer;
           }) || [];
