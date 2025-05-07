@@ -42,6 +42,20 @@ export default function ContactInfo() {
         </div>
       </a>
 
+      <a
+        href="https://grantwasserman.com"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 p-2 rounded-lg transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-800 group"
+      >
+        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+          <MessageSquare className="w-3.5 h-3.5" />
+        </div>
+        <div className="flex-1">
+          <p className="font-medium text-sm text-gray-800 dark:text-gray-200">Personal Website</p>
+        </div>
+      </a>
+
       <div className="flex items-center gap-2 p-2 rounded-lg transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-800 group">
         <div className="flex items-center justify-center w-7 h-7 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
           <Mail className="w-3.5 h-3.5" />
