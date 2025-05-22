@@ -84,7 +84,7 @@ const Config = () => {
             a: ({...props }) => (
               <a
                 {...props}
-                className="text-blue-500 underline font-medium hover:text-blue-600"
+                className="text-black-500 underline font-medium hover:text-blue-600"
                 target="_blank"
                 rel="noopener noreferrer"
               />
@@ -149,7 +149,7 @@ const Config = () => {
               a: ({...props }) => (
                 <a
                   {...props}
-                  className="text-blue-500 underline font-medium hover:text-blue-600"
+                  className="text-black-500 underline font-medium hover:text-blue-600"
                   target="_blank"
                   rel="noopener noreferrer"
                 />

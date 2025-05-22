@@ -25,5 +25,27 @@ const DATASET_INPUT_FEATURES: { [key: string]: string[] } = {
   ]
 };
 
+const DATASET_INPUT_FEATURES_SHORT: { [key: string]: string[] } = {
+  california_housing: [
+    "Avg income",
+    "House age",
+    "Rooms (qty)",
+    "Bedrooms (qty)",
+    "Population",
+    "Avg occupancy",
+    "Latitude",
+    "Longitude"
+  ],
+  mnist: [
+    "784 grayscale pixel values (28x28 image)"
+  ],
+  iris: [
+    "Sepal length",
+    "Sepal width",
+    "Petal length",
+    "Petal width"
+  ]
+};
 
-export { DATASETS, ACTIVATION_FUNCTIONS, DATASET_INPUT_FEATURES };
+
+export { DATASETS, ACTIVATION_FUNCTIONS, DATASET_INPUT_FEATURES, DATASET_INPUT_FEATURES_SHORT };

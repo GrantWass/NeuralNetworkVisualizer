@@ -2,7 +2,7 @@
 
 import useStore from "@/hooks/store";
 import { NeuronLayer } from "@/static/types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -36,6 +36,11 @@ const Explain = () => {
     const { network, getExplanation, dataset, losses, accuracies, learningRate, sampleIndex, originalData, name } = useStore();
     const [expanded, setExpanded] = useState(false);
     const [view, setView] = useState<PropagationView>('forward');
+    const [fontSize, setFontSize] = useState("md")
+
+    useEffect(() => {
+        setFontSize(window.innerWidth<1000 ? "sm" : "md")
+      }, []); 
 
     // Prepare chart data for losses
     const lossData = {
@@ -87,7 +92,7 @@ const Explain = () => {
                 <div className="grid border border-gray-400 rounded bg-white shadow-sm" style={{ gridTemplateColumns: `repeat(${matrix[0].length}, auto)` }}>
                     {matrix.map((row, rowIndex) => (
                         row.map((val, colIndex) => (
-                            <span key={`${rowIndex}-${colIndex}`} className="px-1.5 py-0.5">
+                            <span key={`${rowIndex}-${colIndex}`} className={`px-1.5 py-0.5 text-${fontSize}`}>
                                 {val.toFixed(extendDecimal ? 3 : 2)}
                             </span>
                         ))
@@ -107,7 +112,7 @@ const Explain = () => {
                 {subLabel && <p className="text-xs text-gray-500 text-center mb-1">{subLabel}</p>}
                 <div className="flex flex-row justify-center border border-gray-400 px-1 py-0.5 rounded bg-white shadow-sm">
                     {vector.map((val, index) => (
-                        <span key={index} className="px-1 py-0.5">{val.toFixed(extendDecimal ? 3 : 2)}</span>
+                        <span key={index} className={`px-1 py-0.5 text-${fontSize}`}>{val.toFixed(extendDecimal ? 3 : 2)}</span>
                     ))}
                 </div>
             </div>
@@ -176,7 +181,7 @@ const Explain = () => {
                                             </h4>
                                         )}
                                         
-                                        <div className="flex flex-row justify-center items-center">
+                                        <div className="flex flex-row justify-center items-center flex-wrap">
                                             {layerIndex < network.layers.length - 1 ? (
                                                 <>  
                                                     <div className="flex flex-col items-center">
@@ -267,8 +272,8 @@ const Explain = () => {
                                 return (
                                 <div key={`layer-${reversedIndex}-backprop`} className="flex flex-col gap-4 items-center border-t border-gray-300 pt-4">
                                     {layerIndex === network.layers.length - 1 ?
-                                    <h2 className="text-md font-semibold mb-2 text-gray-700">Output Layer</h2>
-                                    : <h2 className="text-md font-semibold mb-2 text-gray-700">Layer {layerIndex}</h2>}
+                                    <h2 className="text-md font-semibold text-gray-700">Output Layer</h2>
+                                    : <h2 className="text-md font-semibold text-gray-700">Layer {layerIndex}</h2>}
 
                                     {/* Weights Equation */}
                                     <div className="flex flex-row items-center gap-2 flex-wrap justify-center">
@@ -363,8 +368,8 @@ const Explain = () => {
                                                 <p className="text-sm text-gray-600 mb-1">{"Activation Derivative (σ′(Z))"}</p>
                                                 <p className="text-xs text-gray-500 mb-1">Derivative of the activation function at this layer</p>
                                                 <div className="border border-gray-400 rounded px-2 py-1 bg-white shadow-sm">
-                                                    <span className="text-2xl">{`σ′(Z) `} </span>
-                                                    <span className="text-xl text-gray-700 italic" >{`(${network.layers[outputLayerIndex - index ].activation})`} </span>
+                                                    <span className="text-l">{`σ′(Z) `} </span>
+                                                    <span className="text-l text-gray-700 italic" >{`(${network.layers[outputLayerIndex - index ].activation})`} </span>
                                                 </div>
                                             </div>
                                             <span className="text-2xl mt-6">=</span>
@@ -437,7 +442,7 @@ const Explain = () => {
                             a: ({...props }) => (
                             <a
                                 {...props}
-                                className="text-blue-500 underline font-medium hover:text-blue-600"
+                                className="text-black-500 underline font-medium hover:text-blue-600"
                                 target="_blank"
                                 rel="noopener noreferrer"
                             />

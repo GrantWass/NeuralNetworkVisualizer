@@ -16,15 +16,6 @@ interface HoveredNode {
   nodeIndex: number
 }
 
-interface RenderNetworkProps {
-  network: NetworkState | null;
-  svgWidth: number;
-  svgHeight: number;
-  nodeRadius: number;
-  setHoveredConnection: (hovered: HoveredConnection | null) => void;
-  setHoveredNode: (hovered: HoveredNode | null) => void;
-}
-
 class NeuronLayer {
     size: number
     activation: string
@@ -70,4 +61,4 @@ class NeuronLayer {
 }
 
 export { NeuronLayer };
-export type { NetworkState, HoveredConnection, HoveredNode, RenderNetworkProps };
+export type { NetworkState, HoveredConnection, HoveredNode };

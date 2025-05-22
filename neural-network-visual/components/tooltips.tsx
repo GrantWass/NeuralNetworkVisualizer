@@ -124,7 +124,7 @@ const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: 
                 </ul>
               </>
             )}
-          <p className="font-semibold">Actual Result: <span className="font-mono text-white">{formatActual()}</span></p>
+          <p className="font-semibold">{dataset === "california_housing" ? "Actual Value: " : "Actual Result: "}<span className="font-mono text-white">{formatActual()}</span></p>
           </div>
         </div>
       </>

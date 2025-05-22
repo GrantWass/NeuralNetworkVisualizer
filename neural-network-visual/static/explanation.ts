@@ -1,7 +1,7 @@
 import useStore from "@/hooks/store";
 
 export const getExplanationText = () => {
-  const { network, epoch, learningRate, dataset, loss, metric, name } = useStore();
+  const { network, epoch, learningRate, dataset, loss, metric, name, sessionId } = useStore();
 
   let datasetExplanation = "";
   let lossExplanation = "";
@@ -42,7 +42,7 @@ Interpretation: The model finds patterns in features like **income**, **location
 **MAE** is the average of absolute differences between predicted and true values. **Lower MAE** means better predictions.`;
   }
 
-  if (!network) {
+  if (!network || !sessionId) {
     return `The neural network has not been initialized yet.  
 Configure the network and click "Initialize Model" to begin.
 
@@ -112,6 +112,6 @@ export const DATASET_INFO: { [key: string]: string } = {
 - ** Output:** A digit label (0–9)`,
 
   iris: `The [**Iris dataset**](https://en.wikipedia.org/wiki/Iris_flower_data_set) is a classic dataset with **flower measurements**.  
-- **Inputs:** Sepal length**, Sepal width, Petal length, Petal width  
+- **Inputs:** Sepal length, Sepal width, Petal length, Petal width  
 - **Output:** Class label (0 = Setosa, 1 = Versicolor, 2 = Virginica)`
 };
