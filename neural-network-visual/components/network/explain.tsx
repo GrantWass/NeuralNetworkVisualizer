@@ -18,6 +18,7 @@ import { InputInfo, OutputInfo } from "@/components/tooltips";
 import { reshapeTo2D, transpose, multiplyMatrices } from "@/lib/utils"
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
+import { useMemo } from "react";
 
 // Register ChartJS components
 ChartJS.register(
@@ -70,38 +71,44 @@ const Explain = () => {
         ]
     };
 
-    const chartOptions = {
+    const chartOptions = useMemo(() => {
+    if (typeof window === "undefined") {
+        return {}; 
+    }
+
+    return {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: {
-                position: 'top' as const,
-                labels: {
-                    font: {
-                        size: window.innerWidth < 640 ? 10 : 12
-                    }
-                }
+        legend: {
+            position: "top" as const,
+            labels: {
+            font: {
+                size: window.innerWidth < 640 ? 10 : 12,
+            },
             },
         },
+        },
         scales: {
-            x: {
-                display: window.innerWidth > 480,
-                ticks: {
-                    font: {
-                        size: window.innerWidth < 640 ? 9 : 11
-                    }
-                }
+        x: {
+            display: window.innerWidth > 480,
+            ticks: {
+            font: {
+                size: window.innerWidth < 640 ? 9 : 11,
             },
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    font: {
-                        size: window.innerWidth < 640 ? 9 : 11
-                    }
-                }
-            }
-        }
+            },
+        },
+        y: {
+            beginAtZero: true,
+            ticks: {
+            font: {
+                size: window.innerWidth < 640 ? 9 : 11,
+            },
+            },
+        },
+        },
     };
+    }, []);
 
     const renderMatrix = (matrix: number[][] | undefined | null, label: string, subLabel?: string, extendDecimal?: boolean) => (
         matrix && matrix.length > 0 ? (
