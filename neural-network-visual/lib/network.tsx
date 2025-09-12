@@ -306,7 +306,7 @@ export const renderNodes = ({SVGWIDTH, SVGHEIGHT, network, setHoveredNode, sampl
   });
 };
 
-export const renderLayerLabels = ({SVGWIDTH, SVGHEIGHT, network, dataset }: RenderNetworkProps) => {
+export const renderLayerLabels = ({SVGWIDTH, SVGHEIGHT, network }: RenderNetworkProps) => {
   if (!network) return null;
 
   let fontSize = 14
