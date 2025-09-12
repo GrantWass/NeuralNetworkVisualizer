@@ -72,14 +72,33 @@ const Explain = () => {
 
     const chartOptions = {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
             legend: {
                 position: 'top' as const,
+                labels: {
+                    font: {
+                        size: window.innerWidth < 640 ? 10 : 12
+                    }
+                }
             },
         },
         scales: {
+            x: {
+                display: window.innerWidth > 480,
+                ticks: {
+                    font: {
+                        size: window.innerWidth < 640 ? 9 : 11
+                    }
+                }
+            },
             y: {
-                beginAtZero: true
+                beginAtZero: true,
+                ticks: {
+                    font: {
+                        size: window.innerWidth < 640 ? 9 : 11
+                    }
+                }
             }
         }
     };
@@ -87,12 +106,12 @@ const Explain = () => {
     const renderMatrix = (matrix: number[][] | undefined | null, label: string, subLabel?: string, extendDecimal?: boolean) => (
         matrix && matrix.length > 0 ? (
             <div className="inline-block p-1 mx-1">
-                <p className="text-sm text-gray-600 text-center mb-1">{label}</p>
+                <p className="text-xs sm:text-sm text-gray-600 text-center mb-1">{label}</p>
                 {subLabel && <p className="text-xs text-gray-500 text-center mb-1">{subLabel}</p>}
-                <div className="grid border border-gray-400 rounded bg-white shadow-sm" style={{ gridTemplateColumns: `repeat(${matrix[0].length}, auto)` }}>
+                <div className="grid border border-gray-400 rounded bg-white shadow-sm overflow-x-auto" style={{ gridTemplateColumns: `repeat(${matrix[0].length}, auto)` }}>
                     {matrix.map((row, rowIndex) => (
                         row.map((val, colIndex) => (
-                            <span key={`${rowIndex}-${colIndex}`} className={`px-1.5 py-0.5 text-${fontSize}`}>
+                            <span key={`${rowIndex}-${colIndex}`} className={`px-1 sm:px-1.5 py-0.5 text-xs sm:text-${fontSize}`}>
                                 {val.toFixed(extendDecimal ? 3 : 2)}
                             </span>
                         ))
@@ -106,13 +125,13 @@ const Explain = () => {
         vector && vector.length > 0 ? (
             <div className="inline-block px-1 mx-1">
                 <div className="flex flex-row items-center justify-center gap-1 relative group">
-                <p className="text-sm text-gray-600 text-center mb-1">{label}</p>
+                <p className="text-xs sm:text-sm text-gray-600 text-center mb-1">{label}</p>
                 {tooltip as React.ReactNode}
                 </div>
                 {subLabel && <p className="text-xs text-gray-500 text-center mb-1">{subLabel}</p>}
-                <div className="flex flex-row justify-center border border-gray-400 px-1 py-0.5 rounded bg-white shadow-sm">
+                <div className="flex flex-row justify-center border border-gray-400 px-1 py-0.5 rounded bg-white shadow-sm overflow-x-auto">
                     {vector.map((val, index) => (
-                        <span key={index} className={`px-1 py-0.5 text-${fontSize}`}>{val.toFixed(extendDecimal ? 3 : 2)}</span>
+                        <span key={index} className={`px-1 py-0.5 text-xs sm:text-${fontSize}`}>{val.toFixed(extendDecimal ? 3 : 2)}</span>
                     ))}
                 </div>
             </div>
@@ -125,14 +144,14 @@ const Explain = () => {
     const hasMoreContent = fullExplanation.split('\n').length > 5;
 
     return (
-        <div className="mt-8 p-6 bg-gray-100 rounded-lg mx-8 shadow-md">
+        <div className="mt-2 p-4 bg-gray-100 rounded-lg mx-2 shadow-md">
             {dataset != "mnist" && network?.layers && network?.layers[0].A?.length > 0 && (
-            <div className="flex justify-center mb-6">
-                <div className="inline-flex rounded-md shadow-sm" role="group">
+            <div className="flex justify-center mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row rounded-md shadow-sm" role="group">
                     <button
                         type="button"
                         onClick={() => setView('forward')}
-                        className={`px-4 py-2 text-base font-medium rounded-l-lg ${
+                        className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-t-lg sm:rounded-l-lg sm:rounded-t-none ${
                             view === 'forward' 
                                 ? 'bg-black text-white' 
                                 : 'bg-white text-black hover:bg-gray-100 border border-gray-300'
@@ -143,7 +162,7 @@ const Explain = () => {
                     <button
                         type="button"
                         onClick={() => setView('backward')}
-                        className={`px-4 py-2 text-base font-medium ${
+                        className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium ${
                             view === 'backward' 
                                 ? 'bg-black text-white' 
                                 : 'bg-white text-black hover:bg-gray-100 border border-gray-300'
@@ -154,7 +173,7 @@ const Explain = () => {
                     <button
                         type="button"
                         onClick={() => setView('calculation')}
-                        className={`px-4 py-2 text-base font-medium rounded-r-lg ${
+                        className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-b-lg sm:rounded-r-lg sm:rounded-b-none ${
                             view === 'calculation' 
                                 ? 'bg-black text-white' 
                                 : 'bg-white text-black hover:bg-gray-100 border border-gray-300'
@@ -169,9 +188,9 @@ const Explain = () => {
                 <div className="text-center">
                     {view === 'forward' ? (
                         <>
-                            <p className="mt-4 mb-2 text-lg font-bold">Layer-by-layer computation</p>
-                            <p className="text-sm text-gray-600 mb-2">Forward propagation from input to prediction</p>
-                            <div className="flex flex-col justify-center items-center flex-wrap gap-4">
+                            <p className="mt-4 mb-2 text-base sm:text-lg font-bold">Layer-by-layer computation</p>
+                            <p className="text-xs sm:text-sm text-gray-600 mb-2">Forward propagation from input to prediction</p>
+                            <div className="flex flex-col justify-center items-center flex-wrap gap-2 sm:gap-4">
                                 {network?.layers.map((layer: NeuronLayer, layerIndex: number) => (
                                     <div key={layerIndex} className="flex flex-col items-center border-t border-gray-300 pt-4">
                                         {/* Layer Header */}
@@ -181,7 +200,7 @@ const Explain = () => {
                                             </h4>
                                         )}
                                         
-                                        <div className="flex flex-row justify-center items-center flex-wrap">
+                                        <div className="flex flex-row justify-center items-center flex-wrap gap-1 sm:gap-2">
                                             {layerIndex < network.layers.length - 1 ? (
                                                 <>  
                                                     <div className="flex flex-col items-center">
@@ -196,28 +215,28 @@ const Explain = () => {
                                                     )}
                                                     </div>
 
-                                                    <span className="text-lg mt-5 mx-2">×</span>
+                                                    <span className="text-sm sm:text-lg mt-2 sm:mt-5 mx-1">×</span>
 
                                                     {/* Weights */}
                                                     <div className="flex flex-col items-center">
                                                         {renderMatrix(
-                                                            layer.weights, 
+                                                            layer.prevWeights, 
                                                             `Weights`,
                                                             "Connection strengths between neurons"
                                                         )}
                                                     </div>
 
-                                                    <span className="text-lg mt-5 mx-2">+</span>
+                                                    <span className="text-sm sm:text-lg mt-2 sm:mt-5 mx-1">+</span>
 
                                                     {/* Biases */}
                                                     <div className="flex flex-col items-center">
                                                         {renderVector(
-                                                            layer.biases, 
+                                                            layer.prevBias, 
                                                             `Biases`
                                                             )}
                                                     </div>
 
-                                                    <span className="text-lg mt-5 mx-2">=</span>
+                                                    <span className="text-sm sm:text-lg mt-2 sm:mt-5 mx-1">=</span>
 
                                                     {/* Output */}
                                                     <div className="flex flex-col items-center">
@@ -252,15 +271,15 @@ const Explain = () => {
                         </>
                     ) : view === 'backward' ?
                         (<>
-                            <p className="mt-6 mb-2 text-lg font-bold">Updating weight and bias values</p>
-                            <p className="text-sm text-gray-600 mb-2">Adjusting parameters to minimize loss</p>
-                            <p className="text-sm text-gray-600 mb-2">
-                                <strong className="text-xl text-gray-600">η</strong>
+                            <p className="mt-4 sm:mt-6 mb-2 text-base sm:text-lg font-bold">Updating weight and bias values</p>
+                            <p className="text-xs sm:text-sm text-gray-600 mb-2">Adjusting parameters to minimize loss</p>
+                            <p className="text-xs sm:text-sm text-gray-600 mb-2">
+                                <strong className="text-lg sm:text-xl text-gray-600">η</strong>
                                 {` represents learning rate (`}
-                                <strong className="text-l text-gray-600">{learningRate}</strong>
+                                <strong className="text-sm sm:text-l text-gray-600">{learningRate}</strong>
                                 {`)`}
                             </p>
-                            <div className="flex flex-col justify-center items-center flex-wrap gap-4">
+                            <div className="flex flex-col justify-center items-center flex-wrap gap-2 sm:gap-4">
                             {network?.layers.slice().reverse().map((layer: NeuronLayer, reversedIndex: number) => {
 
                                 const layerIndex = network.layers.length - reversedIndex;
@@ -276,22 +295,22 @@ const Explain = () => {
                                     : <h2 className="text-md font-semibold text-gray-700">Layer {layerIndex}</h2>}
 
                                     {/* Weights Equation */}
-                                    <div className="flex flex-row items-center gap-2 flex-wrap justify-center">
+                                    <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
                                     {renderMatrix(layer.prevWeights, `Previous Weights`, "", true)}
-                                    <span className="text-xxl mt-8">-</span>
-                                    <span className="text-sm mt-8 text-gray-600"><strong className="text-xl text-gray-600">η</strong> ×</span>
+                                    <span className="text-lg sm:text-xxl mt-2 sm:mt-8">-</span>
+                                    <span className="text-xs sm:text-sm mt-2 sm:mt-8 text-gray-600"><strong className="text-lg sm:text-xl text-gray-600">η</strong> ×</span>
                                     {renderMatrix(layer.dW, `Change in Weights`, "dW (∇Weights)", true)}
-                                    <span className="text-xl mt-8">=</span>
+                                    <span className="text-lg sm:text-xl mt-2 sm:mt-8">=</span>
                                     {renderMatrix(layer.weights, `Current Weights`, "", true)}
                                     </div>
 
                                     {/* Biases Equation */}
-                                    <div className="flex flex-row items-center gap-2 flex-wrap justify-center">
+                                    <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
                                     {renderVector(layer.prevBias, `Previous Biases`, "", true)}
-                                    <span className="text-xxl mt-8">-</span>
-                                    <span className="text-sm mt-8 text-gray-600"><strong className="text-xl text-gray-600">η</strong> ×</span>
+                                    <span className="text-lg sm:text-xxl mt-2 sm:mt-8">-</span>
+                                    <span className="text-xs sm:text-sm mt-2 sm:mt-8 text-gray-600"><strong className="text-lg sm:text-xl text-gray-600">η</strong> ×</span>
                                     {renderVector(layer.db, `Change in Biases`, "dB (∇Biases)", true)}
-                                    <span className="text-xl mt-8">=</span>
+                                    <span className="text-lg sm:text-xl mt-2 sm:mt-8">=</span>
                                     {renderVector(layer.biases, `Current Biases`, "", true)}
                                      </div>
                                 </div>
@@ -301,9 +320,9 @@ const Explain = () => {
                         </>
                     ) :
                     <div className="flex flex-col justify-center items-center flex-wrap">
-                    <p className="mt-6 mb-2 text-lg font-bold">Propogating error backwards through model</p>
-                    <p className="text-sm text-gray-600 mb-2">Calculating how each neuron contributed to the error</p>
-                    <div className="flex flex-col justify-center items-center flex-wrap gap-4">
+                    <p className="mt-4 sm:mt-6 mb-2 text-base sm:text-lg font-bold">Propogating error backwards through model</p>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-2">Calculating how each neuron contributed to the error</p>
+                    <div className="flex flex-col justify-center items-center flex-wrap gap-2 sm:gap-4">
                     {network?.layers.slice().reverse().map((layer: NeuronLayer, index: number) => {
 
                         const initialContent = index == 0
@@ -329,11 +348,11 @@ const Explain = () => {
                                 <div className="flex flex-col items-center gap-3">
                                 <p className="text-sm text-gray-600">Calculate initial error (dZ) at the output:</p>
                                 <p className="text-xs text-gray-600 italic">*Note that is is done with all samples at once, opposed to one sample as seen here*</p>
-                                <div className="flex flex-row items-center gap-2 flex-wrap justify-center">
+                                                                    <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
                                     {renderVector(network.layers[outputLayerIndex].A[sampleIndex], `Prediction`, "", true)}
-                                    <span className="text-2xl mt-6">-</span>
+                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">-</span>
                                     {renderVector(actual, `Actual`, "", false)}
-                                    <span className="text-2xl mt-6">=</span>
+                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
                                     {renderVector(network.layers[outputLayerIndex].dZ[sampleIndex], `Error`, "", true)}
                                 </div>
                                 </div>
@@ -352,44 +371,44 @@ const Explain = () => {
                                     : 
                                     <p className="text-sm text-gray-600 italic"> No backward calculation needed here — this is the input layer</p>}                                
                                     <div className="flex flex-col items-center gap-2 flex-wrap justify-center">
-                                        <div className="flex flex-row items-center gap-2 flex-wrap justify-center">
+                                        <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
                                         {renderVector(layer.dZ[sampleIndex], `dZ`, "Calculated above", true)}
                                         {(outputLayerIndex - index + 1) !== 0 ? <>
-                                            <span className="text-2xl mt-6">×</span>
-                                            {renderMatrix(transpose(network.layers[outputLayerIndex - index + 1]?.weights), `Wᵀ`, "Transposed weights from backwards layer", true)}
-                                            <span className="text-2xl mt-6">=</span>
+                                            <span className="text-lg sm:text-2xl mt-2 sm:mt-6">×</span>
+                                            {renderMatrix(transpose(network.layers[outputLayerIndex - index + 1]?.prevWeights), `Wᵀ`, "Transposed weights from backwards layer", true)}
+                                            <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
                                             {renderMatrix(dA, `dA`, "∇ Activations", true)}
                                         </> : null}
                                         </div>
-                                        {(outputLayerIndex - index + 1) !== 0 ? <div className="flex flex-row items-center gap-2 flex-wrap justify-center">
+                                        {(outputLayerIndex - index + 1) !== 0 ? <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
                                             {renderMatrix(dA, `dA`, "∇ Activations", true)}
-                                            <span className="text-2xl mt-6">×</span>
+                                            <span className="text-lg sm:text-2xl mt-2 sm:mt-6">×</span>
                                             <div className="inline-block px-1 mx-1 text-center">
-                                                <p className="text-sm text-gray-600 mb-1">{"Activation Derivative (σ′(Z))"}</p>
+                                                <p className="text-xs sm:text-sm text-gray-600 mb-1">{"Activation Derivative (σ′(Z))"}</p>
                                                 <p className="text-xs text-gray-500 mb-1">Derivative of the activation function at this layer</p>
                                                 <div className="border border-gray-400 rounded px-2 py-1 bg-white shadow-sm">
-                                                    <span className="text-l">{`σ′(Z) `} </span>
-                                                    <span className="text-l text-gray-700 italic" >{`(${network.layers[outputLayerIndex - index ].activation})`} </span>
+                                                    <span className="text-sm sm:text-l">{`σ′(Z) `} </span>
+                                                    <span className="text-sm sm:text-l text-gray-700 italic" >{`(${network.layers[outputLayerIndex - index ].activation})`} </span>
                                                 </div>
                                             </div>
-                                            <span className="text-2xl mt-6">=</span>
+                                            <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
                                             {renderVector(network.layers[outputLayerIndex - index]?.dZ[sampleIndex], `dZ`, "Error to pass to backwards layer", true)}
                                         </div> : null}
                                     </div>
                                 </div>
                                 <h2 className="text-md font-semibold mt-6 text-gray-700">Calculating change in weight and biases</h2>
 
-                                <div className="flex flex-row items-center justify-center gap-12 flex-wrap">
+                                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-12 flex-wrap">
 
                                 {/* dW Calculation */}
                                 <div className="flex flex-col items-center gap-2">
                                     <p className="text-sm text-gray-600">Gradient of weights (dW) is based on current layer&apos;s dZ and previous activations:</p>
                                     <p className="text-xs text-gray-600 italic">*Note that is is done with all samples at once, opposed to one sample as seen here*</p>
-                                    <div className="flex flex-row items-center gap-2 flex-wrap justify-center">
+                                    <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
                                     {renderMatrix(reshapeTo2D(outputLayerIndex - index === -1 ? network.input[sampleIndex] :network.layers[outputLayerIndex - index].A[sampleIndex]), `Previous Activations`, "Aᵀ from layer below", false)}
-                                    <span className="text-2xl mt-6">×</span>
+                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">×</span>
                                     {renderVector(layer.dZ[sampleIndex], `dZ`, "", false)}
-                                    <span className="text-2xl mt-6">=</span>
+                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
                                     {renderMatrix(layer.dW, `dW`, "∇ Weights", false)}
                                     </div>
                                 </div>
@@ -397,15 +416,15 @@ const Explain = () => {
                                 {/* db Calculation */}
                                 <div className="flex flex-col items-center gap-2">
                                     <p className="text-sm text-gray-600">Gradient of biases (dB) is the sum of dZ across samples:</p>
-                                    <div className="flex flex-row items-center gap-2 flex-wrap justify-center">
-                                    <span className="text-2xl mt-6">Σ</span>
+                                    <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
+                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">Σ</span>
                                     <div className="flex flex-col gap-1">
                                         {renderVector(layer.dZ[sampleIndex], `dZ`, "Different sample's dZ shown", false)}
                                         {renderVector(layer.dZ[sampleIndex + 1], ``, "", false)}
                                         ⋮
                                         {renderVector(layer.dZ[sampleIndex + 2], ``, "", false)}
                                     </div>
-                                    <span className="text-2xl mt-6">=</span>
+                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
                                     {renderVector(layer.db, `dB`, "∇ Biases", true)}
                                     </div>
                                 </div>
@@ -421,21 +440,25 @@ const Explain = () => {
             )}
 
             {/* Loss and Accuracy Charts */}
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-                    <h3 className="text-lg font-medium mb-2">Training Loss</h3>
-                    <Line data={lossData} options={chartOptions} />
+            <div className="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
+                <div className="bg-white p-3 sm:p-4 rounded-lg shadow-md border border-gray-200">
+                    <h3 className="text-sm sm:text-base lg:text-lg font-medium mb-2">Training Loss</h3>
+                    <div className="h-40 sm:h-48 lg:h-64">
+                        <Line data={lossData} options={chartOptions} />
+                    </div>
                 </div>
-                <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-                    <h3 className="text-lg font-medium mb-2">{name === "accuracy" ? 'Accuracy' : 'Mean Absolute Error'}</h3>
-                    <Line data={accuracyData} options={chartOptions} />
+                <div className="bg-white p-3 sm:p-4 rounded-lg shadow-md border border-gray-200">
+                    <h3 className="text-sm sm:text-base lg:text-lg font-medium mb-2">{name === "accuracy" ? 'Accuracy' : 'Mean Absolute Error'}</h3>
+                    <div className="h-40 sm:h-48 lg:h-64">
+                        <Line data={accuracyData} options={chartOptions} />
+                    </div>
                 </div>
             </div>
 
             {/* Expandable Explanation */}
-            <div className="mt-6">
-                <div className={`whitespace-pre-line text-gray-700 bg-white p-4 rounded shadow-sm border border-gray-300 ${!expanded ? 'max-h-34 overflow-hidden' : ''}`}>
-                    <h3 className="text-xl font-semibold mb-4">Explanation</h3>
+            <div className="mt-4 sm:mt-6">
+                <div className={`whitespace-pre-line text-gray-700 bg-white p-2 sm:p-4 rounded shadow-sm border border-gray-300 ${!expanded ? 'max-h-34 overflow-hidden' : ''}`}>
+                    <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-4">Explanation</h3>
                     <ReactMarkdown
                         rehypePlugins={[rehypeRaw]}
                         components={{

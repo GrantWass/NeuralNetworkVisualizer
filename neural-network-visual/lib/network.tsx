@@ -1,6 +1,7 @@
 import React from "react";
 import { NetworkState, HoveredConnection, HoveredNode } from "@/static/types";
 import { DATASET_INPUT_FEATURES, DATASET_INPUT_FEATURES_SHORT } from "@/static/constants";
+import { formatValue, formatActual, outputMap } from "@/lib/utils";
 
 interface RenderNetworkProps {
   SVGWIDTH: number
@@ -77,76 +78,84 @@ export const renderConnections = ({SVGWIDTH, SVGHEIGHT, network, setHoveredConne
   );
 };
 
+// Helper function to calculate responsive font size
+const getFontSize = (svgWidth: number) => {
+  if (svgWidth < 450) return 8;
+  if (svgWidth < 600) return 11;
+  return 14;
+};
+
+// Helper function to get features based on screen size
+const getFeatures = (dataset: string | undefined, svgWidth: number) => {
+  const features = svgWidth < 800 
+    ? DATASET_INPUT_FEATURES_SHORT[dataset ?? ""] || []
+    : DATASET_INPUT_FEATURES[dataset ?? ""] || [];
+  return features;
+};
+
+// Helper function to get node colors based on layer type and activation
+const getNodeColors = (isInputLayer: boolean, isOutputLayer: boolean, clampedValue: number) => {
+  const fillColor = isInputLayer
+    ? `hsl(210, 100%, ${85 - clampedValue * 50}%)`  // light blue to dark blue
+    : isOutputLayer
+    ? `hsl(0, 70%, ${80 - clampedValue * 40}%)`     // light red to dark red
+    : `hsl(215, 30%, ${85 - clampedValue * 50}%)`;  // gray to dark slate
+
+  const strokeColor = isOutputLayer ? "#7f1d1d" : "#475569";
+  
+  return { fillColor, strokeColor };
+};
+
+// Helper function to render input layer labels
+const renderInputLabels = (cx: number, cy: number, features: string[], nodeIndex: number, fontSize: number, INPUTLABELOFFSET: number) => (
+  <text 
+    x={cx - INPUTLABELOFFSET}
+    y={cy}
+    className=""
+    textAnchor="middle"
+    fontSize={fontSize}
+    fontWeight="bold"
+  >
+    {features[nodeIndex]}
+  </text>
+);
+
+// Helper function to render input values
+const renderInputValues = (cx: number, cy: number, original: number[], nodeIndex: number, activationValue: number, fontSize: number, INPUTLABELOFFSET: number, SVGWIDTH: number, SVGHEIGHT: number) => (
+  <>
+    <text
+      x={cx - INPUTLABELOFFSET - (10 + SVGWIDTH * .012)}
+      y={cy + (SVGHEIGHT * 0.04)}
+      className=""
+      textAnchor="middle"
+      fontSize={fontSize}
+    >
+      {original[nodeIndex].toFixed(2)}
+    </text>
+    <text
+      x={cx - INPUTLABELOFFSET + (SVGWIDTH * .01) + (Math.abs(original[nodeIndex]) > 100 ? (SVGWIDTH * .02) : (SVGWIDTH * .01))}
+      y={cy + (SVGHEIGHT * 0.04)}
+      className=""
+      textAnchor="middle"
+      fontSize={fontSize}
+    >
+      {`(${activationValue.toFixed(2)})`}
+    </text>
+  </>
+);
+
 export const renderNodes = ({SVGWIDTH, SVGHEIGHT, network, setHoveredNode, sampleIndex, dataset, original}: RenderNetworkProps) => {
   if (!network) return null;
-  let svgHeight = SVGHEIGHT
-  if (network.layers.some((layer) => layer.size > maxNodes)) {
-    svgHeight = svgHeight - 30;
-  }
+  
+  const svgHeight = network.layers.some((layer) => layer.size > maxNodes) 
+    ? SVGHEIGHT - 30 
+    : SVGHEIGHT;
 
   const nodeRadius = 10 + SVGWIDTH/100;
-  const INPUTLABELOFFSET = SVGWIDTH/10 + 10
-  let fontSize = 14
-  if (SVGWIDTH < 600){
-    fontSize = 11
-  }
-  if (SVGWIDTH < 450){
-    fontSize = 8
-  }
-  if (dataset == "california_housing") fontSize = fontSize - 1 
+  const INPUTLABELOFFSET = SVGWIDTH/10 + 10;
+  const fontSize = getFontSize(SVGWIDTH);
+  const features = getFeatures(dataset, SVGWIDTH);
 
-  let features = DATASET_INPUT_FEATURES[dataset ?? ""] || [];
-  if (SVGWIDTH < 800){
-    features = DATASET_INPUT_FEATURES_SHORT[dataset ?? ""] || [];
-  }
-
-  //This is hardcoded for now for california datasets
-  //This accounts for the fact not all nodes are shown
-  if (dataset === "california_housing" && original != null) {
-    features = features.slice(0,3).concat(features.slice(5))
-    original = original.slice(0, 10)
-    original = original.slice(0,3).concat(original.slice(5))
-  } 
-
-  //could move this in a separate file (same logic as in tooltip)
-  const formatValue = (value: number, dataset: string) => {
-    if (dataset === "iris") {
-      return `${(value * 100).toFixed(1)}%`;
-    }
-    if (dataset === "california_housing") {
-      const dollars = value * 100000; // adjust scale
-      return dollars.toLocaleString("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 0,
-      });
-    }
-    return value.toFixed(2);
-  };
-
-  const outputMap: { [key: string]: string[] } = {
-    california_housing: ["Median House Value"],
-    iris: ["Setosa", "Versicolor", "Virginica"],
-  };
-
-  if (SVGWIDTH < 800){
-    outputMap['california_housing'] = ["House Value"]
-  }
-  
-  const formatActual = () => {
-    if (!original || original.length < 3){
-      return;
-    }
-    if (dataset === "iris") {
-      const actualResults = original.slice(-3)
-      const index = actualResults.findIndex((v) => v === 1);
-      return outputMap[dataset]?.[index] ?? "Unknown";
-    } else if (dataset === "california_housing") {
-      const actualResults = original.slice(-1)
-      return formatValue(actualResults[0], dataset);
-    }
-    return "N/A";
-  };
 
   return network.layers.flatMap((layer, layerIndex) => {
     const totalNodes = layer.size;
@@ -172,16 +181,8 @@ export const renderNodes = ({SVGWIDTH, SVGHEIGHT, network, setHoveredNode, sampl
       }
 
       const clampedValue = Math.min(1, Math.abs(activationValue));
-
-      const dynamicRadius = nodeRadius + clampedValue * 3; // Slightly larger for high activation
-      const fillColor = isInputLayer
-      ? `hsl(210, 100%, ${85 - clampedValue * 50}%)`  // light blue to dark blue
-      : isOutputLayer
-      ? `hsl(0, 70%, ${80 - clampedValue * 40}%)`     // light red to dark red
-      : `hsl(215, 30%, ${85 - clampedValue * 50}%)`;  // gray to dark slate
-    
-
-      const strokeColor = isOutputLayer ? "#7f1d1d" : "#475569";
+      const dynamicRadius = nodeRadius + clampedValue * 3;
+      const { fillColor, strokeColor } = getNodeColors(isInputLayer, isOutputLayer, clampedValue);
       const nodeKey = `node-${layerIndex}-${nodeIndex}`;
 
       return (
@@ -202,51 +203,9 @@ export const renderNodes = ({SVGWIDTH, SVGHEIGHT, network, setHoveredNode, sampl
             onClick={() => setHoveredNode({ layerIndex, nodeIndex })}
             cursor="pointer"
           />
-          {isInputLayer &&
-            <text 
-              x={cx - INPUTLABELOFFSET}
-              y={cy}
-              className=""
-              textAnchor="middle"
-              fontSize={fontSize}
-              fontWeight="bold"
-            >
-              {features[nodeIndex]}
-            </text>
-          }
-          {isInputLayer && original && activationValue && original.length > 0 &&
-          <>
-            <text
-              x={cx - INPUTLABELOFFSET - (10 + SVGWIDTH * .012)}
-              y={cy + (SVGHEIGHT * 0.04)}
-              className=""
-              textAnchor="middle"
-              fontSize={fontSize}
-            >
-              {original[nodeIndex].toFixed(2)}
-            </text>
-            <text
-              x={cx - INPUTLABELOFFSET + (8 + SVGWIDTH * .014) + (Math.abs(original[nodeIndex]) > 100 ? (SVGWIDTH * .02) : (SVGWIDTH * .01))}
-              y={cy + (SVGHEIGHT * 0.04)}
-              className=""
-              textAnchor="middle"
-              fontSize={fontSize}
-            >
-              {`(${activationValue.toFixed(2)})`}
-            </text>
-          </>
-          }
-          {isInputLayer &&
-            <text 
-              x={cx - INPUTLABELOFFSET}
-              y={cy}
-              className=""
-              textAnchor="middle"
-              fontSize={fontSize}
-              fontWeight="bold"
-            > 
-              {features[nodeIndex]}
-            </text>
+          {isInputLayer && renderInputLabels(cx, cy, features, nodeIndex, fontSize, INPUTLABELOFFSET)}
+          {isInputLayer && original && activationValue && original.length > 0 && 
+            renderInputValues(cx, cy, original, nodeIndex, activationValue, fontSize, INPUTLABELOFFSET, SVGWIDTH, SVGHEIGHT)
           }
           {isOutputLayer && dataset && activationValue &&
           <>
@@ -260,7 +219,7 @@ export const renderNodes = ({SVGWIDTH, SVGHEIGHT, network, setHoveredNode, sampl
             >
               {outputMap[dataset][nodeIndex]}
             </text>
-            {dataset === "california_housing" &&
+            {dataset === "auto_mpg" &&
             <>
               <text
                 x={cx + (SVGWIDTH * .11)}
@@ -287,7 +246,7 @@ export const renderNodes = ({SVGWIDTH, SVGHEIGHT, network, setHoveredNode, sampl
                 textAnchor="middle"
                 fontSize={fontSize}
               >
-                {formatActual()}
+                {formatActual(original || [], dataset)}
               </text>
             </>
             }
@@ -299,7 +258,7 @@ export const renderNodes = ({SVGWIDTH, SVGHEIGHT, network, setHoveredNode, sampl
                 textAnchor="middle"
                 fontSize={fontSize}
               >
-                {formatActual() === outputMap[dataset][nodeIndex] ? "Actual Answer" : false}
+                {formatActual(original || [], dataset) === outputMap[dataset][nodeIndex] ? "Actual Answer" : false}
               </text>
             }
             <text
@@ -357,7 +316,6 @@ export const renderLayerLabels = ({SVGWIDTH, SVGHEIGHT, network, dataset }: Rend
   if (SVGWIDTH < 450){
     fontSize = 9
   }
-  if (dataset == "california_housing") fontSize = fontSize - 1 
 
   return network.layers.flatMap((layer, index) => {
     const labelKey = `label-${index}`;

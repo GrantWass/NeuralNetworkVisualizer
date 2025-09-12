@@ -29,17 +29,17 @@ Measures the difference between predicted and actual species labels. **Lower val
 
     accuracyExplanation = `Accuracy:  
 Indicates how often the model correctly classifies **flower species** based on input features.`;
-  } else if (dataset === "california_housing") {
-    datasetExplanation = `Dataset: [**California Housing Dataset**](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.fetch_california_housing.html)  
-Task: **Regression** (Predicting house prices)  
-Output: A single **numeric value** representing predicted price  
-Interpretation: The model finds patterns in features like **income**, **location**, and **house age** to predict home prices.`;
+  } else if (dataset === "auto_mpg") {
+    datasetExplanation = `Dataset: [**Auto MPG Dataset**](https://archive.ics.uci.edu/ml/datasets/auto+mpg)  
+Task: **Regression** (Predicting fuel efficiency)  
+Output: A single **numeric value** representing predicted MPG  
+Interpretation: The model finds patterns in features like **displacement**, **horsepower**, **weight**, and **acceleration** to predict fuel efficiency.`;
 
     lossExplanation = `Loss Function: [**Mean Squared Error (MSE)**](https://en.wikipedia.org/wiki/Mean_squared_error)  
-**MSE** calculates the average squared difference between predicted and actual prices. The model tries to **minimize** this.`;
+**MSE** calculates the average squared difference between predicted and actual MPG values. The model tries to **minimize** this.`;
 
     accuracyExplanation = `Metric: **Mean Absolute Error (MAE)**  
-**MAE** is the average of absolute differences between predicted and true values. **Lower MAE** means better predictions.`;
+**MAE** is the average of absolute differences between predicted and true MPG values. **Lower MAE** means better predictions.`;
   }
 
   if (!network || !sessionId) {
@@ -65,7 +65,7 @@ ${accuracyExplanation}`;
   }
 
   return `Training Cycle **${epoch}** Completed  
-
+  
 1. [**Forward Propagation**](https://en.wikipedia.org/wiki/Feedforward_neural_network): Inputs pass through the network, each neuron computes a **weighted sum** and applies an **activation function**.  
 2. [**Loss Calculation**](https://en.wikipedia.org/wiki/Loss_function): Measures how far predictions are from actual values.  
 3. [**Backward Propagation**](https://en.wikipedia.org/wiki/Backpropagation): The error is **back-propagated** to update weights.  
@@ -103,9 +103,9 @@ Too many layers can lead to **overfitting** (memorizing data).
 Regularization techniques like **dropout** and **batch normalization** help mitigate this.`;
 
 export const DATASET_INFO: { [key: string]: string } = {
-  california_housing: `The [**California Housing dataset**](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.fetch_california_housing.html) is based on **1990 census data**.  
-- **Inputs:** Median income, House age, Average rooms/bedrooms, Population, Latitude, Longitude  
-- **Output:** Median house value (numeric)`,
+  auto_mpg: `The [**Auto MPG dataset**](https://archive.ics.uci.edu/ml/datasets/auto+mpg) contains **automobile fuel efficiency data**.  
+- **Inputs:** Displacement, Horsepower, Weight, Acceleration  
+- **Output:** Miles per gallon (numeric)`,
 
   mnist: `The [**MNIST dataset**](https://en.wikipedia.org/wiki/MNIST_database) is a collection of **handwritten digit images**.  
 - ** Inputs:** 28x28 grayscale images (784 pixels)  

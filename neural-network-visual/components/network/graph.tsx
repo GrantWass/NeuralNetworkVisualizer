@@ -1,12 +1,8 @@
 "use client"
 
 import useStore from "@/hooks/store";
-import { useState, useEffect } from "react"
 import { renderConnections, renderNodes, renderLayerLabels } from "@/lib/network";
 
-
-const HeightDefault = 500;
-const WidthDefault = 1000;
 
 const Graph = () => {
     const {
@@ -20,25 +16,17 @@ const Graph = () => {
         originalData,
     } = useStore();
 
-    const [SVGHEIGHT, setSvgHeight] = useState(HeightDefault)
-    const [SVGWIDTH, setSvgWidth] = useState(WidthDefault)
-
-
-    useEffect(() => {
-        if (window != undefined){
-            if (window.innerWidth < 1000){
-                setSvgWidth(window.innerWidth-100)
-                setSvgHeight(window.innerWidth/2)
-            }
-        }
-    }, [])
     
   return (
     <div className="grid place-items-center w-full mt-8 mb-6">
-        <svg width={SVGWIDTH} height={SVGHEIGHT} className="border border-gray-300 rounded">
-        {renderConnections({SVGWIDTH, SVGHEIGHT, network, setHoveredConnection, setHoveredNode })}
-        {renderNodes({SVGWIDTH, SVGHEIGHT, network, setHoveredConnection, setHoveredNode, sampleIndex, dataset, original: originalData[sampleIndex] })}
-        {renderLayerLabels({SVGWIDTH, SVGHEIGHT, network, setHoveredConnection, setHoveredNode, dataset: dataset })}
+        <svg 
+          className="w-[90%] max-w-[1000px] h-auto aspect-[2/1] border border-gray-300 rounded"
+          viewBox="0 0 1000 500"
+          preserveAspectRatio="xMidYMid meet"
+        >
+        {renderConnections({SVGWIDTH: 1000, SVGHEIGHT: 500, network, setHoveredConnection, setHoveredNode })}
+        {renderNodes({SVGWIDTH: 1000, SVGHEIGHT: 500, network, setHoveredConnection, setHoveredNode, sampleIndex, dataset, original: originalData[sampleIndex] })}
+        {renderLayerLabels({SVGWIDTH: 1000, SVGHEIGHT: 500, network, setHoveredConnection, setHoveredNode, dataset: dataset })}
         </svg>
         <div className="mt-4 h-50">
                 {hoveredConnection ? (

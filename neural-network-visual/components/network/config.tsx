@@ -51,13 +51,13 @@ const Config = () => {
   }
 
   return (
-    <div className="mb-4 space-y-4 max-w-4xl mx-auto">
-      <div className="flex flex-col justify-between justify-center p-4">
-      <div className="flex flex-row justify-between items-center p-4">
-        <div>
+    <div className="mb-4 space-y-4 max-w-4xl mx-auto px-2 sm:px-4">
+      <div className="flex flex-col justify-between justify-center p-2 sm:p-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-2 sm:p-4 gap-4">
+        <div className="w-full sm:w-auto">
           <Label className="text-lg font-semibold">Dataset</Label>
           <Select value={dataset} onValueChange={handleDatasetChange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Select dataset" />
             </SelectTrigger>
             <SelectContent>
@@ -69,11 +69,11 @@ const Config = () => {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-2 sm:gap-4 w-full sm:w-auto">
           {!configOpen ?
-          <Button onClick={onChangeModel}>Change Model</Button>
+          <Button onClick={onChangeModel} className="flex-1 sm:flex-none">Change Model</Button>
           :
-          <Button onClick={initModel}>INITIALIZE MODEL</Button>}
+          <Button onClick={initModel} className="flex-1 sm:flex-none">INITIALIZE MODEL</Button>}
         </div>
       </div>
       <div className="p-4 bg-gray-100 rounded-lg">
@@ -104,14 +104,14 @@ const Config = () => {
       </div>
       
       {configOpen ? (
-        <div className="flex flex-row justify-between items-start p-4 border-t gap-6">
-          <div className="flex flex-col justify-center gap-4">
-            <Button onClick={removeHiddenLayer} disabled={hiddenLayers.length <= 1}>Remove Hidden Layer</Button>
-            <Button onClick={addHiddenLayer}>Add Hidden Layer</Button>
+        <div className="flex flex-col lg:flex-row justify-between items-start p-2 sm:p-4 border-t gap-4 lg:gap-6">
+          <div className="flex flex-row sm:flex-col justify-center gap-2 sm:gap-4 w-full lg:w-auto">
+            <Button onClick={removeHiddenLayer} disabled={hiddenLayers.length <= 1} className="flex-1 sm:flex-none">Remove Layer</Button>
+            <Button onClick={addHiddenLayer} disabled={hiddenLayers.length >= 3} className="flex-1 sm:flex-none">Add Layer</Button>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 w-full lg:w-auto">
             <Label className="text-lg font-semibold">Hidden Layers</Label>
-            <div className="flex items-center gap-32">
+            <div className="hidden sm:flex items-center gap-32">
               <p className="font-semibold">Size:</p>
               <p className="font-semibold">Activation:</p>
             </div>
@@ -141,8 +141,8 @@ const Config = () => {
               </div>
             ))}
           </div>
-          <div className="p-4 bg-gray-100 rounded-lg">
-          <div className="whitespace-pre-wrap prose">
+          <div className="p-2 sm:p-4 bg-gray-100 rounded-lg w-full lg:w-auto">
+          <div className="whitespace-pre-wrap prose text-sm">
             <ReactMarkdown
             rehypePlugins={[rehypeRaw]}
             components={{
@@ -165,7 +165,7 @@ const Config = () => {
             {HIDDEN_LAYER_INFO}
           </ReactMarkdown>
           </div>
-            <p className="font-bold cursor-pointer" onClick={openPopup} >Learn More</p> 
+            <p className="font-bold cursor-pointer text-sm" onClick={openPopup} >Learn More</p> 
           </div>
           {isPopupOpen && (
             <InfoPopup
@@ -176,26 +176,30 @@ const Config = () => {
           )}
         </div>
       ) : (
-        <div className="flex flex-col gap-4 p-4 border-t">
-          <div className="flex items-center gap-4">
-            <Label>Learning Rate:</Label>
-            <Slider
-              value={[learningRate]}
-              onValueChange={(value) => setLearningRate(value[0])}
-              max={1}
-              step={0.01}
-              className="w-64"
-            />
-            <span>{learningRate.toFixed(2)}</span>
-            <Label className="ml-10">Input Sample Number:</Label>
-            <Input
-                type="number"
-                value={sampleIndex}
-                onChange={(e) => setSampleIndex(Math.max(0, Math.min(Number(e.target.value),25)))}
-                min={0}
-                max={25}
-                className="w-15 text-center border border-gray-400 rounded-md shadow-sm"
-            />
+        <div className="flex flex-col gap-4 p-2 sm:p-4 border-t">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm sm:text-base">Learning Rate:</Label>
+              <Slider
+                value={[learningRate]}
+                onValueChange={(value) => setLearningRate(value[0])}
+                max={1}
+                step={0.01}
+                className="w-32 sm:w-64"
+              />
+              <span className="text-sm font-medium min-w-[3rem]">{learningRate.toFixed(2)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-sm sm:text-base">Sample #:</Label>
+              <Input
+                  type="number"
+                  value={sampleIndex}
+                  onChange={(e) => setSampleIndex(Math.max(0, Math.min(Number(e.target.value),25)))}
+                  min={0}
+                  max={25}
+                  className="w-20 text-center border border-gray-400 rounded-md shadow-sm"
+              />
+            </div>
           </div>            
           <Button onClick={runTrainingCycle} className="w-full" disabled={!sessionId}>
             Run Training Cycle

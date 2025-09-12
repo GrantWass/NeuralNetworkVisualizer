@@ -51,7 +51,7 @@ const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: 
 
   const OutputInfo = ({ dataset, output, actual }: { dataset: string; output: number[]; actual: number[] }) => {
     const outputMap: { [key: string]: string[] } = {
-      california_housing: ["Median House Value"],
+      auto_mpg: ["MPG"],
       iris: ["Setosa", "Versicolor", "Virginica"],
     };
   
@@ -59,13 +59,8 @@ const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: 
       if (dataset === "iris") {
         return `${(value * 100).toFixed(1)}%`;
       }
-      if (dataset === "california_housing") {
-        const dollars = value * 100000; // adjust scale
-        return dollars.toLocaleString("en-US", {
-          style: "currency",
-          currency: "USD",
-          maximumFractionDigits: 0,
-        });
+      if (dataset === "auto_mpg") {
+        return `${value.toFixed(1)} MPG`;
       }
       return value.toFixed(3);
     };
@@ -78,7 +73,7 @@ const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: 
         const actualResults = actual.slice(-3)
         const index = actualResults.findIndex((v) => v === 1);
         return outputMap[dataset]?.[index] ?? "Unknown";
-      } else if (dataset === "california_housing") {
+      } else if (dataset === "auto_mpg") {
         const actualResults = actual.slice(-1)
         return formatValue(actualResults[0], dataset);
       }
@@ -124,7 +119,7 @@ const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: 
                 </ul>
               </>
             )}
-          <p className="font-semibold">{dataset === "california_housing" ? "Actual Value: " : "Actual Result: "}<span className="font-mono text-white">{formatActual()}</span></p>
+          <p className="font-semibold">{dataset === "auto_mpg" ? "Actual Value: " : "Actual Result: "}<span className="font-mono text-white">{formatActual()}</span></p>
           </div>
         </div>
       </>

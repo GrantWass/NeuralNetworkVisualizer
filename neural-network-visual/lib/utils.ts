@@ -49,3 +49,33 @@ export function multiplyMatrices(a: number[][] | null, b: number[][] | null) {
 
   return result;
 }
+
+  export const formatValue = (value: number, dataset: string) => {
+    if (dataset === "iris") {
+      return `${(value * 100).toFixed(1)}%`;
+    }
+    if (dataset === "auto_mpg") {
+      return `${value.toFixed(1)} MPG`;
+    }
+    return value.toFixed(2);
+  };
+
+  export const outputMap: { [key: string]: string[] } = {
+    auto_mpg: ["MPG"],
+    iris: ["Setosa", "Versicolor", "Virginica"],
+  };
+  
+  export const formatActual = (original: number[], dataset: string) => {
+    if (!original || original.length < 3){
+      return;
+    }
+    if (dataset === "iris") {
+      const actualResults = original.slice(-3)
+      const index = actualResults.findIndex((v) => v === 1);
+      return outputMap[dataset]?.[index] ?? "Unknown";
+    } else if (dataset === "auto_mpg") {
+      const actualResults = original.slice(-1)
+      return formatValue(actualResults[0], dataset);
+    }
+    return "N/A";
+  };

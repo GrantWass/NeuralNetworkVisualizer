@@ -160,8 +160,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     } else if (dataset === "iris") {
       inputSize = 4;
       outputSize = 3;
-    } else if (dataset === "california_housing") {
-      inputSize = 8;
+    } else if (dataset === "auto_mpg") {
+      inputSize = 4;
       outputSize = 1;
       accuracyMetric = "mae";
     }
@@ -294,11 +294,13 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
 
   addHiddenLayer: () => {
     const { hiddenLayers, activations } = get();
-    set({
-      hiddenLayers: [...hiddenLayers, 4],
-      activations: [...activations, "relu"],
-    });
-    get().initModelFrontend();
+    if (hiddenLayers.length < 3) {
+      set({
+        hiddenLayers: [...hiddenLayers, 4],
+        activations: [...activations, "relu"],
+      });
+      get().initModelFrontend();
+    }
   },
 
   removeHiddenLayer: () => {
