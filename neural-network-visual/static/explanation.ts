@@ -1,24 +1,20 @@
-import useStore from "@/hooks/store";
+import { NetworkState } from "./types";
 
-export const getExplanationText = () => {
-  const { network, epoch, learningRate, dataset, loss, metric, name, sessionId } = useStore();
-
+export const getExplanationText = (
+  network: NetworkState | null,
+  epoch: number,
+  learningRate: number,
+  dataset: string,
+  loss: number,
+  metric: number,
+  name: string,
+  sessionId: string | null
+) => {
   let datasetExplanation = "";
   let lossExplanation = "";
   let accuracyExplanation = "";
 
-  if (dataset === "mnist") {
-    datasetExplanation = `Dataset: [**MNIST (Handwritten Digits)**](https://en.wikipedia.org/wiki/MNIST_database)  
-Task: **Multi-class classification** (10 classes: digits 0-9)  
-Output: A **probability distribution** over 10 digits. The highest probability is the predicted digit.  
-Interpretation: The network learns to recognize **handwritten digits** by adjusting weights to reduce **classification errors**.`;
-
-    lossExplanation = `Loss Function: [**Cross-Entropy Loss**](https://en.wikipedia.org/wiki/Cross_entropy)  
-**Cross-entropy** measures the difference between predicted probabilities and true labels. **Lower values** indicate better predictions.`;
-
-    accuracyExplanation = `Accuracy:  
-Calculated as the percentage of **correct predictions**. A higher value indicates the model is correctly identifying more digits.`;
-  } else if (dataset === "iris") {
+  if (dataset === "iris") {
     datasetExplanation = `Dataset: [**Iris Flower Dataset**](https://en.wikipedia.org/wiki/Iris_flower_data_set)  
 Task: **Multi-class classification** (3 species)  
 Output: **Probability distribution** over 3 classes (Setosa, Versicolor, Virginica)  
@@ -106,10 +102,6 @@ export const DATASET_INFO: { [key: string]: string } = {
   auto_mpg: `The [**Auto MPG dataset**](https://archive.ics.uci.edu/ml/datasets/auto+mpg) contains **automobile fuel efficiency data**.  
 - **Inputs:** Displacement, Horsepower, Weight, Acceleration  
 - **Output:** Miles per gallon (numeric)`,
-
-  mnist: `The [**MNIST dataset**](https://en.wikipedia.org/wiki/MNIST_database) is a collection of **handwritten digit images**.  
-- ** Inputs:** 28x28 grayscale images (784 pixels)  
-- ** Output:** A digit label (0–9)`,
 
   iris: `The [**Iris dataset**](https://en.wikipedia.org/wiki/Iris_flower_data_set) is a classic dataset with **flower measurements**.  
 - **Inputs:** Sepal length, Sepal width, Petal length, Petal width  

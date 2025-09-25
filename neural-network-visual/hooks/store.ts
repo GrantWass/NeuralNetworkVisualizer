@@ -149,15 +149,11 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
 
   initModelFrontend: () => {
     const { hiddenLayers, activations, dataset } = get();
-    var inputSize = 0;
-    var outputSize = 0;
-    var accuracyMetric = "accuracy";
+    let inputSize = 0;
+    let outputSize = 0;
+    let accuracyMetric = "accuracy";
 
-    if (dataset === "mnist") {
-      inputSize = 784;
-      outputSize = 10;
-      accuracyMetric = "mae"
-    } else if (dataset === "iris") {
+    if (dataset === "iris") {
       inputSize = 4;
       outputSize = 3;
     } else if (dataset === "auto_mpg") {
@@ -211,7 +207,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   },
 
   runTrainingCycle: async () => {
-    const { sessionId, learningRate, dataset } = get();
+    const { sessionId, learningRate } = get();
     if (!sessionId) {
       toast("Error", {
         description: "Please initialize the model first.",
@@ -339,7 +335,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   },
 
   getExplanation: () => {
-    const text : string = getExplanationText()
+    const { network, epoch, learningRate, dataset, loss, metric, name, sessionId } = get();
+    const text : string = getExplanationText(network, epoch, learningRate, dataset, loss, metric, name, sessionId)
     return text
   },
   

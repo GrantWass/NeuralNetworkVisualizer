@@ -52,7 +52,7 @@ export default function ContactInfo() {
           <MessageSquare className="w-3.5 h-3.5" />
         </div>
         <div className="flex-1">
-          <p className="font-medium text-sm text-gray-800 dark:text-gray-200">Personal Website</p>
+          <p className="font-medium text-sm text-gray-800 dark:text-gray-200">Portfolio</p>
         </div>
       </a>
 

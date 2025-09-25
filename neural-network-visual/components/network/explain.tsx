@@ -152,7 +152,7 @@ const Explain = () => {
 
     return (
         <div className="mt-2 p-4 bg-gray-100 rounded-lg mx-2 shadow-md">
-            {dataset != "mnist" && network?.layers && network?.layers[0].A?.length > 0 && (
+            {network?.layers && network?.layers[0].A?.length > 0 && (
             <div className="flex justify-center mb-4 sm:mb-6">
                 <div className="flex flex-col sm:flex-row rounded-md shadow-sm" role="group">
                     <button
@@ -191,7 +191,7 @@ const Explain = () => {
                 </div>
             </div>)}
 
-            {dataset != "mnist" && network?.layers && network?.layers[0].A?.length > 0 && (
+            {network?.layers && network?.layers[0].A?.length > 0 && (
                 <div className="text-center">
                     {view === 'forward' ? (
                         <>

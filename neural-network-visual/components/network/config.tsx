@@ -11,6 +11,7 @@ import { HIDDEN_LAYER_INFO, HIDDEN_LAYER_LEARN_MORE } from "@/static/explanation
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
+import { ActivationInfoPopup } from "../activation";
 
 const Config = () => {
   const {
@@ -104,68 +105,83 @@ const Config = () => {
       </div>
       
       {configOpen ? (
-        <div className="flex flex-col lg:flex-row justify-between items-start p-2 sm:p-4 border-t gap-4 lg:gap-6">
-          <div className="flex flex-row sm:flex-col justify-center gap-2 sm:gap-4 w-full lg:w-auto">
-            <Button onClick={removeHiddenLayer} disabled={hiddenLayers.length <= 1} className="flex-1 sm:flex-none">Remove Layer</Button>
-            <Button onClick={addHiddenLayer} disabled={hiddenLayers.length >= 3} className="flex-1 sm:flex-none">Add Layer</Button>
+        <div className="flex flex-col md:flex-row justify-between items-start p-2 sm:p-4 border-t gap-4 lg:gap-6">
+          <div className="flex flex-row md:flex-col justify-center gap-2 sm:gap-4 w-full md:w-auto my-auto">
+            <Button onClick={removeHiddenLayer} disabled={hiddenLayers.length <= 1} className="flex-1 ">Remove Layer</Button>
+            <Button onClick={addHiddenLayer} disabled={hiddenLayers.length >= 3} className="flex-1 ">Add Layer</Button>
           </div>
-          <div className="flex flex-col gap-2 w-full lg:w-auto">
-            <Label className="text-lg font-semibold">Hidden Layers</Label>
-            <div className="hidden sm:flex items-center gap-32">
-              <p className="font-semibold">Size:</p>
-              <p className="font-semibold">Activation:</p>
-            </div>
-            {hiddenLayers.map((nodes, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  value={nodes}
-                  onChange={(e) => updateHiddenLayer(index, Math.max(1, Number(e.target.value)))}
-                  min={1}
-                  max={10}
-                  className="w-20"
-                />
-                <Label className="w-[75px]">Layer {index + 1}</Label>
-                <Select value={activations[index]} onValueChange={(value) => updateActivation(index, value)}>
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Select activation" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ACTIVATION_FUNCTIONS.map((af) => (
-                      <SelectItem key={af} value={af}>
-                        {af}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <div className="flex flex-col md:flex-row gap-4 w-full">
+            {/* Left side: Hidden Layers */}
+            <div className="flex flex-col gap-2 w-full lg:w-auto">
+              <Label className="text-lg font-semibold">Hidden Layers <ActivationInfoPopup /></Label>
+              <div className="hidden sm:flex items-center gap-32">
+                <p className="font-semibold">Size:</p>
+                <p className="font-semibold">
+                  Activation:
+                </p>
               </div>
-            ))}
-          </div>
-          <div className="p-2 sm:p-4 bg-gray-100 rounded-lg w-full lg:w-auto">
-          <div className="whitespace-pre-wrap prose text-sm">
-            <ReactMarkdown
-            rehypePlugins={[rehypeRaw]}
-            components={{
-              a: ({...props }) => (
-                <a
-                  {...props}
-                  className="text-black-500 underline font-medium hover:text-blue-600"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                />
-              ),
-              ul: ({...props }) => (
-                <ul {...props} className="list-disc pl-5 mt-[-30px] mb-[-10px]" />
-              ),
-              li: ({...props }) => (
-                <li {...props} className="mb-[-15px]" />
-              ),
-            }}
-          >
-            {HIDDEN_LAYER_INFO}
-          </ReactMarkdown>
-          </div>
-            <p className="font-bold cursor-pointer text-sm" onClick={openPopup} >Learn More</p> 
+              {hiddenLayers.map((nodes, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={nodes}
+                    onChange={(e) => updateHiddenLayer(index, Math.max(1, Number(e.target.value)))}
+                    min={1}
+                    max={10}
+                    className="w-20"
+                  />
+                  <Label className="w-[75px]">Layer {index + 1}</Label>
+                  <Select
+                    value={activations[index]}
+                    onValueChange={(value) => updateActivation(index, value)}
+                  >
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Select activation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ACTIVATION_FUNCTIONS.map((af) => (
+                        <SelectItem key={af} value={af}>
+                          {af}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+
+            {/* Right side: Info box */}
+            <div className="p-2 sm:p-4 bg-gray-100 rounded-lg w-full lg:w-auto my-auto">
+              <div className="whitespace-pre-wrap prose text-sm">
+                <ReactMarkdown
+                  rehypePlugins={[rehypeRaw]}
+                  components={{
+                    a: ({ ...props }) => (
+                      <a
+                        {...props}
+                        className="text-black-500 underline font-medium hover:text-blue-600"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      />
+                    ),
+                    ul: ({ ...props }) => (
+                      <ul {...props} className="list-disc pl-5 mt-[-30px] mb-[-10px]" />
+                    ),
+                    li: ({ ...props }) => (
+                      <li {...props} className="mb-[-15px]" />
+                    ),
+                  }}
+                >
+                  {HIDDEN_LAYER_INFO}
+                </ReactMarkdown>
+              </div>
+              <p
+                className="font-bold cursor-pointer text-sm"
+                onClick={openPopup}
+              >
+                Learn More
+              </p>
+            </div>
           </div>
           {isPopupOpen && (
             <InfoPopup
