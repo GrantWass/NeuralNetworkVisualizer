@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { toast } from "sonner"
-import { DATASETS } from '@/static/constants';
-import { NetworkState, HoveredConnection, HoveredNode, NeuronLayer} from "@/static/types";
-import { getExplanationText, DATASET_INFO } from '@/static/explanation';
+import { DATASETS } from '@/components/network/static/constants';
+import { NetworkState, HoveredConnection, HoveredNode, NeuronLayer} from "@/components/network/static/types";
+import { getExplanationText, DATASET_INFO } from '@/components/network/static/explanation';
 
 interface TrainingState {
   sessionId: string | null;

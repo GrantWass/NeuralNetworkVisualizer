@@ -1,5 +1,5 @@
 import Config from "@/components/network/config";
-import Graph from "@/components/network/graph";
+import Graph from "@/components/network/neural";
 import Explain from "@/components/network/explain";
 import ContactInfo from "./contact";
 

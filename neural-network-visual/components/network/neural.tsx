@@ -1,8 +1,7 @@
 "use client"
 
-import useStore from "@/hooks/store";
-import { renderConnections, renderNodes, renderLayerLabels } from "@/lib/network";
-
+import useStore from "@/components/network/lib/store";
+import {Network} from "@/components/network/network";
 
 const Graph = () => {
     const {
@@ -24,9 +23,16 @@ const Graph = () => {
           viewBox="0 0 1000 500"
           preserveAspectRatio="xMidYMid meet"
         >
-        {renderConnections({SVGWIDTH: 1000, SVGHEIGHT: 500, network, setHoveredConnection, setHoveredNode })}
-        {renderNodes({SVGWIDTH: 1000, SVGHEIGHT: 500, network, setHoveredConnection, setHoveredNode, sampleIndex, dataset, original: originalData[sampleIndex] })}
-        {renderLayerLabels({SVGWIDTH: 1000, SVGHEIGHT: 500, network, setHoveredConnection, setHoveredNode, dataset: dataset })}
+        <Network
+            SVGWIDTH={1000}
+            SVGHEIGHT={500}
+            network={network}
+            setHoveredConnection={setHoveredConnection}
+            setHoveredNode={setHoveredNode}
+            sampleIndex={sampleIndex}
+            dataset={dataset}
+            original={originalData[sampleIndex]}
+        />
         </svg>
         <div className="mt-4 h-50">
                 {hoveredConnection ? (

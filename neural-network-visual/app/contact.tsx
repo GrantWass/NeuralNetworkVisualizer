@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Linkedin, Mail, Copy, Check, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { cn } from "@/components/network/lib/utils"
 
 export default function ContactInfo() {
   const [copied, setCopied] = useState(false)
@@ -27,7 +27,7 @@ export default function ContactInfo() {
   }
 
   const contactContent = (
-    <div className="space-y-2">
+    <div className="">
       <a
         href="https://www.linkedin.com/in/grant-wass/"
         target="_blank"
@@ -109,18 +109,37 @@ export default function ContactInfo() {
     )
   }
 
+  // Desktop: collapsed dropdown controlled by isOpen (closed by default)
   return (
-    <Card
-      className={cn(
-        "fixed bottom-4 right-4 shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 transition-all duration-300 z-50 w-82 p-0"
+    <>
+      {/* Floating toggle button */}
+      <Button
+        variant="outline"
+        className="fixed bottom-4 right-4 rounded-full shadow-lg z-50 px-4 py-2 flex items-center gap-2"
+        onClick={() => setIsOpen((s) => !s)}
+        aria-expanded={isOpen}
+        aria-label={isOpen ? "Close contact" : "Open contact"}
+      >
+        <MessageSquare className="h-5 w-5" />
+        <span className="font-medium">Connect with Me</span>
+      </Button>
+
+      {/* Dropdown card (appears above the button) */}
+      {isOpen && (
+        <div className="fixed bottom-20 right-4 z-50">
+          <Card className={cn("w-80 p-0 shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950")}>
+            <CardHeader className="pb-1 pt-3 flex justify-between flex-row">
+              <CardTitle className="mt-2 text-base font-bold text-gray-800 dark:text-gray-100 w-[50%]">Connect with Me</CardTitle>
+              <div className="flex justify-end mt-2">
+                <Button onClick={() => setIsOpen(false)}>Close</Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-1 p-2">
+              {contactContent}
+            </CardContent>
+          </Card>
+        </div>
       )}
-    >
-      <CardHeader className="pb-1 pt-1">
-        <CardTitle className="mt-2 text-base font-bold text-gray-800 dark:text-gray-100">Connect with Me</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 p-2">
-        {contactContent}
-      </CardContent>
-    </Card>
+    </>
   )
 } 

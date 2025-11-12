@@ -1,4 +1,4 @@
-import { DATASET_INPUT_FEATURES } from "@/static/constants";
+import { DATASET_INPUT_FEATURES } from "@/components/network/static/constants";
 
 const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: number[], originalInput: number[] }) => {        
   

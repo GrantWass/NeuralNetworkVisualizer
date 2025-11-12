@@ -1,7 +1,7 @@
 "use client";
 
-import useStore from "@/hooks/store";
-import { NeuronLayer } from "@/static/types";
+import useStore from "@/components/network/lib/store";
+import { NeuronLayer } from "@/components/network/static/types";
 import { useState, useEffect } from "react";
 import { Line } from "react-chartjs-2";
 import {
@@ -14,8 +14,8 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { InputInfo, OutputInfo } from "@/components/tooltips";
-import { reshapeTo2D, transpose, multiplyMatrices } from "@/lib/utils"
+import { InputInfo, OutputInfo } from "@/components/network/tooltips";
+import { reshapeTo2D, transpose, multiplyMatrices } from "@/components/network/lib/utils"
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import { useMemo } from "react";

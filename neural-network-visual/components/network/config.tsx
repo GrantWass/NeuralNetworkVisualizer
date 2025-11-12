@@ -3,15 +3,15 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import InfoPopup from "@/components/popup"
+import InfoPopup from "@/components/network/popup"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import useStore from "@/hooks/store";
-import { DATASETS, ACTIVATION_FUNCTIONS } from "@/static/constants";
-import { HIDDEN_LAYER_INFO, HIDDEN_LAYER_LEARN_MORE } from "@/static/explanation";
+import useStore from "@/components/network/lib/store";
+import { DATASETS, ACTIVATION_FUNCTIONS } from "@/components/network/static/constants";
+import { HIDDEN_LAYER_INFO, HIDDEN_LAYER_LEARN_MORE } from "@/components/network/static/explanation";
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
-import { ActivationInfoPopup } from "../activation";
+import { ActivationInfoPopup } from "./activation";
 
 const Config = () => {
   const {
@@ -127,7 +127,7 @@ const Config = () => {
                     value={nodes}
                     onChange={(e) => updateHiddenLayer(index, Math.max(1, Number(e.target.value)))}
                     min={1}
-                    max={10}
+                    max={6}
                     className="w-20"
                   />
                   <Label className="w-[75px]">Layer {index + 1}</Label>
