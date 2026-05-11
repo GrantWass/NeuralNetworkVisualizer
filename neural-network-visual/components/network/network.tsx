@@ -90,6 +90,11 @@ const ConnectionLines: React.FC<{
               (fc) => fc.li === li && fc.fi === fi && fc.ti === ti
             );
 
+            const wAbs = Math.abs(w);
+            const baseColor = w >= 0
+              ? `rgba(99,102,241,${(0.12 + Math.min(wAbs, 1) * 0.75).toFixed(2)})`
+              : `rgba(249,115,22,${(0.12 + Math.min(wAbs, 1) * 0.75).toFixed(2)})`;
+
             return (
               <g key={`conn-${li}-${fi}-${ti}`} opacity={connOpacity}>
                 {/* Base connection line */}
@@ -98,8 +103,8 @@ const ConnectionLines: React.FC<{
                   y1={fromY}
                   x2={toX}
                   y2={toY}
-                  stroke={Math.abs(w) < 0.5 ? "#94a3b8" : "#475569"}
-                  strokeWidth={Math.abs(w) * (SVGWIDTH > 600 ? 3 : 2) + 1}
+                  stroke={baseColor}
+                  strokeWidth={wAbs * (SVGWIDTH > 600 ? 2.5 : 1.8) + 0.8}
                 />
                 {/* Flash overlay for most-changed connections */}
                 {flashEntry && (

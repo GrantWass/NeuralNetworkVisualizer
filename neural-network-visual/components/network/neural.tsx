@@ -19,12 +19,12 @@ const Legend = () => (
       <span>Output node</span>
     </div>
     <div className="flex items-center gap-1.5">
-      <div className="w-5 h-0.5 bg-gray-400" />
-      <span>Weak weight</span>
+      <div className="w-5 h-1 bg-indigo-400 rounded" />
+      <span>Positive weight</span>
     </div>
     <div className="flex items-center gap-1.5">
-      <div className="w-5 h-1.5 bg-gray-700" />
-      <span>Strong weight</span>
+      <div className="w-5 h-1 bg-orange-400 rounded" />
+      <span>Negative weight</span>
     </div>
     <div className="flex items-center gap-1.5">
       <div className="w-3 h-3 rounded-full bg-green-400" />

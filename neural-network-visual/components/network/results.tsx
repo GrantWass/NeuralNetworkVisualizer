@@ -26,66 +26,51 @@ export const renderResults = ({
 }: RenderResultsParams) => {
     if (!dataset) return null;
 
+    const x = cx + SVGWIDTH * 0.11;
+
+    if (dataset === "auto_mpg") {
+        const actual = formatActual(original || [], dataset);
+        return (
+            <>
+                <text x={x} y={cy - SVGHEIGHT * 0.07} fontSize={fontSize} fontWeight="bold" textAnchor="middle" fill="#374151">
+                    {outputMap[dataset]?.[ni]}
+                </text>
+                <text x={x} y={cy - SVGHEIGHT * 0.01} fontSize={fontSize + 1} fontWeight="bold" textAnchor="middle" fill="#111827">
+                    {formatValue(activationValue, dataset)}
+                </text>
+                <text x={x} y={cy + SVGHEIGHT * 0.07} fontSize={fontSize - 1} textAnchor="middle" fill="#9ca3af">
+                    actual {actual}
+                </text>
+            </>
+        );
+    }
+
+    if (dataset === "iris") {
+        const label = outputMap[dataset]?.[ni];
+        const isActual = formatActual(original || [], dataset) === label;
+        return (
+            <>
+                <text x={x} y={cy - SVGHEIGHT * 0.04} fontSize={fontSize} fontWeight={isActual ? "bold" : "normal"} textAnchor="middle" fill={isActual ? "#111827" : "#6b7280"}>
+                    {label}
+                </text>
+                <text x={x} y={cy + SVGHEIGHT * 0.03} fontSize={fontSize} textAnchor="middle" fill="#374151">
+                    {formatValue(activationValue, dataset)}
+                </text>
+                {isActual && (
+                    <text x={x} y={cy + SVGHEIGHT * 0.09} fontSize={fontSize - 1} textAnchor="middle" fill="#16a34a" fontWeight="bold">
+                        ✓ actual
+                    </text>
+                )}
+            </>
+        );
+    }
+
     return (
         <>
-            <text
-                x={cx + SVGWIDTH * 0.11}
-                y={cy + (dataset === "iris" ? 0 : -SVGHEIGHT * 0.1)}
-                fontSize={fontSize}
-                textAnchor="middle"
-                fontWeight="bold"
-            >
+            <text x={x} y={cy - SVGHEIGHT * 0.04} fontSize={fontSize} fontWeight="bold" textAnchor="middle" fill="#374151">
                 {outputMap[dataset]?.[ni]}
             </text>
-
-            {dataset === "auto_mpg" && (
-                <>
-                    <text
-                        x={cx + SVGWIDTH * 0.11}
-                        y={cy - SVGHEIGHT * 0.06}
-                        fontSize={fontSize}
-                        textAnchor="middle"
-                    >
-                        Predicted Value:
-                    </text>
-                    <text
-                        x={cx + SVGWIDTH * 0.11}
-                        y={cy + SVGHEIGHT * 0.04}
-                        fontSize={fontSize}
-                        textAnchor="middle"
-                    >
-                        Actual Value:
-                    </text>
-                    <text
-                        x={cx + SVGWIDTH * 0.11}
-                        y={cy + SVGHEIGHT * 0.08}
-                        fontSize={fontSize}
-                        textAnchor="middle"
-                    >
-                        {formatActual(original || [], dataset)}
-                    </text>
-                </>
-            )}
-
-            {dataset === "iris" && (
-                <text
-                    x={cx + SVGWIDTH * 0.11}
-                    y={cy + SVGHEIGHT * 0.08}
-                    fontSize={fontSize}
-                    textAnchor="middle"
-                >
-                    {formatActual(original || [], dataset) === outputMap[dataset]?.[ni]
-                        ? "Actual Answer"
-                        : ""}
-                </text>
-            )}
-
-            <text
-                x={cx + SVGWIDTH * 0.11}
-                y={(dataset === "iris" ? cy : cy - SVGHEIGHT * 0.06) + SVGHEIGHT * 0.04}
-                fontSize={fontSize}
-                textAnchor="middle"
-            >
+            <text x={x} y={cy + SVGHEIGHT * 0.03} fontSize={fontSize} textAnchor="middle" fill="#111827">
                 {formatValue(activationValue, dataset)}
             </text>
         </>
@@ -93,24 +78,13 @@ export const renderResults = ({
 };
 
 export const renderInputValues = (cx: number, cy: number, original: number[], nodeIndex: number, activationValue: number, fontSize: number, INPUTLABELOFFSET: number, SVGWIDTH: number, SVGHEIGHT: number) => (
-  <>
-    <text
-      x={cx - INPUTLABELOFFSET - (10 + SVGWIDTH * .012)}
-      y={cy + (SVGHEIGHT * 0.04)}
-      className=""
-      textAnchor="middle"
-      fontSize={fontSize}
-    >
-      {original[nodeIndex].toFixed(2)}
-    </text>
-    <text
-      x={cx - INPUTLABELOFFSET + (SVGWIDTH * .01) + (Math.abs(original[nodeIndex]) > 100 ? (SVGWIDTH * .02) : (SVGWIDTH * .01))}
-      y={cy + (SVGHEIGHT * 0.04)}
-      className=""
-      textAnchor="middle"
-      fontSize={fontSize}
-    >
-      {`(${activationValue.toFixed(2)})`}
-    </text>
-  </>
+  <text
+    x={cx - INPUTLABELOFFSET}
+    y={cy + SVGHEIGHT * 0.04}
+    textAnchor="middle"
+    fontSize={fontSize}
+  >
+    <tspan fill="#374151">{original[nodeIndex].toFixed(1)}</tspan>
+    <tspan fill="#9ca3af"> ({activationValue.toFixed(2)})</tspan>
+  </text>
 );
