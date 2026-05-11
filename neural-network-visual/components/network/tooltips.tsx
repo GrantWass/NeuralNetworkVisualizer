@@ -11,7 +11,7 @@ const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: 
         </svg>
       </span>
 
-      <div className="absolute z-50 hidden group-hover:block p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-full mb-1 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+      <div className="absolute z-50 hidden group-hover:block p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap">
         {features.length > 0 && originalInput?.length > 0 && (
           <>
             <p className="font-semibold mb-2">Input Features</p>
@@ -58,7 +58,7 @@ const OutputInfo = ({ dataset, output, actual }: { dataset: string; output: numb
         </svg>
       </span>
 
-      <div className="absolute z-50 hidden group-hover:block w-52 p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-full mb-1 left-1/2 transform -translate-x-1/2">
+      <div className="absolute z-50 hidden group-hover:block w-52 p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg left-full ml-2 top-1/2 -translate-y-1/2">
         {outputs.length > 0 && (
           <>
             <p className="font-semibold mb-2">Raw Output Values</p>

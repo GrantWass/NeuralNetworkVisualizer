@@ -63,7 +63,7 @@ const PredictionSummary = ({
     const correct = actualIdx === predIdx;
 
     return (
-      <div className="w-full max-w-xs mx-auto mb-4 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+      <div className="w-full bg-white border border-gray-200 rounded-lg p-3 shadow-sm h-full">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Prediction</p>
           <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
@@ -126,7 +126,7 @@ const PredictionSummary = ({
     const predMPG = prediction[0];
     const error = Math.abs(predMPG - actualMPG);
     return (
-      <div className="w-full max-w-sm mx-auto mb-4 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+      <div className="w-full bg-white border border-gray-200 rounded-lg p-3 shadow-sm h-full">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Prediction</p>
         <div className="flex items-center justify-around text-center">
           <div>
@@ -156,7 +156,7 @@ const PredictionSummary = ({
     const actualLabel = sample[sample.length - 1];
     const correct = predLabel === actualLabel;
     return (
-      <div className="w-full max-w-sm mx-auto mb-4 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+      <div className="w-full bg-white border border-gray-200 rounded-lg p-3 shadow-sm h-full">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Prediction</p>
           <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
@@ -421,23 +421,24 @@ const Explain = () => {
     return (
         <>
             {/* Connection panel + Prediction side by side */}
-            <div className="flex flex-col sm:flex-row gap-4 mx-2 mt-4 mb-2 items-start">
-                <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row gap-3 mx-2 mt-4 mb-2">
+                {/* Left: connection / node details */}
+                <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                     {hoveredConnection ? (
-                        <div className="text-sm space-y-1">
-                            <p className="font-semibold">Connection: Layer {hoveredConnection.layerIndex} → {hoveredConnection.layerIndex + 1} &nbsp;|&nbsp; Neuron {hoveredConnection.fromIndex + 1} → {hoveredConnection.toIndex + 1}</p>
+                        <>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Connection</p>
+                            <p className="text-sm font-medium text-gray-800 mb-2">
+                                Layer {hoveredConnection.layerIndex} → {hoveredConnection.layerIndex + 1}
+                                <span className="text-gray-400 mx-1.5">·</span>
+                                Neuron {hoveredConnection.fromIndex + 1} → {hoveredConnection.toIndex + 1}
+                            </p>
                             <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-gray-600">Weight:</span>
+                                <span className="text-xs text-gray-500">Weight</span>
                                 {!editingWeight ? (
                                     <>
-                                        <span className="font-mono font-medium">{hoveredConnection.weight.toFixed(4)}</span>
+                                        <span className="font-mono text-sm font-semibold text-gray-900">{hoveredConnection.weight.toFixed(4)}</span>
                                         {sessionId && (
-                                            <button
-                                                onClick={() => setEditingWeight(true)}
-                                                className="text-xs border border-gray-300 rounded px-2 py-0.5 hover:bg-gray-50"
-                                            >
-                                                Edit
-                                            </button>
+                                            <button onClick={() => setEditingWeight(true)} className="text-xs border border-gray-300 rounded px-2 py-0.5 hover:bg-gray-50 text-gray-600">Edit</button>
                                         )}
                                     </>
                                 ) : (
@@ -456,32 +457,46 @@ const Explain = () => {
                                     </>
                                 )}
                             </div>
-                            {!sessionId && <p className="text-xs text-gray-400 italic">Initialize the model to edit weights.</p>}
-                        </div>
+                            {!sessionId && <p className="text-xs text-gray-400 italic mt-1">Initialize the model to edit weights.</p>}
+                        </>
                     ) : hoveredNode && network ? (
-                        <div className="text-sm space-y-0.5">
-                            <p className="font-semibold">Node Details</p>
+                        <>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Node</p>
                             {hoveredNode.layerIndex > 0 ? (
-                                <>
+                                <div className="space-y-1.5">
                                     {network.layers[hoveredNode.layerIndex - 1]?.biases?.[hoveredNode.nodeIndex] !== undefined && (
-                                        <p>Bias: <span className="font-mono">{network.layers[hoveredNode.layerIndex - 1].biases[hoveredNode.nodeIndex].toFixed(4)}</span></p>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-500">Bias</span>
+                                            <span className="font-mono font-medium text-gray-900">{network.layers[hoveredNode.layerIndex - 1].biases[hoveredNode.nodeIndex].toFixed(4)}</span>
+                                        </div>
                                     )}
                                     {network.layers[hoveredNode.layerIndex - 1]?.Z?.[sampleIndex]?.[hoveredNode.nodeIndex] !== undefined && (
-                                        <p>Pre-activation (Z): <span className="font-mono">{network.layers[hoveredNode.layerIndex - 1].Z[sampleIndex][hoveredNode.nodeIndex].toFixed(4)}</span></p>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-500">Pre-activation (Z)</span>
+                                            <span className="font-mono font-medium text-gray-900">{network.layers[hoveredNode.layerIndex - 1].Z[sampleIndex][hoveredNode.nodeIndex].toFixed(4)}</span>
+                                        </div>
                                     )}
                                     {network.layers[hoveredNode.layerIndex - 1]?.A?.[sampleIndex]?.[hoveredNode.nodeIndex] !== undefined && (
-                                        <p>Post-activation (A): <span className="font-mono">{network.layers[hoveredNode.layerIndex - 1].A[sampleIndex][hoveredNode.nodeIndex].toFixed(4)}</span></p>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-500">Post-activation (A)</span>
+                                            <span className="font-mono font-medium text-gray-900">{network.layers[hoveredNode.layerIndex - 1].A[sampleIndex][hoveredNode.nodeIndex].toFixed(4)}</span>
+                                        </div>
                                     )}
-                                </>
-                            ) : <p className="text-gray-500">Input node — values come from the dataset.</p>}
-                        </div>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-500">Input node — values come from the dataset.</p>
+                            )}
+                        </>
                     ) : (
-                        <p className="text-sm text-gray-400">Click a node or connection to see details</p>
+                        <div className="flex items-center justify-center h-full min-h-[60px]">
+                            <p className="text-sm text-gray-400">Click a node or connection in the graph</p>
+                        </div>
                     )}
                 </div>
 
+                {/* Right: prediction */}
                 {hasTrained && (
-                    <div className="flex-shrink-0">
+                    <div className="flex-1 min-w-0">
                         <PredictionSummary
                             dataset={dataset}
                             network={network}
