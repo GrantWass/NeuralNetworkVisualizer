@@ -3,6 +3,14 @@ import { NetworkState, HoveredConnection, HoveredNode } from "@/components/netwo
 import { DATASET_INPUT_FEATURES, DATASET_INPUT_FEATURES_SHORT } from "@/components/network/static/constants";
 import { renderResults, renderInputValues } from "@/components/network/results";
 
+interface FlashConnection {
+  li: number;
+  fi: number;
+  ti: number;
+  delta: number;
+  positive: boolean;
+}
+
 // --------------------
 // Type Definitions
 // --------------------
@@ -15,6 +23,9 @@ interface NetworkSVGProps {
   sampleIndex?: number;
   dataset?: string;
   original?: number[];
+  flashConnections?: FlashConnection[];
+  flashKey?: number;
+  stepLayerHighlight?: number | null;
 }
 
 // --------------------
@@ -52,8 +63,12 @@ const ConnectionLines: React.FC<{
   SVGWIDTH: number;
   SVGHEIGHT: number;
   onClick: (hovered: HoveredConnection | null) => void;
-}> = ({ network, SVGWIDTH, SVGHEIGHT, onClick }) => {
+  flashConnections?: FlashConnection[];
+  flashKey?: number;
+  stepLayerHighlight?: number | null;
+}> = ({ network, SVGWIDTH, SVGHEIGHT, onClick, flashConnections = [], flashKey = 0, stepLayerHighlight }) => {
   const { layerSpacing, SHIFT } = computeLayout(SVGWIDTH, network.layers.length);
+  const inStepMode = stepLayerHighlight !== null && stepLayerHighlight !== undefined;
 
   return (
     <>
@@ -66,8 +81,18 @@ const ConnectionLines: React.FC<{
             const toX = next ? (li + 2) * layerSpacing + SHIFT : fromX;
             const toY = next ? ((ti + 1) * SVGHEIGHT) / (next.size + 1) : fromY;
 
+            // Dim connection if in step mode and not connected to highlighted layer
+            const isActiveConn = !inStepMode || li === stepLayerHighlight || li + 1 === stepLayerHighlight;
+            const connOpacity = inStepMode ? (isActiveConn ? 1 : 0.08) : 1;
+
+            // Check if this connection is in the flash list
+            const flashEntry = flashConnections.find(
+              (fc) => fc.li === li && fc.fi === fi && fc.ti === ti
+            );
+
             return (
-              <g key={`conn-${li}-${fi}-${ti}`}>
+              <g key={`conn-${li}-${fi}-${ti}`} opacity={connOpacity}>
+                {/* Base connection line */}
                 <line
                   x1={fromX}
                   y1={fromY}
@@ -76,6 +101,21 @@ const ConnectionLines: React.FC<{
                   stroke={Math.abs(w) < 0.5 ? "#94a3b8" : "#475569"}
                   strokeWidth={Math.abs(w) * (SVGWIDTH > 600 ? 3 : 2) + 1}
                 />
+                {/* Flash overlay for most-changed connections */}
+                {flashEntry && (
+                  <line
+                    key={`flash-${li}-${fi}-${ti}-${flashKey}`}
+                    x1={fromX}
+                    y1={fromY}
+                    x2={toX}
+                    y2={toY}
+                    stroke={flashEntry.positive ? "#22c55e" : "#f97316"}
+                    strokeWidth={Math.abs(w) * (SVGWIDTH > 600 ? 3 : 2) + 3}
+                    strokeOpacity={0.85}
+                    className="weight-flash"
+                  />
+                )}
+                {/* Hit zone */}
                 <line
                   x1={fromX}
                   y1={fromY}
@@ -104,12 +144,14 @@ const NodeCircles: React.FC<{
   sampleIndex?: number;
   original?: number[];
   onNodeClick: (hovered: HoveredNode | null) => void;
-}> = ({ network, SVGWIDTH, SVGHEIGHT, dataset, sampleIndex, original, onNodeClick }) => {
+  stepLayerHighlight?: number | null;
+}> = ({ network, SVGWIDTH, SVGHEIGHT, dataset, sampleIndex, original, onNodeClick, stepLayerHighlight }) => {
   const { layerSpacing, SHIFT } = computeLayout(SVGWIDTH, network.layers.length);
   const fontSize = fontSizeForWidth(SVGWIDTH);
   const features = featureList(dataset, SVGWIDTH);
   const nodeRadius = 10 + SVGWIDTH / 100;
   const INPUTLABELOFFSET = SVGWIDTH / 10 + 10;
+  const inStepMode = stepLayerHighlight !== null && stepLayerHighlight !== undefined;
 
   return (
     <>
@@ -117,6 +159,8 @@ const NodeCircles: React.FC<{
         const total = layer.size;
         const isInput = li === 0;
         const isOutput = li === network.layers.length - 1;
+        const isActiveLayer = !inStepMode || li === stepLayerHighlight || li === stepLayerHighlight + 1;
+        const layerOpacity = inStepMode ? (isActiveLayer ? 1 : 0.15) : 1;
 
         return Array.from({ length: total }, (_, ni) => {
           const cx = (li + 1) * layerSpacing + SHIFT;
@@ -132,7 +176,7 @@ const NodeCircles: React.FC<{
           const r = nodeRadius + clamped * 3;
 
           return (
-            <g key={`node-${li}-${ni}`}>
+            <g key={`node-${li}-${ni}`} opacity={layerOpacity}>
               <circle cx={cx} cy={cy} r={r} fill={fill} stroke={stroke} strokeWidth={2} />
               <circle
                 cx={cx}
@@ -141,25 +185,24 @@ const NodeCircles: React.FC<{
                 fill="transparent"
                 cursor="pointer"
                 onClick={() => onNodeClick({ layerIndex: li, nodeIndex: ni })}
-            />
-                {isInput && (
+              />
+              {isInput && (
                 <text
-                    x={cx - INPUTLABELOFFSET}
-                    y={cy}
-                    fontSize={fontSize}
-                    fontWeight="bold"
-                    textAnchor="middle"
+                  x={cx - INPUTLABELOFFSET}
+                  y={cy}
+                  fontSize={fontSize}
+                  fontWeight="bold"
+                  textAnchor="middle"
                 >
-                    {features[ni]}
+                  {features[ni]}
                 </text>
-                )}
-                {isInput && original && activationValue && original.length > 0 &&
-                    renderInputValues(cx, cy, original, ni, activationValue, fontSize, INPUTLABELOFFSET, SVGWIDTH, SVGHEIGHT)
-                }
-
-                {isOutput && dataset &&
-                    renderResults({ SVGWIDTH, SVGHEIGHT, cx, cy, dataset, ni, activationValue, original, fontSize })
-                }
+              )}
+              {isInput && original && activationValue && original.length > 0 &&
+                renderInputValues(cx, cy, original, ni, activationValue, fontSize, INPUTLABELOFFSET, SVGWIDTH, SVGHEIGHT)
+              }
+              {isOutput && dataset &&
+                renderResults({ SVGWIDTH, SVGHEIGHT, cx, cy, dataset, ni, activationValue, original, fontSize })
+              }
             </g>
           );
         });
@@ -190,25 +233,25 @@ const LayerLabels: React.FC<{ network: NetworkState; SVGWIDTH: number; SVGHEIGHT
           {layer.name}
         </text>
       ))}
-        <text
-          key={`inputlabel-og`}
-          x={(SVGWIDTH*.065 + 10)}
-          y={SVGHEIGHT * .04}
-          textAnchor="middle"
-          fontSize={fontSize}
-          fontWeight="bold"
-        >
-          {`Input Values`}
-        </text>
-        <text
-          key={`inputlabel-normal`}
-          x={(SVGWIDTH*.065 + 10) + (SVGWIDTH > 600 ? 90 : SVGWIDTH*.135)}
-          y={SVGHEIGHT * .04}
-          textAnchor="middle"
-          fontSize={fontSize}
-        >
-          {`(Normalized)`}
-        </text>
+      <text
+        key={`inputlabel-og`}
+        x={(SVGWIDTH * 0.065 + 10)}
+        y={SVGHEIGHT * 0.04}
+        textAnchor="middle"
+        fontSize={fontSize}
+        fontWeight="bold"
+      >
+        {`Input Values`}
+      </text>
+      <text
+        key={`inputlabel-normal`}
+        x={(SVGWIDTH * 0.065 + 10) + (SVGWIDTH > 600 ? 90 : SVGWIDTH * 0.135)}
+        y={SVGHEIGHT * 0.04}
+        textAnchor="middle"
+        fontSize={fontSize}
+      >
+        {`(Normalized)`}
+      </text>
     </>
   );
 };
@@ -225,6 +268,9 @@ export const Network: React.FC<NetworkSVGProps> = ({
   sampleIndex,
   dataset,
   original,
+  flashConnections = [],
+  flashKey = 0,
+  stepLayerHighlight,
 }) => {
   if (!network) return null;
   return (
@@ -234,6 +280,9 @@ export const Network: React.FC<NetworkSVGProps> = ({
         SVGHEIGHT={SVGHEIGHT}
         network={network}
         onClick={setHoveredConnection}
+        flashConnections={flashConnections}
+        flashKey={flashKey}
+        stepLayerHighlight={stepLayerHighlight}
       />
       <NodeCircles
         SVGWIDTH={SVGWIDTH}
@@ -243,6 +292,7 @@ export const Network: React.FC<NetworkSVGProps> = ({
         sampleIndex={sampleIndex}
         original={original}
         onNodeClick={setHoveredNode}
+        stepLayerHighlight={stepLayerHighlight}
       />
       <LayerLabels SVGWIDTH={SVGWIDTH} SVGHEIGHT={SVGHEIGHT} network={network} />
     </>

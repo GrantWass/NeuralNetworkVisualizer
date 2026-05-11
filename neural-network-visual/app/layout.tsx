@@ -16,8 +16,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Neural Network Visualization",
-  description: "Tool to help students understand neural networks",
+  title: {
+    default: "Neural Network Visualizer | Interactive Deep Learning Tool",
+    template: "%s | Neural Network Visualizer",
+  },
+  description:
+    "An interactive neural network visualizer that shows forward propagation, backpropagation, and gradient descent step by step — with real math, live training, and a built-in ML glossary.",
 };
 
 export default function RootLayout({

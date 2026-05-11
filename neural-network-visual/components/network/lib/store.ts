@@ -4,6 +4,14 @@ import { DATASETS } from '@/components/network/static/constants';
 import { NetworkState, HoveredConnection, HoveredNode, NeuronLayer} from "@/components/network/static/types";
 import { getExplanationText, DATASET_INFO } from '@/components/network/static/explanation';
 
+interface ChangedConnection {
+  li: number;
+  fi: number;
+  ti: number;
+  delta: number;
+  positive: boolean;
+}
+
 interface TrainingState {
   sessionId: string | null;
   epoch: number;
@@ -18,12 +26,19 @@ interface TrainingState {
   datasetInfo: string;
   runModel: boolean;
   loss: number;
+  prevLoss: number;
   metric: number;
   name: string;
   losses: number[];
   accuracies: number[];
   sampleIndex: number;
   originalData: number[][];
+  changedConnections: ChangedConnection[];
+  stepLayerHighlight: number | null;
+  compareMode: boolean;
+  comparisonSessionId: string | null;
+  comparisonLosses: number[];
+  comparisonLR: number;
 }
 
 interface TrainingActions {
@@ -35,7 +50,7 @@ interface TrainingActions {
   setHoveredNode: (hoveredNode: HoveredNode | null) => void;
   setConfigOpen: (configOpen: boolean) => void;
   initModel: () => Promise<void>;
-  initModelFrontend: () => void;  
+  initModelFrontend: () => void;
   clearSessionAndReset: () => Promise<void>;
   runTrainingCycle: () => Promise<void>;
   addHiddenLayer: () => void;
@@ -46,6 +61,11 @@ interface TrainingActions {
   getExplanation: () => string;
   setRunModel: (runModel: boolean) => void;
   setSampleIndex: (sampleIndex: number) => void;
+  setStepLayerHighlight: (index: number | null) => void;
+  setComparisonLR: (lr: number) => void;
+  enableCompareMode: () => Promise<void>;
+  disableCompareMode: () => void;
+  setWeight: (layerIndex: number, fromIndex: number, toIndex: number, newValue: number) => Promise<void>;
 }
 
 const URL = process.env.NEXT_PUBLIC_API_URL;
@@ -64,16 +84,25 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   datasetInfo: DATASET_INFO[DATASETS[1]],
   runModel: false,
   loss: 0,
+  prevLoss: 0,
   metric: 0,
   name: "",
   losses: [],
   accuracies: [],
   sampleIndex: 0,
   originalData: [],
+  changedConnections: [],
+  stepLayerHighlight: null,
+  compareMode: false,
+  comparisonSessionId: null,
+  comparisonLosses: [],
+  comparisonLR: 0.5,
 
   setEpoch: (epoch) => set({ epoch }),
   setSampleIndex: (sampleIndex) => set({ sampleIndex }),
   setLearningRate: (learningRate) => set({ learningRate }),
+  setStepLayerHighlight: (stepLayerHighlight) => set({ stepLayerHighlight }),
+  setComparisonLR: (comparisonLR) => set({ comparisonLR }),
   setNetwork: (network) => set({ network }),
   setHoveredConnection: (hoveredConnection) => {
     if (hoveredConnection){
@@ -207,15 +236,25 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   },
 
   runTrainingCycle: async () => {
-    const { sessionId, learningRate } = get();
+    const { sessionId, learningRate, compareMode, comparisonSessionId, comparisonLR } = get();
     if (!sessionId) {
       toast("Error", {
         description: "Please initialize the model first.",
       });
       return;
     }
-    
+
     get().setRunModel(true);
+    const prevLossValue = get().loss;
+
+    // Fire comparison training in parallel (no await — we handle it separately)
+    const comparisonPromise = (compareMode && comparisonSessionId)
+      ? fetch(`${URL}/train`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: comparisonSessionId, learning_rate: comparisonLR, epochs: 1 }),
+        }).then(r => r.json()).catch(() => null)
+      : Promise.resolve(null);
 
     try {
       const epochs = 1
@@ -245,7 +284,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
               // Update individual layer properties independently
               layer.weights = resultLayer.weights ? resultLayer.weights : layer.weights;
               layer.biases = resultLayer.biases ? resultLayer.biases[0] : layer.biases;
-              layer.Z = resultLayer.Z ? resultLayer.Z : layer.Z; 
+              layer.Z = resultLayer.Z ? resultLayer.Z : layer.Z;
               layer.A = resultLayer.A ? resultLayer.A : layer.A;
               layer.dW = resultLayer.dW ? resultLayer.dW : layer.dW;
               layer.db = resultLayer.db ? resultLayer.db[0] : layer.db;
@@ -256,27 +295,54 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
             }
             return layer;
           }) || [];
+
+          // Compute top 5 most-changed connections for highlighting
+          const changedConns: ChangedConnection[] = [];
+          updatedLayers.forEach((layer, li) => {
+            if (layer.prevWeights?.length > 0 && layer.weights?.length > 0) {
+              layer.weights.forEach((row, fi) => {
+                row.forEach((currW, ti) => {
+                  const prevW = layer.prevWeights[fi]?.[ti] ?? currW;
+                  const diff = currW - prevW;
+                  const delta = Math.abs(diff);
+                  if (delta > 0.001) {
+                    changedConns.push({ li, fi, ti, delta, positive: diff > 0 });
+                  }
+                });
+              });
+            }
+          });
+          changedConns.sort((a, b) => b.delta - a.delta);
+
           return {
             ...state,
             network: {
               ...state.network,
               input: result.input,
               initialized: true,
-              layers: updatedLayers,  // Update layers with new data
+              layers: updatedLayers,
             },
             epoch: state.epoch + epochs,
             loss: result.loss,
+            prevLoss: prevLossValue,
             metric: result.metric,
             name: result.name,
             losses: [...state.losses, result.loss],
             accuracies: [...state.accuracies, result.metric],
-
+            changedConnections: changedConns.slice(0, 5),
           };
         });
 
         toast("Training Cycle Complete", {
           description: `Loss: ${result.loss.toFixed(4)}, Metric (${result.name}): ${result.metric.toFixed(4)}`,
         });
+
+        // Resolve comparison result and append to comparisonLosses
+        const compData = await comparisonPromise;
+        if (compData?.training_results?.[0]) {
+          const compLoss = compData.training_results[0].loss;
+          set((state) => ({ comparisonLosses: [...state.comparisonLosses, compLoss] }));
+        }
       } else {
         throw new Error(data.error || "Failed to run training cycle");
       }
@@ -339,7 +405,69 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     const text : string = getExplanationText(network, epoch, learningRate, dataset, loss, metric, name, sessionId)
     return text
   },
-  
+
+  enableCompareMode: async () => {
+    const { hiddenLayers, activations, dataset } = get();
+    try {
+      const response = await fetch(`${URL}/init_model`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ layer_sizes: hiddenLayers, activations, dataset }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        set({ comparisonSessionId: data.session_id, compareMode: true, comparisonLosses: [] });
+        toast("Comparison Started", { description: `Comparison model initialized. Adjust the comparison η and keep training.` });
+      } else {
+        throw new Error(data.error);
+      }
+    } catch {
+      toast("Error", { description: "Failed to initialize comparison model." });
+    }
+  },
+
+  disableCompareMode: () => {
+    const { comparisonSessionId } = get();
+    if (comparisonSessionId) {
+      fetch(`${URL}/clear_session?session_id=${comparisonSessionId}`, { method: "POST" }).catch(console.error);
+    }
+    set({ compareMode: false, comparisonSessionId: null, comparisonLosses: [] });
+  },
+
+  setWeight: async (layerIndex, fromIndex, toIndex, newValue) => {
+    const { sessionId, network } = get();
+    if (!sessionId || !network) return;
+    try {
+      const response = await fetch(`${URL}/set_weights`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, layer_index: layerIndex, from_index: fromIndex, to_index: toIndex, new_value: newValue }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        set((state) => {
+          const updatedLayers = state.network?.layers.map((layer, index) => {
+            const resultLayer = data.layers[index];
+            if (resultLayer) {
+              if (index === layerIndex && layer.weights[fromIndex]) {
+                layer.weights[fromIndex][toIndex] = newValue;
+              }
+              layer.A = resultLayer.A ?? layer.A;
+              layer.Z = resultLayer.Z ?? layer.Z;
+            }
+            return layer;
+          }) ?? [];
+          return { ...state, network: { ...state.network!, layers: updatedLayers } };
+        });
+        toast("Weight Updated", { description: `Layer ${layerIndex} [${fromIndex}→${toIndex}] = ${newValue.toFixed(4)}. Prediction updated.` });
+      } else {
+        throw new Error(data.error);
+      }
+    } catch {
+      toast("Error", { description: "Failed to update weight." });
+    }
+  },
+
 }));
 
 export default useStore;

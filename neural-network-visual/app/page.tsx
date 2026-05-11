@@ -6,20 +6,28 @@ import ContactInfo from "./contact";
 
 export const metadata = {
   title: "Neural Network Visualizer | Interactive Deep Learning Tool",
-  description: "Visualize forward and backward propagation in a neural network with an interactive graph, detailed configuration options, and explanations.",
+  description:
+    "Step through forward propagation, backpropagation, and gradient descent interactively — with real matrix math, live training charts, prediction confidence bars, a step-by-step mode, and a built-in ML glossary. Free and open to everyone learning AI.",
   keywords: [
     "Neural Network Visualizer",
-    "Deep Learning",
-    "Backpropagation",
+    "Interactive Neural Network",
+    "Backpropagation Visualization",
     "Forward Propagation",
-    "Machine Learning",
-    "AI Visualization",
+    "Deep Learning Tutorial",
+    "Machine Learning Education",
+    "Gradient Descent Interactive",
+    "Neural Network Playground",
+    "AI Visualization Tool",
+    "Learn Neural Networks",
+    "Step by Step Backpropagation",
+    "Machine Learning Glossary",
     "Neural Network Demo",
-    "Interactive Neural Net"
+    "Iris Dataset Neural Network",
   ],
   openGraph: {
-    title: "Neural Network Visualizer",
-    description: "Explore and understand neural networks through an interactive visualization. Configure layers, track metrics, and learn backpropagation.",
+    title: "Neural Network Visualizer — See the Math, Step by Step",
+    description:
+      "Watch a neural network learn in real time. Step through each layer's computation, see weights update after every training cycle, explore a built-in ML glossary, and understand backpropagation through actual matrix equations.",
     url: "https://nn-visual.com/",
     siteName: "Neural Network Visualizer",
     locale: "en_US",
