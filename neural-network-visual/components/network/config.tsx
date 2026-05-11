@@ -36,6 +36,14 @@ const DATASET_DETAILS: Record<string, {
     loss: "Mean Squared Error (MSE)",
     samples: "392 samples",
   },
+  xor: {
+    task: "Binary Classification",
+    taskType: "Can a hidden layer learn a non-linear rule?",
+    inputs: ["Input A (0 or 1)", "Input B (0 or 1)"],
+    output: "1 if inputs differ, 0 if they match",
+    loss: "Binary Cross-Entropy",
+    samples: "4 patterns (the full XOR truth table)",
+  },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -48,12 +56,12 @@ const getLRFeedback = (lr: number): { text: string; color: string } => {
 };
 
 const countParams = (hiddenLayers: number[], dataset: string) => {
-  const inputSize = 4;
+  const inputSize = dataset === "xor" ? 2 : 4;
   const outputSize = dataset === "iris" ? 3 : 1;
   const sizes = [inputSize, ...hiddenLayers, outputSize];
   let total = 0;
   for (let i = 0; i < sizes.length - 1; i++) {
-    total += sizes[i] * sizes[i + 1] + sizes[i + 1]; // weights + biases
+    total += sizes[i] * sizes[i + 1] + sizes[i + 1];
   }
   return total;
 };
@@ -167,7 +175,7 @@ const StepConfigure = ({
   onNext: () => void;
 }) => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const inputSize = 4;
+  const inputSize = dataset === "xor" ? 2 : 4;
   const outputSize = dataset === "iris" ? 3 : 1;
 
   return (
@@ -296,7 +304,7 @@ const StepInitialize = ({
   onBack: () => void;
   onInitialize: () => void;
 }) => {
-  const inputSize = 4;
+  const inputSize = dataset === "xor" ? 2 : 4;
   const outputSize = dataset === "iris" ? 3 : 1;
   const totalParams = countParams(hiddenLayers, dataset);
   const allLayers = [
@@ -310,7 +318,7 @@ const StepInitialize = ({
     {
       label: "Output Layer",
       size: outputSize,
-      activation: dataset === "iris" ? "softmax" : "linear",
+      activation: dataset === "iris" ? "softmax" : dataset === "xor" ? "sigmoid" : "linear",
       color: "bg-red-50 border-red-200 text-red-800",
     },
   ];
@@ -430,6 +438,23 @@ const SampleStory = ({
     );
   }
 
+  if (dataset === "xor") {
+    const prob = prediction[0];
+    const predLabel = prob >= 0.5 ? 1 : 0;
+    const actualLabel = sample[sample.length - 1];
+    const correct = predLabel === actualLabel;
+    return (
+      <div className="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2">
+        <span className="font-medium">A={sample[0]}, B={sample[1]}</span>
+        <span className="mx-1">→</span>
+        <span className="font-semibold text-gray-800">Predicted: {predLabel} ({(prob * 100).toFixed(0)}%)</span>
+        <span className={`ml-1 font-bold ${correct ? "text-green-600" : "text-red-500"}`}>
+          {correct ? "✓" : "✗"} Actual: {actualLabel}
+        </span>
+      </div>
+    );
+  }
+
   return null;
 };
 
@@ -469,7 +494,7 @@ const StepTrain = ({
   onChangeModel: () => void;
 }) => {
   const lrFeedback = getLRFeedback(learningRate);
-  const inputSize = 4;
+  const inputSize = dataset === "xor" ? 2 : 4;
   const outputSize = dataset === "iris" ? 3 : 1;
 
   return (
@@ -498,7 +523,7 @@ const StepTrain = ({
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold text-gray-900">
-              {name === "accuracy" ? `${(metric * 100).toFixed(0)}%` : metric.toFixed(2)}
+              {name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)}
             </p>
             <p className="text-xs text-gray-500 mt-0.5">{name === "accuracy" ? "Accuracy" : "MAE"}</p>
           </div>

@@ -53,30 +53,25 @@ const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: 
     const outputMap: { [key: string]: string[] } = {
       auto_mpg: ["MPG"],
       iris: ["Setosa", "Versicolor", "Virginica"],
+      xor: ["Output"],
     };
-  
-    const formatValue = (value: number, dataset: string) => {
-      if (dataset === "iris") {
-        return `${(value * 100).toFixed(1)}%`;
-      }
-      if (dataset === "auto_mpg") {
-        return `${value.toFixed(1)} MPG`;
-      }
+
+    const formatValue = (value: number, ds: string) => {
+      if (ds === "iris") return `${(value * 100).toFixed(1)}%`;
+      if (ds === "auto_mpg") return `${value.toFixed(1)} MPG`;
+      if (ds === "xor") return `${(value * 100).toFixed(1)}% → ${value >= 0.5 ? 1 : 0}`;
       return value.toFixed(3);
     };
 
     const formatActual = () => {
-      if (!actual || actual.length < 3){
-        return;
-      }
+      if (!actual || actual.length === 0) return;
       if (dataset === "iris") {
-        const actualResults = actual.slice(-3)
-        const index = actualResults.findIndex((v) => v === 1);
+        if (actual.length < 3) return;
+        const index = actual.slice(-3).findIndex((v) => v === 1);
         return outputMap[dataset]?.[index] ?? "Unknown";
-      } else if (dataset === "auto_mpg") {
-        const actualResults = actual.slice(-1)
-        return formatValue(actualResults[0], dataset);
       }
+      if (dataset === "auto_mpg") return formatValue(actual[actual.length - 1], dataset);
+      if (dataset === "xor") return `${actual[actual.length - 1]}`;
       return "N/A";
     };
   

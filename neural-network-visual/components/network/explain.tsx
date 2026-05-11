@@ -123,6 +123,43 @@ const PredictionSummary = ({
     );
   }
 
+  if (dataset === "xor") {
+    const prob = prediction[0];
+    const predLabel = prob >= 0.5 ? 1 : 0;
+    const actualLabel = sample[sample.length - 1];
+    const correct = predLabel === actualLabel;
+    return (
+      <div className="w-full max-w-sm mx-auto mb-4 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Current Prediction</p>
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+            {correct ? "✓ Correct" : "✗ Wrong"}
+          </span>
+        </div>
+        <div className="space-y-1.5">
+          {[0, 1].map((label) => (
+            <div key={label} className="flex items-center gap-2">
+              <span className={`text-xs w-6 text-right font-medium ${predLabel === label ? "text-gray-900" : "text-gray-400"}`}>{label}</span>
+              <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
+                <div
+                  className={`h-3 rounded-full transition-all duration-300 ${label === 1 ? "bg-blue-500" : "bg-gray-400"} ${predLabel === label ? "opacity-100" : "opacity-30"}`}
+                  style={{ width: `${((label === 1 ? prob : 1 - prob) * 100).toFixed(1)}%` }}
+                />
+              </div>
+              <span className={`text-xs w-10 font-mono ${predLabel === label ? "font-bold text-gray-900" : "text-gray-400"}`}>
+                {((label === 1 ? prob : 1 - prob) * 100).toFixed(1)}%
+              </span>
+              {actualLabel === label && <span className="text-xs text-gray-400 italic">← actual</span>}
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-gray-400 mt-2">
+          A={sample[0]}, B={sample[1]} → XOR={actualLabel}
+        </p>
+      </div>
+    );
+  }
+
   return null;
 };
 
@@ -140,17 +177,9 @@ const LossCallout = ({ prevLoss, loss, epoch }: { prevLoss: number; loss: number
     bad: "bg-red-50 border-red-300 text-red-800",
   };
 
-  const icons: Record<string, string> = {
-    great: "🚀",
-    good: "📈",
-    slow: "⚠️",
-    bad: "📉",
-  };
-
   return (
-    <div className={`flex items-start gap-2 border rounded-lg px-3 py-2 text-sm mb-4 ${styles[type ?? 'good']}`}>
-      <span>{icons[type ?? 'good']}</span>
-      <span>{text}</span>
+    <div className={`border rounded-lg px-3 py-2 text-sm mb-4 ${styles[type ?? 'good']}`}>
+      {text}
     </div>
   );
 };
@@ -182,7 +211,6 @@ const Explain = () => {
       disableCompareMode,
     } = useStore();
 
-    const [expanded, setExpanded] = useState(false);
     const [view, setView] = useState<PropagationView>('forward');
     const [fontSize, setFontSize] = useState("md");
 
@@ -317,9 +345,6 @@ const Explain = () => {
     );
 
     const fullExplanation = getExplanation() || '';
-    const explanationPreview = fullExplanation.split('\n').slice(0, 5).join('\n');
-    const hasMoreContent = fullExplanation.split('\n').length > 5;
-
     const hasTrained = network?.layers && network.layers[0].A?.length > 0;
 
     // Layers to render in forward pass (all except last)
@@ -434,9 +459,17 @@ const Explain = () => {
                                       : `Layer ${layerIndex + 1} Computation`;
 
                                     // Plain-English header per layer
-                                    const layerHint = isOutputComputation
-                                      ? `Multiplies hidden activations by learned weights, adds biases, then applies ${layer.activation} to produce the final prediction.`
-                                      : `Multiplies input values by learned weights, adds biases, then applies ${layer.activation} to pass non-linear signals forward.`;
+                                    const inputDesc = layerIndex === 0
+                                      ? (dataset === "xor" ? "the two binary inputs (A, B)"
+                                        : dataset === "iris" ? "the four flower measurements"
+                                        : "the four car features")
+                                      : "the previous layer's activations";
+                                    const outputDesc = isOutputComputation
+                                      ? (dataset === "iris" ? `a ${layer.activation} probability over 3 classes`
+                                        : dataset === "xor" ? `a ${layer.activation} probability (0–1) for the XOR output`
+                                        : `a linear value representing predicted MPG`)
+                                      : `${layer.activation} activations passed to the next layer`;
+                                    const layerHint = `Takes ${inputDesc}, multiplies by weights, adds biases, then applies ${layer.activation} → ${outputDesc}.`;
 
                                     return (
                                         <div key={layerIndex} className="flex flex-col items-center border-t border-gray-300 pt-4 w-full">
@@ -733,34 +766,23 @@ const Explain = () => {
                 </div>
             </div>
 
-            {/* Expandable Explanation */}
-            <div className="mt-4 sm:mt-6">
-                <div className={`whitespace-pre-line text-gray-700 bg-white p-2 sm:p-4 rounded shadow-sm border border-gray-300 ${!expanded ? 'max-h-34 overflow-hidden' : ''}`}>
-                    <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-4">Explanation</h3>
-                    <ReactMarkdown
-                        rehypePlugins={[rehypeRaw]}
-                        components={{
-                            a: ({...props }) => (
-                                <a {...props} className="text-black-500 underline font-medium hover:text-blue-600" target="_blank" rel="noopener noreferrer" />
-                            ),
-                            ul: ({...props }) => <ul {...props} className="list-disc pl-5 mt-[-30px] mb-[-10px]" />,
-                            li: ({...props }) => <li {...props} className="mb-[-15px]" />,
-                        }}
-                    >
-                        {expanded ? fullExplanation : explanationPreview}
-                    </ReactMarkdown>
-
-                    {hasMoreContent && (
-                        <div>
-                            <button
-                                onClick={() => setExpanded(!expanded)}
-                                className="font-bold cursor-pointer text-sm"
-                            >
-                                {expanded ? 'Show less' : 'Read more...'}
-                            </button>
-                        </div>
-                    )}
-                </div>
+            {/* Explanation panel */}
+            <div className="mt-4 sm:mt-6 bg-white border border-gray-200 rounded-lg p-4 text-sm text-gray-700">
+                <h3 className="font-semibold text-gray-900 mb-3">About this training run</h3>
+                <ReactMarkdown
+                    rehypePlugins={[rehypeRaw]}
+                    components={{
+                        a: ({...props }) => (
+                            <a {...props} className="underline font-medium hover:text-blue-600" target="_blank" rel="noopener noreferrer" />
+                        ),
+                        p: ({...props}) => <p {...props} className="mb-2 leading-relaxed" />,
+                        ul: ({...props }) => <ul {...props} className="list-disc pl-5 space-y-0.5 mb-2" />,
+                        li: ({...props }) => <li {...props} />,
+                        strong: ({...props}) => <strong {...props} className="font-semibold text-gray-900" />,
+                    }}
+                >
+                    {fullExplanation}
+                </ReactMarkdown>
             </div>
         </div>
     );

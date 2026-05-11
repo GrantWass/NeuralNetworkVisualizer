@@ -1,11 +1,11 @@
-const DATASETS = ["auto_mpg", "iris"];
+const DATASETS = ["auto_mpg", "iris", "xor"];
 
 const ACTIVATION_FUNCTIONS = ["relu", "sigmoid", "tanh", "linear"];
 
 const DATASET_INPUT_FEATURES: { [key: string]: string[] } = {
   auto_mpg: [
     "Displacement",
-    "Horsepower", 
+    "Horsepower",
     "Weight",
     "Acceleration"
   ],
@@ -14,6 +14,10 @@ const DATASET_INPUT_FEATURES: { [key: string]: string[] } = {
     "Sepal width",
     "Petal length",
     "Petal width"
+  ],
+  xor: [
+    "Input A",
+    "Input B",
   ]
 };
 
@@ -21,7 +25,7 @@ const DATASET_INPUT_FEATURES_SHORT: { [key: string]: string[] } = {
   auto_mpg: [
     "Displacement",
     "Horsepower",
-    "Weight", 
+    "Weight",
     "Acceleration"
   ],
   iris: [
@@ -29,6 +33,10 @@ const DATASET_INPUT_FEATURES_SHORT: { [key: string]: string[] } = {
     "Sepal width",
     "Petal length",
     "Petal width"
+  ],
+  xor: [
+    "A",
+    "B",
   ]
 };
 

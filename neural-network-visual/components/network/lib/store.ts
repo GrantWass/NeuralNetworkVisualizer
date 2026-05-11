@@ -189,12 +189,16 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       inputSize = 4;
       outputSize = 1;
       accuracyMetric = "mae";
+    } else if (dataset === "xor") {
+      inputSize = 2;
+      outputSize = 1;
     }
 
     const layerSizes = [inputSize, ...hiddenLayers, outputSize];
     const totalLayers = layerSizes.length;
+    const outputActivation = dataset === "iris" ? "softmax" : dataset === "xor" ? "sigmoid" : "linear";
     const layers = layerSizes.map((size, index) => {
-      const activation = index === totalLayers - 1 ? "softmax" : activations[index] || "relu";
+      const activation = index === totalLayers - 1 ? outputActivation : activations[index] || "relu";
       
       const layer = new NeuronLayer(size, activation, index, totalLayers);
       layer.initWeightsAndBiases(size, index + 1 == layerSizes.length ? 0 : layerSizes[index + 1]);
@@ -209,6 +213,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     const { sessionId } = get();
     if (!sessionId) return;
     try {
+      // Clear both main and comparison sessions
+      get().disableCompareMode();
       await fetch(`${URL}/clear_session?session_id=${sessionId}`, { method: "POST" });
       set({
         sessionId: null,
@@ -255,6 +261,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
           body: JSON.stringify({ session_id: comparisonSessionId, learning_rate: comparisonLR, epochs: 1 }),
         }).then(r => r.json()).catch(() => null)
       : Promise.resolve(null);
+
 
     try {
       const epochs = 1
@@ -342,6 +349,12 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         if (compData?.training_results?.[0]) {
           const compLoss = compData.training_results[0].loss;
           set((state) => ({ comparisonLosses: [...state.comparisonLosses, compLoss] }));
+        } else if (compData && !compData.training_results) {
+          // Comparison session expired or was lost — auto-disable and notify
+          get().disableCompareMode();
+          toast("Comparison Ended", {
+            description: "The comparison session was lost. Re-enable Compare LR to start a new one.",
+          });
         }
       } else {
         throw new Error(data.error || "Failed to run training cycle");
@@ -401,8 +414,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   },
 
   getExplanation: () => {
-    const { network, epoch, learningRate, dataset, loss, metric, name, sessionId } = get();
-    const text : string = getExplanationText(network, epoch, learningRate, dataset, loss, metric, name, sessionId)
+    const { network, epoch, learningRate, dataset, loss, prevLoss, metric, name, sessionId } = get();
+    const text : string = getExplanationText(network, epoch, learningRate, dataset, loss, prevLoss, metric, name, sessionId)
     return text
   },
 
