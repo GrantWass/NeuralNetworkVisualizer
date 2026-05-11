@@ -747,46 +747,13 @@ const Explain = () => {
             {/* Loss and Accuracy Charts */}
             <div className="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
                 <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
-                    <div className="flex items-start justify-between mb-3 gap-2 flex-wrap">
-                        <div>
-                            <div className="flex items-baseline gap-2">
-                                <h3 className="text-sm font-semibold text-gray-800">Training Loss</h3>
-                                {losses.length > 0 && (
-                                    <span className="text-xs font-mono text-gray-500">{losses[losses.length - 1].toFixed(4)}</span>
-                                )}
-                            </div>
-                            <p className="text-xs text-gray-400 mt-0.5">Decreasing = network is learning</p>
-                        </div>
-                        {!compareMode ? (
-                            <button
-                                onClick={enableCompareMode}
-                                disabled={!sessionId}
-                                title="Initialize a second model with a different learning rate and compare loss curves"
-                                className="text-xs border border-gray-200 rounded px-2 py-1 hover:bg-gray-50 disabled:opacity-40 whitespace-nowrap text-gray-600"
-                            >
-                                Compare LR
-                            </button>
-                        ) : (
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-xs font-medium text-pink-500">η₂ =</span>
-                                <input
-                                    type="number"
-                                    value={comparisonLR}
-                                    onChange={(e) => setComparisonLR(Math.min(1, Math.max(0.001, parseFloat(e.target.value) || 0.01)))}
-                                    min={0.001}
-                                    max={1}
-                                    step={0.01}
-                                    className="w-16 text-xs border border-gray-200 rounded px-1.5 py-0.5 font-mono"
-                                />
-                                <button onClick={disableCompareMode} className="text-xs text-gray-400 hover:text-gray-600 ml-1">✕</button>
-                            </div>
+                    <div className="flex items-baseline gap-2 mb-0.5">
+                        <h3 className="text-sm font-semibold text-gray-800">Training Loss</h3>
+                        {losses.length > 0 && (
+                            <span className="text-xs font-mono text-gray-500">{losses[losses.length - 1].toFixed(4)}</span>
                         )}
                     </div>
-                    {compareMode && (
-                        <p className="text-xs text-gray-400 mb-2">
-                            Indigo (η={learningRate}) vs pink dashed (η={comparisonLR})
-                        </p>
-                    )}
+                    <p className="text-xs text-gray-400 mt-0.5 mb-3">Decreasing = network is learning</p>
                     <div className="h-40 sm:h-48 lg:h-56">
                         <Line data={lossData} options={lossChartOptions} />
                     </div>
