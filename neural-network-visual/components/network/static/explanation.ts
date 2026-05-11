@@ -173,21 +173,6 @@ Hidden layers act as **feature detectors**:
 Too many layers can lead to **overfitting** (memorizing data).
 Regularization techniques like **dropout** and **batch normalization** help mitigate this.`;
 
-export type LossCalloutType = 'great' | 'good' | 'slow' | 'bad' | null;
-
-export const getLossCallout = (
-  prevLoss: number,
-  currentLoss: number,
-  epoch: number
-): { text: string; type: LossCalloutType } => {
-  if (epoch <= 1 || prevLoss === 0) return { text: '', type: null };
-  const pct = ((prevLoss - currentLoss) / prevLoss) * 100;
-  if (pct > 10) return { text: `Loss dropped ${pct.toFixed(1)}% — the network is learning fast. Weights are shifting away from bad predictions.`, type: 'great' };
-  if (pct > 2)  return { text: `Loss decreased ${pct.toFixed(1)}% — steady progress.`, type: 'good' };
-  if (pct >= -1) return { text: `Loss barely changed (${pct.toFixed(1)}%). The model may be stuck — try adjusting the learning rate or run more cycles.`, type: 'slow' };
-  return { text: `Loss increased ${Math.abs(pct).toFixed(1)}%. The learning rate may be too high and causing weights to overshoot.`, type: 'bad' };
-};
-
 export const DATASET_INFO: { [key: string]: string } = {
   auto_mpg: `The [**Auto MPG dataset**](https://archive.ics.uci.edu/ml/datasets/auto+mpg) contains **automobile fuel efficiency data**.
 - **Inputs:** Displacement, Horsepower, Weight, Acceleration

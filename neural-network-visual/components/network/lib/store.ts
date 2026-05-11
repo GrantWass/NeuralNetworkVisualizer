@@ -35,10 +35,6 @@ interface TrainingState {
   originalData: number[][];
   changedConnections: ChangedConnection[];
   stepLayerHighlight: number | null;
-  compareMode: boolean;
-  comparisonSessionId: string | null;
-  comparisonLosses: number[];
-  comparisonLR: number;
 }
 
 interface TrainingActions {
@@ -62,9 +58,6 @@ interface TrainingActions {
   setRunModel: (runModel: boolean) => void;
   setSampleIndex: (sampleIndex: number) => void;
   setStepLayerHighlight: (index: number | null) => void;
-  setComparisonLR: (lr: number) => void;
-  enableCompareMode: () => Promise<void>;
-  disableCompareMode: () => void;
   setWeight: (layerIndex: number, fromIndex: number, toIndex: number, newValue: number) => Promise<void>;
 }
 
@@ -93,16 +86,11 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   originalData: [],
   changedConnections: [],
   stepLayerHighlight: null,
-  compareMode: false,
-  comparisonSessionId: null,
-  comparisonLosses: [],
-  comparisonLR: 0.5,
 
   setEpoch: (epoch) => set({ epoch }),
   setSampleIndex: (sampleIndex) => set({ sampleIndex }),
   setLearningRate: (learningRate) => set({ learningRate }),
   setStepLayerHighlight: (stepLayerHighlight) => set({ stepLayerHighlight }),
-  setComparisonLR: (comparisonLR) => set({ comparisonLR }),
   setNetwork: (network) => set({ network }),
   setHoveredConnection: (hoveredConnection) => {
     if (hoveredConnection){
@@ -162,16 +150,17 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
           return layer;
         });
         set({ network: { input: [[]], layers, initialized: true }, originalData: data.original_train_data, configOpen: false });
-        toast("Model Initialized", {
-          description: `Session ID: ${data.session_id}`,
+        const arch = data.layer_sizes.join(" → ");
+        toast.success("Model ready", {
+          description: `Architecture: ${arch} · ${data.layer_sizes.reduce((a: number, b: number, i: number, arr: number[]) => i < arr.length - 1 ? a + arr[i] * arr[i+1] + arr[i+1] : a, 0)} parameters`,
         });
       } else {
         throw new Error(data.error || "Failed to initialize model");
       }
     } catch (error) {
       console.error("Error initializing model:", error);
-      toast("Error", {
-        description: "Failed to initialize model. Please try again.",
+      toast.error("Initialization failed", {
+        description: "Could not connect to the backend. Make sure the server is running.",
       });
     }
   },
@@ -213,8 +202,6 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     const { sessionId } = get();
     if (!sessionId) return;
     try {
-      // Clear both main and comparison sessions
-      get().disableCompareMode();
       await fetch(`${URL}/clear_session?session_id=${sessionId}`, { method: "POST" });
       set({
         sessionId: null,
@@ -229,38 +216,27 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         accuracies: [],
         originalData: [],
       });
-      toast("Configuration Reset", {
-        description: "Session cleared, network reset, and configuration open.",
-      });
+      toast("Model reset");
       get().setSessionId(null);
     } catch (error) {
       console.error("Error clearing session:", error);
-      toast("Error", {
-        description: "Failed to reset configuration. Please try again.",
+      toast.error("Reset failed", {
+        description: "Could not clear the session. Please try again.",
       });
     }
   },
 
   runTrainingCycle: async () => {
-    const { sessionId, learningRate, compareMode, comparisonSessionId, comparisonLR } = get();
+    const { sessionId, learningRate } = get();
     if (!sessionId) {
-      toast("Error", {
-        description: "Please initialize the model first.",
+      toast.error("No model initialized", {
+        description: "Complete step 3 to initialize the model before training.",
       });
       return;
     }
 
     get().setRunModel(true);
     const prevLossValue = get().loss;
-
-    // Fire comparison training in parallel (no await — we handle it separately)
-    const comparisonPromise = (compareMode && comparisonSessionId)
-      ? fetch(`${URL}/train`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_id: comparisonSessionId, learning_rate: comparisonLR, epochs: 1 }),
-        }).then(r => r.json()).catch(() => null)
-      : Promise.resolve(null);
 
 
     try {
@@ -340,29 +316,24 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
           };
         });
 
-        toast("Training Cycle Complete", {
-          description: `Loss: ${result.loss.toFixed(4)}, Metric (${result.name}): ${result.metric.toFixed(4)}`,
+        const lossArrow = prevLossValue > 0
+          ? result.loss < prevLossValue ? "↓" : result.loss > prevLossValue ? "↑" : "→"
+          : "";
+        const metricLabel = result.name === "accuracy"
+          ? `${result.metric.toFixed(1)}% accuracy`
+          : `MAE ${result.metric.toFixed(3)}`;
+        const { epoch: currentEpoch } = get();
+        toast.success(`Epoch ${currentEpoch}`, {
+          description: `Loss ${result.loss.toFixed(4)} ${lossArrow} · ${metricLabel}`,
         });
 
-        // Resolve comparison result and append to comparisonLosses
-        const compData = await comparisonPromise;
-        if (compData?.training_results?.[0]) {
-          const compLoss = compData.training_results[0].loss;
-          set((state) => ({ comparisonLosses: [...state.comparisonLosses, compLoss] }));
-        } else if (compData && !compData.training_results) {
-          // Comparison session expired or was lost — auto-disable and notify
-          get().disableCompareMode();
-          toast("Comparison Ended", {
-            description: "The comparison session was lost. Re-enable Compare LR to start a new one.",
-          });
-        }
       } else {
         throw new Error(data.error || "Failed to run training cycle");
       }
     } catch (error) {
       console.error("Error running training cycle:", error);
-      toast("Error", {
-        description: "Failed to run training cycle. Please try again.",
+      toast.error("Training failed", {
+        description: "Could not complete the training cycle. Please try again.",
       });
     }
   },
@@ -419,34 +390,6 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     return text
   },
 
-  enableCompareMode: async () => {
-    const { hiddenLayers, activations, dataset } = get();
-    try {
-      const response = await fetch(`${URL}/init_model`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ layer_sizes: hiddenLayers, activations, dataset }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        set({ comparisonSessionId: data.session_id, compareMode: true, comparisonLosses: [] });
-        toast("Comparison Started", { description: `Comparison model initialized. Adjust the comparison η and keep training.` });
-      } else {
-        throw new Error(data.error);
-      }
-    } catch {
-      toast("Error", { description: "Failed to initialize comparison model." });
-    }
-  },
-
-  disableCompareMode: () => {
-    const { comparisonSessionId } = get();
-    if (comparisonSessionId) {
-      fetch(`${URL}/clear_session?session_id=${comparisonSessionId}`, { method: "POST" }).catch(console.error);
-    }
-    set({ compareMode: false, comparisonSessionId: null, comparisonLosses: [] });
-  },
-
   setWeight: async (layerIndex, fromIndex, toIndex, newValue) => {
     const { sessionId, network } = get();
     if (!sessionId || !network) return;
@@ -472,12 +415,14 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
           }) ?? [];
           return { ...state, network: { ...state.network!, layers: updatedLayers } };
         });
-        toast("Weight Updated", { description: `Layer ${layerIndex} [${fromIndex}→${toIndex}] = ${newValue.toFixed(4)}. Prediction updated.` });
+        toast.success("Weight updated", {
+          description: `Layer ${layerIndex}, neuron ${fromIndex} → ${toIndex} set to ${newValue.toFixed(4)}`,
+        });
       } else {
         throw new Error(data.error);
       }
     } catch {
-      toast("Error", { description: "Failed to update weight." });
+      toast.error("Weight update failed", { description: "Could not apply the new weight value." });
     }
   },
 

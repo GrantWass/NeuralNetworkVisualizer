@@ -19,7 +19,6 @@ import { reshapeTo2D, transpose, multiplyMatrices } from "@/components/network/l
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import { useMemo } from "react";
-import { getLossCallout } from "@/components/network/static/explanation";
 import Glossary from "@/components/network/glossary";
 
 // Register ChartJS components
@@ -64,31 +63,59 @@ const PredictionSummary = ({
     const correct = actualIdx === predIdx;
 
     return (
-      <div className="w-full max-w-sm mx-auto mb-4 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+      <div className="w-full max-w-xs mx-auto mb-4 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Current Prediction</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Prediction</p>
           <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
             {correct ? "✓ Correct" : "✗ Wrong"}
           </span>
         </div>
-        <div className="space-y-1.5">
-          {classNames.map((name, i) => (
-            <div key={name} className="flex items-center gap-2">
-              <span className={`text-xs w-20 text-right font-medium ${i === predIdx ? "text-gray-900" : "text-gray-400"}`}>
-                {name}
-              </span>
-              <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
-                <div
-                  className={`h-3 rounded-full transition-all duration-300 ${colors[i]} ${i === predIdx ? "opacity-100" : "opacity-40"}`}
-                  style={{ width: `${(prediction[i] * 100).toFixed(1)}%` }}
-                />
-              </div>
-              <span className={`text-xs w-10 font-mono ${i === predIdx ? "font-bold text-gray-900" : "text-gray-400"}`}>
-                {(prediction[i] * 100).toFixed(1)}%
-              </span>
-              {i === actualIdx && <span className="text-xs text-gray-400 italic">← actual</span>}
+
+        {/* Predicted / Actual summary when wrong */}
+        {!correct ? (
+          <div className="flex gap-2 mb-2.5 text-xs">
+            <div className="flex-1 rounded bg-gray-50 border border-gray-200 px-2 py-1">
+              <p className="text-gray-400 mb-0.5">Predicted</p>
+              <p className="font-semibold text-gray-900">{classNames[predIdx]}</p>
             </div>
-          ))}
+            <div className="flex-1 rounded bg-gray-50 border border-gray-200 px-2 py-1">
+              <p className="text-gray-400 mb-0.5">Actual</p>
+              <p className="font-semibold text-gray-700">{classNames[actualIdx] ?? "?"}</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-green-700 font-medium mb-2">
+            {classNames[predIdx]} — {(prediction[predIdx] * 100).toFixed(1)}% confidence
+          </p>
+        )}
+
+        <div className="space-y-1.5">
+          {classNames.map((name, i) => {
+            const isPred = i === predIdx;
+            const isActual = i === actualIdx;
+            const opacity = isPred ? "opacity-100" : isActual && !correct ? "opacity-60" : "opacity-20";
+            return (
+              <div key={name} className="flex items-center gap-2">
+                <span className={`text-xs w-20 text-right ${isPred || isActual ? "font-semibold text-gray-800" : "text-gray-400"}`}>
+                  {name}
+                </span>
+                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-300 ${colors[i]} ${opacity}`}
+                    style={{ width: `${(prediction[i] * 100).toFixed(1)}%` }}
+                  />
+                </div>
+                <span className={`text-xs w-10 font-mono ${isPred ? "font-bold text-gray-900" : "text-gray-400"}`}>
+                  {(prediction[i] * 100).toFixed(1)}%
+                </span>
+                <span className="w-10 text-xs">
+                  {isPred && isActual && <span className="text-green-600 font-medium">✓</span>}
+                  {isPred && !isActual && <span className="text-blue-500">pred</span>}
+                  {!isPred && isActual && <span className="text-orange-500">actual</span>}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -100,7 +127,7 @@ const PredictionSummary = ({
     const error = Math.abs(predMPG - actualMPG);
     return (
       <div className="w-full max-w-sm mx-auto mb-4 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Current Prediction</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Prediction</p>
         <div className="flex items-center justify-around text-center">
           <div>
             <p className="text-xl font-bold text-gray-900">{predMPG.toFixed(1)}</p>
@@ -131,7 +158,7 @@ const PredictionSummary = ({
     return (
       <div className="w-full max-w-sm mx-auto mb-4 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Current Prediction</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Prediction</p>
           <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
             {correct ? "✓ Correct" : "✗ Wrong"}
           </span>
@@ -164,27 +191,6 @@ const PredictionSummary = ({
 };
 
 // ----------------------------------------------------------------
-// Loss callout banner
-// ----------------------------------------------------------------
-const LossCallout = ({ prevLoss, loss, epoch }: { prevLoss: number; loss: number; epoch: number }) => {
-  const { text, type } = getLossCallout(prevLoss, loss, epoch);
-  if (!text) return null;
-
-  const styles: Record<string, string> = {
-    great: "bg-green-50 border-green-300 text-green-800",
-    good: "bg-blue-50 border-blue-300 text-blue-800",
-    slow: "bg-yellow-50 border-yellow-300 text-yellow-800",
-    bad: "bg-red-50 border-red-300 text-red-800",
-  };
-
-  return (
-    <div className={`border rounded-lg px-3 py-2 text-sm mb-4 ${styles[type ?? 'good']}`}>
-      {text}
-    </div>
-  );
-};
-
-// ----------------------------------------------------------------
 // Main Explain component
 // ----------------------------------------------------------------
 const Explain = () => {
@@ -199,16 +205,9 @@ const Explain = () => {
       originalData,
       name,
       loss,
-      prevLoss,
       epoch,
       setStepLayerHighlight,
       sessionId,
-      compareMode,
-      comparisonLosses,
-      comparisonLR,
-      setComparisonLR,
-      enableCompareMode,
-      disableCompareMode,
     } = useStore();
 
     const [view, setView] = useState<PropagationView>('forward');
@@ -252,62 +251,103 @@ const Explain = () => {
       setStepLayerHighlight(null);
     };
 
-    // Prepare chart data
+    const pointSettings = { pointRadius: 0, pointHoverRadius: 4, pointHitRadius: 12 };
+
     const lossData = {
-        labels: losses.map((_, index) => `Epoch ${index + 1}`),
+        labels: losses.map((_, i) => i + 1),
         datasets: [
             {
-                label: `Loss (η=${learningRate})`,
+                label: `η=${learningRate}`,
                 data: losses,
-                borderColor: 'rgb(255, 99, 132)',
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                tension: 0.1,
+                borderColor: 'rgb(99, 102, 241)',
+                backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                ...pointSettings,
             },
-            ...(compareMode && comparisonLosses.length > 0 ? [{
-                label: `Loss (η=${comparisonLR})`,
-                data: comparisonLosses,
-                borderColor: 'rgb(99, 132, 255)',
-                backgroundColor: 'rgba(99, 132, 255, 0.2)',
-                tension: 0.1,
-                borderDash: [5, 5] as number[],
-            }] : []),
         ]
     };
 
     const accuracyData = {
-        labels: accuracies.map((_, index) => `Epoch ${index + 1}`),
+        labels: accuracies.map((_, i) => i + 1),
         datasets: [{
-            label: name === "accuracy" ? 'Accuracy' : 'Mean Absolute Error',
+            label: name === "accuracy" ? 'Accuracy (%)' : 'MAE',
             data: accuracies,
-            borderColor: 'rgb(54, 162, 235)',
-            backgroundColor: 'rgba(54, 162, 235, 0.5)',
-            tension: 0.1
+            borderColor: 'rgb(16, 185, 129)',
+            backgroundColor: 'rgba(16, 185, 129, 0.08)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true,
+            ...pointSettings,
         }]
     };
 
-    const chartOptions = useMemo(() => {
+    const baseChartOptions = useMemo(() => {
         if (typeof window === "undefined") return {};
+        const sm = window.innerWidth < 640;
         return {
             responsive: true,
             maintainAspectRatio: false,
+            animation: { duration: 200 } as const,
             plugins: {
                 legend: {
                     position: "top" as const,
-                    labels: { font: { size: window.innerWidth < 640 ? 10 : 12 } },
+                    labels: { font: { size: sm ? 10 : 11 }, boxWidth: 12, padding: 12 },
+                },
+                tooltip: {
+                    callbacks: {
+                        title: (items: { label: string }[]) => `Epoch ${items[0]?.label}`,
+                    },
                 },
             },
             scales: {
                 x: {
-                    display: window.innerWidth > 480,
-                    ticks: { font: { size: window.innerWidth < 640 ? 9 : 11 } },
+                    display: true,
+                    title: { display: !sm, text: "Epoch", font: { size: 10 }, color: '#9ca3af' },
+                    ticks: {
+                        font: { size: sm ? 9 : 10 },
+                        maxTicksLimit: 8,
+                        color: '#9ca3af',
+                    },
+                    grid: { color: 'rgba(0,0,0,0.04)' },
                 },
                 y: {
-                    beginAtZero: true,
-                    ticks: { font: { size: window.innerWidth < 640 ? 9 : 11 } },
+                    ticks: { font: { size: sm ? 9 : 10 }, color: '#9ca3af' },
+                    grid: { color: 'rgba(0,0,0,0.06)' },
                 },
             },
         };
     }, []);
+
+    const lossChartOptions = useMemo(() => ({
+        ...baseChartOptions,
+        scales: {
+            ...baseChartOptions.scales,
+            y: {
+                ...baseChartOptions.scales?.y,
+                beginAtZero: false,
+            },
+        },
+    }), [baseChartOptions]);
+
+    const metricChartOptions = useMemo(() => ({
+        ...baseChartOptions,
+        scales: {
+            ...baseChartOptions.scales,
+            y: {
+                ...baseChartOptions.scales?.y,
+                beginAtZero: name === "accuracy",
+                ...(name === "accuracy" ? {
+                    max: 100,
+                    ticks: {
+                        ...baseChartOptions.scales?.y?.ticks,
+                        callback: (v: number | string) => `${v}%`,
+                    },
+                } : {}),
+            },
+        },
+    }), [baseChartOptions, name]);
 
     const renderMatrix = (matrix: number[][] | undefined | null, label: string, subLabel?: string, extendDecimal?: boolean) => (
         matrix && matrix.length > 0 ? (
@@ -356,8 +396,15 @@ const Explain = () => {
     return (
         <div className="mt-2 p-4 bg-gray-100 rounded-lg mx-2 shadow-md">
 
-            {/* Loss callout */}
-            {hasTrained && <LossCallout prevLoss={prevLoss} loss={loss} epoch={epoch} />}
+            {/* Prediction summary — always visible, above tabs */}
+            {hasTrained && (
+                <PredictionSummary
+                    dataset={dataset}
+                    network={network}
+                    sampleIndex={sampleIndex}
+                    originalData={originalData}
+                />
+            )}
 
             {hasTrained && (
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
@@ -397,13 +444,6 @@ const Explain = () => {
                 <div className="text-center">
                     {view === 'forward' ? (
                         <>
-                            {/* Prediction summary */}
-                            <PredictionSummary
-                                dataset={dataset}
-                                network={network}
-                                sampleIndex={sampleIndex}
-                                originalData={originalData}
-                            />
 
                             <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                                 <div>
@@ -706,25 +746,29 @@ const Explain = () => {
 
             {/* Loss and Accuracy Charts */}
             <div className="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
-                <div className="bg-white p-3 sm:p-4 rounded-lg shadow-md border border-gray-200">
-                    <div className="flex items-start justify-between mb-1 gap-2 flex-wrap">
+                <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
+                    <div className="flex items-start justify-between mb-3 gap-2 flex-wrap">
                         <div>
-                            <h3 className="text-sm sm:text-base lg:text-lg font-medium">Training Loss</h3>
-                            <p className="text-xs text-gray-500">Lower = better. Decreasing means the network is learning.</p>
+                            <div className="flex items-baseline gap-2">
+                                <h3 className="text-sm font-semibold text-gray-800">Training Loss</h3>
+                                {losses.length > 0 && (
+                                    <span className="text-xs font-mono text-gray-500">{losses[losses.length - 1].toFixed(4)}</span>
+                                )}
+                            </div>
+                            <p className="text-xs text-gray-400 mt-0.5">Decreasing = network is learning</p>
                         </div>
-                        {/* Compare LR toggle */}
                         {!compareMode ? (
                             <button
                                 onClick={enableCompareMode}
                                 disabled={!sessionId}
                                 title="Initialize a second model with a different learning rate and compare loss curves"
-                                className="text-xs border border-gray-300 rounded px-2 py-1 hover:bg-gray-50 disabled:opacity-40 whitespace-nowrap"
+                                className="text-xs border border-gray-200 rounded px-2 py-1 hover:bg-gray-50 disabled:opacity-40 whitespace-nowrap text-gray-600"
                             >
-                                + Compare LR
+                                Compare LR
                             </button>
                         ) : (
                             <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-xs font-medium" style={{ color: 'rgb(99,132,255)' }}>η₂ =</span>
+                                <span className="text-xs font-medium text-pink-500">η₂ =</span>
                                 <input
                                     type="number"
                                     value={comparisonLR}
@@ -732,36 +776,39 @@ const Explain = () => {
                                     min={0.001}
                                     max={1}
                                     step={0.01}
-                                    className="w-16 text-xs border border-blue-300 rounded px-1.5 py-0.5 font-mono"
+                                    className="w-16 text-xs border border-gray-200 rounded px-1.5 py-0.5 font-mono"
                                 />
-                                <button
-                                    onClick={disableCompareMode}
-                                    className="text-xs text-gray-400 hover:text-gray-700 ml-1"
-                                    title="Stop comparison"
-                                >
-                                    ✕
-                                </button>
+                                <button onClick={disableCompareMode} className="text-xs text-gray-400 hover:text-gray-600 ml-1">✕</button>
                             </div>
                         )}
                     </div>
                     {compareMode && (
-                        <p className="text-xs text-blue-600 mb-2 italic">
-                            Red (η={learningRate}) vs Blue dashed (η={comparisonLR}) — keep training to see the difference.
+                        <p className="text-xs text-gray-400 mb-2">
+                            Indigo (η={learningRate}) vs pink dashed (η={comparisonLR})
                         </p>
                     )}
-                    <div className="h-40 sm:h-48 lg:h-64">
-                        <Line data={lossData} options={chartOptions} />
+                    <div className="h-40 sm:h-48 lg:h-56">
+                        <Line data={lossData} options={lossChartOptions} />
                     </div>
                 </div>
-                <div className="bg-white p-3 sm:p-4 rounded-lg shadow-md border border-gray-200">
-                    <h3 className="text-sm sm:text-base lg:text-lg font-medium mb-1">{name === "accuracy" ? 'Accuracy' : 'Mean Absolute Error'}</h3>
-                    <p className="text-xs text-gray-500 mb-2">
-                        {name === "accuracy"
-                            ? "Higher = more correct classifications."
-                            : "Lower = predictions closer to actual values (in MPG)."}
+                <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
+                    <div className="flex items-baseline gap-2 mb-0.5">
+                        <h3 className="text-sm font-semibold text-gray-800">
+                            {name === "accuracy" ? "Accuracy" : "Mean Absolute Error"}
+                        </h3>
+                        {accuracies.length > 0 && (
+                            <span className="text-xs font-mono text-gray-500">
+                                {name === "accuracy"
+                                    ? `${accuracies[accuracies.length - 1].toFixed(1)}%`
+                                    : accuracies[accuracies.length - 1].toFixed(3)}
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-xs text-gray-400 mb-3">
+                        {name === "accuracy" ? "Higher = more correct classifications" : "Lower = predictions closer to actual values"}
                     </p>
-                    <div className="h-40 sm:h-48 lg:h-64">
-                        <Line data={accuracyData} options={chartOptions} />
+                    <div className="h-40 sm:h-48 lg:h-56">
+                        <Line data={accuracyData} options={metricChartOptions} />
                     </div>
                 </div>
             </div>

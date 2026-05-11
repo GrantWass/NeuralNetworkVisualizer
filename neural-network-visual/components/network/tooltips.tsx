@@ -1,125 +1,91 @@
 import { DATASET_INPUT_FEATURES } from "@/components/network/static/constants";
 
-const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: number[], originalInput: number[] }) => {        
-  
-    const features = DATASET_INPUT_FEATURES[dataset] || [];
-  
-    return (
-      <>
-        <div className="flex items-center gap-1 text-sm text-gray-600 mb-1 relative group">
-          <span className="cursor-pointer text-gray-500 hover:text-gray-700 transition-colors duration-150">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"
-              />
-            </svg>
-          </span>
-  
-          {/* Tooltip */}
-          <div className="absolute z-10 hidden w-max group-hover:block p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-6 left-1/2 transform -translate-x-1/2 transition-all duration-200">
-            {features.length > 0 && originalInput && originalInput.length > 0 && (
-              <>
-                <p className="font-semibold mb-1">Features & Input:</p>
-                <p className="mb-1">(Normalized)</p>
-                <ul className="space-y-1 text-sm text-gray-100 text-left">
-                  {features.map((feature, idx) => (
-                    <li key={feature} className="flex justify-between">
-                      <span>{feature}</span>
-                      <div className="ml-5">
-                      <span className="font-mono">{originalInput[idx]?.toFixed(3) ?? "N/A"}</span>
-                      <span className="ml-2 font-mono">{`(${input[idx]?.toFixed(3)})` }</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </div>
-        </div>
-      </>
-    );
+const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: number[], originalInput: number[] }) => {
+  const features = DATASET_INPUT_FEATURES[dataset] || [];
+
+  return (
+    <div className="flex items-center gap-1 text-sm text-gray-600 mb-1 relative group">
+      <span className="cursor-pointer text-gray-500 hover:text-gray-700 transition-colors duration-150">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+        </svg>
+      </span>
+
+      <div className="absolute z-10 hidden group-hover:block p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+        {features.length > 0 && originalInput?.length > 0 && (
+          <>
+            <p className="font-semibold mb-2">Input Features</p>
+            <div className="flex gap-4 text-xs text-gray-400 mb-1 pb-1 border-b border-gray-600">
+              <span className="w-28">Feature</span>
+              <span className="w-12 text-right">Raw</span>
+              <span className="w-16 text-right">Normalized</span>
+            </div>
+            <ul className="space-y-1">
+              {features.map((feature, idx) => (
+                <li key={feature} className="flex gap-4 text-xs">
+                  <span className="w-28 text-gray-300">{feature}</span>
+                  <span className="w-12 text-right font-mono text-gray-400">{originalInput[idx]?.toFixed(2) ?? "—"}</span>
+                  <span className="w-16 text-right font-mono text-white">{input[idx]?.toFixed(4) ?? "—"}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-gray-500 mt-2 pt-1 border-t border-gray-600">The network receives the normalized values</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const OutputInfo = ({ dataset, output, actual }: { dataset: string; output: number[]; actual: number[] }) => {
+  const outputMap: { [key: string]: string[] } = {
+    auto_mpg: ["MPG"],
+    iris: ["Setosa", "Versicolor", "Virginica"],
+    xor: ["Output"],
   };
 
-  const OutputInfo = ({ dataset, output, actual }: { dataset: string; output: number[]; actual: number[] }) => {
-    const outputMap: { [key: string]: string[] } = {
-      auto_mpg: ["MPG"],
-      iris: ["Setosa", "Versicolor", "Virginica"],
-      xor: ["Output"],
-    };
+  const actualIdx = dataset === "iris"
+    ? actual.slice(-3).findIndex((v) => v === 1)
+    : -1;
 
-    const formatValue = (value: number, ds: string) => {
-      if (ds === "iris") return `${(value * 100).toFixed(1)}%`;
-      if (ds === "auto_mpg") return `${value.toFixed(1)} MPG`;
-      if (ds === "xor") return `${(value * 100).toFixed(1)}% → ${value >= 0.5 ? 1 : 0}`;
-      return value.toFixed(3);
-    };
+  const outputs = outputMap[dataset] || [];
 
-    const formatActual = () => {
-      if (!actual || actual.length === 0) return;
-      if (dataset === "iris") {
-        if (actual.length < 3) return;
-        const index = actual.slice(-3).findIndex((v) => v === 1);
-        return outputMap[dataset]?.[index] ?? "Unknown";
-      }
-      if (dataset === "auto_mpg") return formatValue(actual[actual.length - 1], dataset);
-      if (dataset === "xor") return `${actual[actual.length - 1]}`;
-      return "N/A";
-    };
-  
-    const outputs = outputMap[dataset] || [];
-  
-    return (
-      <>
-        <div className="flex items-center gap-1 text-sm text-gray-600 mb-1 relative group">
-          <span className="cursor-pointer text-gray-500 hover:text-gray-700 transition-colors duration-150">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"
-              />
-            </svg>
-          </span>
-  
-          {/* Tooltip */}
-          <div className="absolute z-10 hidden group-hover:block w-56 p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-6 left-1/2 transform -translate-x-1/2 transition-all duration-200">
-            {outputs.length > 0 && (
-              <>
-                <p className="font-semibold mb-1">Model Output:</p>
-                <ul className="space-y-1 text-sm text-gray-100 text-left">
-                  {outputs.map((label, idx) => (
-                    <li key={label} className="flex justify-between">
-                      <span>{label}</span>
-                      <span className="font-mono">
-                        {formatValue(output[idx], dataset)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          <p className="font-semibold">{dataset === "auto_mpg" ? "Actual Value: " : "Actual Result: "}<span className="font-mono text-white">{formatActual()}</span></p>
-          </div>
-        </div>
-      </>
-    );
-  };  
-  
-  export { InputInfo, OutputInfo };
-  
+  return (
+    <div className="flex items-center gap-1 text-sm text-gray-600 mb-1 relative group">
+      <span className="cursor-pointer text-gray-500 hover:text-gray-700 transition-colors duration-150">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+        </svg>
+      </span>
+
+      <div className="absolute z-10 hidden group-hover:block w-52 p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-6 left-1/2 transform -translate-x-1/2">
+        {outputs.length > 0 && (
+          <>
+            <p className="font-semibold mb-2">Raw Output Values</p>
+            <div className="flex justify-between text-xs text-gray-400 mb-1 pb-1 border-b border-gray-600">
+              <span>Neuron</span>
+              <span>Activation</span>
+            </div>
+            <ul className="space-y-1">
+              {outputs.map((label, idx) => (
+                <li key={label} className="flex justify-between items-center text-xs">
+                  <span className={actualIdx === idx ? "text-yellow-300 font-medium" : "text-gray-300"}>
+                    {label}{actualIdx === idx ? " ← actual" : ""}
+                  </span>
+                  <span className="font-mono text-white">{output[idx]?.toFixed(4) ?? "—"}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-gray-500 mt-2 pt-1 border-t border-gray-600">
+              {dataset === "iris" ? "Softmax applied — values sum to 1" :
+               dataset === "xor" ? "Sigmoid output — closer to 1 = predicts XOR=1" :
+               "Linear output — raw predicted value"}
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export { InputInfo, OutputInfo };
