@@ -410,7 +410,7 @@ const SampleStory = ({
     const correct = actualIdx === predIdx;
     return (
       <div className="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2">
-        <span className="font-medium">Sample #{sampleIndex + 1}: </span>
+        <span className="font-medium">Sample #{sampleIndex}: </span>
         {features.map((f, i) => `${f.split(" ")[0]} ${sample[i]?.toFixed(1)}`).join(" / ")}
         <span className="mx-1">→</span>
         <span className="font-semibold text-gray-800">

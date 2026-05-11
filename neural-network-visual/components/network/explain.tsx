@@ -2,7 +2,7 @@
 
 import useStore from "@/components/network/lib/store";
 import { NeuronLayer } from "@/components/network/static/types";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -208,6 +208,9 @@ const Explain = () => {
       epoch,
       setStepLayerHighlight,
       sessionId,
+      hoveredConnection,
+      hoveredNode,
+      setWeight,
     } = useStore();
 
     const [view, setView] = useState<PropagationView>('forward');
@@ -216,6 +219,28 @@ const Explain = () => {
     // Step-by-step forward pass mode
     const [stepMode, setStepMode] = useState(false);
     const [stepIndex, setStepIndex] = useState(0);
+
+    // Weight editing state (for connection panel)
+    const [editingWeight, setEditingWeight] = useState(false);
+    const [weightInput, setWeightInput] = useState("");
+    const weightInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+      setEditingWeight(false);
+      if (hoveredConnection) setWeightInput(hoveredConnection.weight.toFixed(4));
+    }, [hoveredConnection]);
+
+    useEffect(() => {
+      if (editingWeight) weightInputRef.current?.focus();
+    }, [editingWeight]);
+
+    const handleWeightSubmit = async () => {
+      if (!hoveredConnection) return;
+      const val = parseFloat(weightInput);
+      if (isNaN(val)) return;
+      await setWeight(hoveredConnection.layerIndex, hoveredConnection.fromIndex, hoveredConnection.toIndex, val);
+      setEditingWeight(false);
+    };
 
     const layerComputationCount = network
       ? network.layers.filter((_, i) => i < network.layers.length - 1).length
@@ -394,17 +419,79 @@ const Explain = () => {
       : forwardLayers;
 
     return (
-        <div className="mt-2 p-4 bg-gray-100 rounded-lg mx-2 shadow-md">
+        <>
+            {/* Connection panel + Prediction side by side */}
+            <div className="flex flex-col sm:flex-row gap-4 mx-2 mt-4 mb-2 items-start">
+                <div className="flex-1 min-w-0">
+                    {hoveredConnection ? (
+                        <div className="text-sm space-y-1">
+                            <p className="font-semibold">Connection: Layer {hoveredConnection.layerIndex} → {hoveredConnection.layerIndex + 1} &nbsp;|&nbsp; Neuron {hoveredConnection.fromIndex + 1} → {hoveredConnection.toIndex + 1}</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-gray-600">Weight:</span>
+                                {!editingWeight ? (
+                                    <>
+                                        <span className="font-mono font-medium">{hoveredConnection.weight.toFixed(4)}</span>
+                                        {sessionId && (
+                                            <button
+                                                onClick={() => setEditingWeight(true)}
+                                                className="text-xs border border-gray-300 rounded px-2 py-0.5 hover:bg-gray-50"
+                                            >
+                                                Edit
+                                            </button>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <input
+                                            ref={weightInputRef}
+                                            type="number"
+                                            value={weightInput}
+                                            onChange={(e) => setWeightInput(e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') handleWeightSubmit(); if (e.key === 'Escape') setEditingWeight(false); }}
+                                            step="0.01"
+                                            className="w-24 text-sm border border-gray-400 rounded px-2 py-0.5 font-mono"
+                                        />
+                                        <button onClick={handleWeightSubmit} className="text-xs bg-black text-white rounded px-2 py-1">Set</button>
+                                        <button onClick={() => setEditingWeight(false)} className="text-xs border border-gray-300 rounded px-2 py-1 hover:bg-gray-50">Cancel</button>
+                                    </>
+                                )}
+                            </div>
+                            {!sessionId && <p className="text-xs text-gray-400 italic">Initialize the model to edit weights.</p>}
+                        </div>
+                    ) : hoveredNode && network ? (
+                        <div className="text-sm space-y-0.5">
+                            <p className="font-semibold">Node Details</p>
+                            {hoveredNode.layerIndex > 0 ? (
+                                <>
+                                    {network.layers[hoveredNode.layerIndex - 1]?.biases?.[hoveredNode.nodeIndex] !== undefined && (
+                                        <p>Bias: <span className="font-mono">{network.layers[hoveredNode.layerIndex - 1].biases[hoveredNode.nodeIndex].toFixed(4)}</span></p>
+                                    )}
+                                    {network.layers[hoveredNode.layerIndex - 1]?.Z?.[sampleIndex]?.[hoveredNode.nodeIndex] !== undefined && (
+                                        <p>Pre-activation (Z): <span className="font-mono">{network.layers[hoveredNode.layerIndex - 1].Z[sampleIndex][hoveredNode.nodeIndex].toFixed(4)}</span></p>
+                                    )}
+                                    {network.layers[hoveredNode.layerIndex - 1]?.A?.[sampleIndex]?.[hoveredNode.nodeIndex] !== undefined && (
+                                        <p>Post-activation (A): <span className="font-mono">{network.layers[hoveredNode.layerIndex - 1].A[sampleIndex][hoveredNode.nodeIndex].toFixed(4)}</span></p>
+                                    )}
+                                </>
+                            ) : <p className="text-gray-500">Input node — values come from the dataset.</p>}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-400">Click a node or connection to see details</p>
+                    )}
+                </div>
 
-            {/* Prediction summary — always visible, above tabs */}
-            {hasTrained && (
-                <PredictionSummary
-                    dataset={dataset}
-                    network={network}
-                    sampleIndex={sampleIndex}
-                    originalData={originalData}
-                />
-            )}
+                {hasTrained && (
+                    <div className="flex-shrink-0">
+                        <PredictionSummary
+                            dataset={dataset}
+                            network={network}
+                            sampleIndex={sampleIndex}
+                            originalData={originalData}
+                        />
+                    </div>
+                )}
+            </div>
+        <div className="mt-2 p-4 bg-gray-100 rounded-lg mx-2 shadow-md">
 
             {hasTrained && (
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
@@ -799,6 +886,7 @@ const Explain = () => {
                 </ReactMarkdown>
             </div>
         </div>
+        </>
     );
 };
 

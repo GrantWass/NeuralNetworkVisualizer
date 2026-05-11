@@ -5,13 +5,13 @@ const InputInfo = ({ dataset, input, originalInput }: { dataset: string; input: 
 
   return (
     <div className="flex items-center gap-1 text-sm text-gray-600 mb-1 relative group">
-      <span className="cursor-pointer text-gray-500 hover:text-gray-700 transition-colors duration-150">
+      <span className="cursor-pointer text-indigo-400 hover:text-indigo-600 transition-colors duration-150">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
         </svg>
       </span>
 
-      <div className="absolute z-10 hidden group-hover:block p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+      <div className="absolute z-50 hidden group-hover:block p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-full mb-1 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
         {features.length > 0 && originalInput?.length > 0 && (
           <>
             <p className="font-semibold mb-2">Input Features</p>
@@ -52,13 +52,13 @@ const OutputInfo = ({ dataset, output, actual }: { dataset: string; output: numb
 
   return (
     <div className="flex items-center gap-1 text-sm text-gray-600 mb-1 relative group">
-      <span className="cursor-pointer text-gray-500 hover:text-gray-700 transition-colors duration-150">
+      <span className="cursor-pointer text-indigo-400 hover:text-indigo-600 transition-colors duration-150">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
         </svg>
       </span>
 
-      <div className="absolute z-10 hidden group-hover:block w-52 p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-6 left-1/2 transform -translate-x-1/2">
+      <div className="absolute z-50 hidden group-hover:block w-52 p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg bottom-full mb-1 left-1/2 transform -translate-x-1/2">
         {outputs.length > 0 && (
           <>
             <p className="font-semibold mb-2">Raw Output Values</p>
