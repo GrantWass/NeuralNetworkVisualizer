@@ -11,8 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+// import { Button } from "@/components/ui/button";   // live inference disabled
+// import { Input } from "@/components/ui/input";      // live inference disabled
 import { Gloss } from "@/components/transformer/Gloss";
 import type { TransformerExample, AttentionResult } from "./types";
 import examplesData from "./data.json";
@@ -741,36 +741,11 @@ function FurtherReading() {
 
 export default function TransformerVizClient() {
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const [liveResult, setLiveResult] = useState<AttentionResult | null>(null);
-  const [userInput, setUserInput] = useState("");
-  const [inferenceStatus, setInferenceStatus] = useState<"idle" | "loading" | "error">("idle");
-
-  async function handleCompute() {
-    const sentence = userInput.trim();
-    if (!sentence) return;
-    const apiBase = process.env.NEXT_PUBLIC_API_URL;
-    if (!apiBase) {
-      setInferenceStatus("error");
-      return;
-    }
-    setInferenceStatus("loading");
-    try {
-      const res = await fetch(
-        `${apiBase}/attention`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sentence }),
-        }
-      );
-      if (!res.ok) throw new Error(`${res.status}`);
-      const data = await res.json();
-      setLiveResult(data as AttentionResult);
-      setInferenceStatus("idle");
-    } catch {
-      setInferenceStatus("error");
-    }
-  }
+  // live inference disabled — re-enable when BERT is back in the build
+  // const [liveResult, setLiveResult] = useState<AttentionResult | null>(null);
+  // const [userInput, setUserInput] = useState("");
+  // const [inferenceStatus, setInferenceStatus] = useState<"idle" | "loading" | "error">("idle");
+  // async function handleCompute() { ... }
 
   const rawTokens = examples[selectedIdx].tokens;
   const keepIndices = rawTokens
@@ -821,7 +796,7 @@ export default function TransformerVizClient() {
             </label>
             <Select
               value={String(selectedIdx)}
-              onValueChange={(v) => { setSelectedIdx(Number(v)); setLiveResult(null); }}
+              onValueChange={(v) => { setSelectedIdx(Number(v)); }}
             >
               <SelectTrigger id="example-select" className="w-full">
                 <SelectValue placeholder="Choose an example" />
@@ -836,54 +811,25 @@ export default function TransformerVizClient() {
             </Select>
           </div>
 
-          {/* Divider */}
-          <div className="hidden sm:flex items-center">
+          {/* Live input disabled — re-enable when BERT is back in the build */}
+          {/* <div className="hidden sm:flex items-center">
             <span className="text-xs text-muted-foreground px-2">or</span>
           </div>
-
-          {/* Live input */}
           <div className="flex flex-col gap-1.5 flex-1">
             <label className="text-xs text-muted-foreground">Try your own</label>
             <div className="flex gap-2">
-              <Input
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
+              <Input value={userInput} onChange={(e) => setUserInput(e.target.value)}
                 placeholder="The cat sat on the mat"
-                onKeyDown={(e) => e.key === "Enter" && handleCompute()}
-                className="flex-1"
-              />
-              <Button
-                onClick={handleCompute}
-                disabled={inferenceStatus === "loading" || !userInput.trim()}
-                className="flex items-center gap-2"
-              >
-                {inferenceStatus === "loading" && (
-                  <svg
-                    className="animate-spin h-3.5 w-3.5 shrink-0"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12" cy="12" r="10"
-                      stroke="currentColor" strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                    />
-                  </svg>
-                )}
+                onKeyDown={(e) => e.key === "Enter" && handleCompute()} className="flex-1" />
+              <Button onClick={handleCompute}
+                disabled={inferenceStatus === "loading" || !userInput.trim()}>
                 {inferenceStatus === "loading" ? "Loading…" : "Compute"}
               </Button>
             </div>
             {inferenceStatus === "error" && (
-              <p className="text-xs text-destructive">
-                Couldn&apos;t reach the model — try one of the examples above.
-              </p>
+              <p className="text-xs text-destructive">Couldn&apos;t reach the model — try one of the examples above.</p>
             )}
-          </div>
+          </div> */}
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed border-t border-border pt-3">
           The examples above are hand-picked to surface clear patterns. Your own sentence
@@ -906,8 +852,8 @@ export default function TransformerVizClient() {
       />
       <Sections3And4
         selectedIdx={selectedIdx}
-        liveResult={liveResult}
-        setLiveResult={setLiveResult}
+        liveResult={null}
+        setLiveResult={() => {}}
       />
       <Section5 />
       <FurtherReading />

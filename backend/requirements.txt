@@ -5,6 +5,5 @@ numpy==1.26.4
 python-multipart
 mangum
 requests
-transformers>=4.40.0
-# CPU-only build — saves ~1.5 GB vs the CUDA build, sufficient for inference
-torch --index-url https://download.pytorch.org/whl/cpu
+# transformers>=4.40.0   # re-enable with /attention endpoint
+# torch --index-url https://download.pytorch.org/whl/cpu   # re-enable with /attention endpoint
