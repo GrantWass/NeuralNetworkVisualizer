@@ -199,10 +199,12 @@ const NodeCircles: React.FC<{
                   fontWeight="bold"
                   textAnchor="middle"
                 >
-                  {features[ni]}
+                  {dataset === "xor" && inputSample
+                    ? `${features[ni]} (${Math.round(inputSample[ni])})`
+                    : features[ni]}
                 </text>
               )}
-              {isInput && original && activationValue && original.length > 0 &&
+              {isInput && dataset !== "xor" && original && activationValue && original.length > 0 &&
                 renderInputValues(cx, cy, original, ni, activationValue, fontSize, INPUTLABELOFFSET, SVGWIDTH, SVGHEIGHT)
               }
               {isOutput && dataset &&

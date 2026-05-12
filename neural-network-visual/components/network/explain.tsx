@@ -809,14 +809,14 @@ const Explain = () => {
 
                                                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-12 flex-wrap">
                                                     <div className="flex flex-col items-center gap-2">
-                                                        <p className="text-sm text-gray-600">Gradient of weights (dW) is based on current layer&apos;s dZ and previous activations:</p>
-                                                        <p className="text-xs text-gray-600 italic">*Note: this is done with all samples at once, unlike the single sample shown here*</p>
+                                                        <p className="text-sm text-gray-600">dW = (1/m) &Sigma; A<sub>prev</sub><sup>T</sup> &middot; dZ averaged over all samples:</p>
+                                                        <p className="text-xs text-gray-600 italic">*One sample shown for illustration — the actual dW is the average across all {dataset === "xor" ? "4 XOR patterns (which have opposing gradients that partially cancel)" : "training samples"}*</p>
                                                         <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
-                                                            {renderMatrix(reshapeTo2D(outputLayerIndex - index === -1 ? network.input[sampleIndex] : network.layers[outputLayerIndex - index].A[sampleIndex]), `Previous Activations`, "Aᵀ from layer below", false)}
+                                                            {renderMatrix(reshapeTo2D(outputLayerIndex - index === -1 ? network.input[sampleIndex] : network.layers[outputLayerIndex - index].A[sampleIndex]), `Sample A_prev`, "one sample, for reference", false)}
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">×</span>
-                                                            {renderVector(layer.dZ[sampleIndex], `dZ`, "", false)}
-                                                            <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
-                                                            {renderMatrix(layer.dW, `dW`, "∇ Weights", false)}
+                                                            {renderVector(layer.dZ[sampleIndex], `dZ`, "one sample", false)}
+                                                            <span className="text-lg sm:text-2xl mt-2 sm:mt-6">≠</span>
+                                                            {renderMatrix(layer.dW, `dW (batch avg)`, "∇ Weights", true)}
                                                         </div>
                                                     </div>
 

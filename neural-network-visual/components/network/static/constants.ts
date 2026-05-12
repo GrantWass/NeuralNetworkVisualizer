@@ -15,10 +15,7 @@ const DATASET_INPUT_FEATURES: { [key: string]: string[] } = {
     "Petal length",
     "Petal width"
   ],
-  xor: [
-    "A (0 or 1)",
-    "B (0 or 1)",
-  ]
+  xor: ["A", "B"]
 };
 
 const DATASET_INPUT_FEATURES_SHORT: { [key: string]: string[] } = {
@@ -34,10 +31,7 @@ const DATASET_INPUT_FEATURES_SHORT: { [key: string]: string[] } = {
     "Petal length",
     "Petal width"
   ],
-  xor: [
-    "A (0/1)",
-    "B (0/1)",
-  ]
+  xor: ["A", "B"]
 };
 
 
