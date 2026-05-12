@@ -410,9 +410,6 @@ const Explain = () => {
     const fullExplanation = getExplanation() || '';
     const hasTrained = network?.layers && network.layers[0].A?.length > 0;
 
-    // Layers to render in forward pass (all except last)
-    const forwardLayers = network?.layers.slice(0, -1) ?? [];
-
     return (
         <>
             {/* Connection panel + Prediction side by side */}

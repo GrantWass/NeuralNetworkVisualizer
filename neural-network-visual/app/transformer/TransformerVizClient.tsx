@@ -832,10 +832,7 @@ export default function TransformerVizClient() {
           </div> */}
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed border-t border-border pt-3">
-          The examples above are hand-picked to surface clear patterns. Your own sentence
-          may not — transformers don&apos;t always reveal clean structure, and that&apos;s part
-          of what makes them interesting. Look for pronouns and what they refer to, verbs and
-          their subjects, or a modifier and the noun it belongs to.
+          These examples are hand-picked to surface clear patterns. As you explore, look for pronouns and what they refer to, verbs and their subjects, or a modifier and the noun it belongs to.
         </p>
       </div>
 
