@@ -204,8 +204,6 @@ const Explain = () => {
       sampleIndex,
       originalData,
       name,
-      loss,
-      epoch,
       setStepLayerHighlight,
       sessionId,
       hoveredConnection,
@@ -414,9 +412,6 @@ const Explain = () => {
 
     // Layers to render in forward pass (all except last)
     const forwardLayers = network?.layers.slice(0, -1) ?? [];
-    const visibleLayers = stepMode
-      ? forwardLayers.filter((_, i) => i === stepIndex)
-      : forwardLayers;
 
     return (
         <>
@@ -820,7 +815,7 @@ const Explain = () => {
                                                                     )}
                                                                     <span className="text-lg sm:text-2xl mt-2 sm:mt-6">×</span>
                                                                     {renderMatrix(layer.dZ, `dZ`, "samples × outputs", true)}
-                                                                    <span className="text-sm sm:text-base mt-2 sm:mt-6 text-gray-600">/ 4 =</span>
+                                                                    <span className="text-sm sm:text-base mt-2 sm:mt-6 text-gray-600">× (1/4) =</span>
                                                                     {renderMatrix(layer.dW, `dW`, "∇ Weights", true)}
                                                                 </div>
                                                             </>
