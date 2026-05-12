@@ -236,7 +236,7 @@ export default function NeuralNetworkViz() {
       <Graph />
       <Explain />
 
-      <article className="mt-8 max-w-[65ch] space-y-3 border-t border-border pt-6">
+      <article className="mt-8 w-full space-y-3 border-t border-border pt-6">
         {markdownBlocks.map((block, index) => {
           if (block.type === "h2") {
             return (
@@ -290,7 +290,7 @@ export default function NeuralNetworkViz() {
         })}
       </article>
 
-      <section className="mt-10 max-w-[65ch] border-t border-border pt-6">
+      <section className="mt-10 w-full border-t border-border pt-6">
         <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">
           Continue learning
         </h2>
