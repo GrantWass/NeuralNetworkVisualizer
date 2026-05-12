@@ -33,9 +33,17 @@ export const HeatmapSVG: React.FC<HeatmapSVGProps> = ({
 }) => {
   const { tokens, matrix: rawFiltered } = stripSpecial(rawTokens, rawMatrix);
 
-  // Rescale to local max so the full color range is used after [SEP]/[CLS] removal
-  const localMax = Math.max(...rawFiltered.flat(), 1e-9);
-  const matrix = rawFiltered.map((row) => row.map((v) => v / localMax));
+  // Renormalize each row so weights sum to 1 after special tokens are stripped.
+  // [CLS]/[SEP] absorbed part of the original softmax probability mass, so the
+  // remaining values would otherwise sum to less than 1.
+  const normalized = rawFiltered.map((row) => {
+    const rowSum = row.reduce((a, b) => a + b, 0) || 1;
+    return row.map((v) => v / rowSum);
+  });
+
+  // Rescale to local max so the full color range is used
+  const localMax = Math.max(...normalized.flat(), 1e-9);
+  const matrix = normalized.map((row) => row.map((v) => v / localMax));
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
@@ -93,7 +101,7 @@ export const HeatmapSVG: React.FC<HeatmapSVGProps> = ({
         {/* Heatmap cells — color uses normalized value, tooltip shows raw value */}
         {matrix.map((row, i) =>
           row.map((normVal, j) => {
-            const rawVal = rawFiltered[i][j];
+            const rawVal = normalized[i][j];
             const x = labelPad + j * cellSize;
             const y = topPad + i * cellSize;
             const label = `${tokens[i]} attends to ${tokens[j]} with weight ${rawVal.toFixed(3)}`;

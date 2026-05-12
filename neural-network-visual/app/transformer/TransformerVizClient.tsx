@@ -11,9 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// Button and Input are used in the live-inference block (currently commented out)
-// import { Button } from "@/components/ui/button";
-// import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Gloss } from "@/components/transformer/Gloss";
 import type { TransformerExample, AttentionResult } from "./types";
 import examplesData from "./data.json";
 
@@ -75,11 +75,21 @@ function Section2({
   tokens,
   attentionMatrix,
   rawScoresMatrix,
+  multiHeadAttention,
+  multiHeadRawScores,
+  queryVectors,
+  keyVectors,
+  headIndices,
   selectedIdx,
 }: {
   tokens: string[];
   attentionMatrix: number[][];
   rawScoresMatrix?: number[][];
+  multiHeadAttention?: number[][][];
+  multiHeadRawScores?: number[][][];
+  queryVectors?: number[][][];
+  keyVectors?: number[][][];
+  headIndices?: number[];
   selectedIdx: number;
 }) {
   return (
@@ -87,21 +97,79 @@ function Section2({
       <h2 className="text-xl font-semibold">How Attention Works Mechanically</h2>
       <p className="text-muted-foreground leading-relaxed max-w-2xl">
         For each token, the model learns three vectors:{" "}
-        <strong>Query</strong> ("what am I looking for?"),{" "}
-        <strong>Key</strong> ("what do I contain?"), and{" "}
-        <strong>Value</strong> ("what do I pass along?"). To score how much
-        token A should attend to token B, we compute the dot product of A's
-        query and B's key — a similarity score. We divide by √d (the square
-        root of the vector size) to stop the scores from growing too large,
-        then apply <strong>softmax</strong> to convert them into probabilities
-        that sum to 1. Finally, each token's output is a weighted average of
-        all value vectors, where the weights are those probabilities.
+        <Gloss term="Query">
+          A learned linear projection of each token into a 64-dimensional vector encoding what
+          this token is searching for in its context. Think of it as a question broadcast to
+          every other token. At training time, the projection weights are optimized so that
+          tokens needing related information produce aligned Query and Key vectors.
+        </Gloss>{" "}
+        ("what am I looking for?"),{" "}
+        <Gloss term="Key">
+          A learned projection encoding what a token contains and is willing to share. Tokens
+          whose Keys align with a given Query receive more attention weight from that token.
+          Q and K are independent projections — what a token is "asking for" and what it
+          "offers" are separate learned representations that serve different roles.
+        </Gloss>{" "}
+        ("what do I contain?"), and{" "}
+        <Gloss term="Value">
+          A third projection, independent of Q and K. Once attention weights are decided by
+          Q·K matching, the Value vector is what actually gets mixed into the output. Think of
+          it this way: K determines whether "animal" gets attended to; V determines what
+          information "animal" contributes when it does. The same token can have a very
+          different Key and Value — matching and contributing are separate jobs.
+        </Gloss>{" "}
+        ("what do I pass along?"). To score how much token A should attend to token B, we
+        compute the{" "}
+        <Gloss term="dot product">
+          Measures geometric alignment between two vectors: the sum of element-wise products.
+          If Q and K have large values in the same dimensions (same sign), the dot product is
+          large and positive. Dimensions where they disagree (opposite signs) subtract from the
+          score. It collapses two 64-d vectors into a single number summarizing how much they
+          point in the same direction.
+        </Gloss>{" "}
+        of A's Query and B's Key.{" "}
+        We divide by{" "}
+        <Gloss term="√d">
+          Without this scaling, dot products grow proportionally to the vector dimension d.
+          In high-dimensional spaces, large scores push softmax toward 0/1 extremes, which
+          kills gradients during training. Dividing by √d (here √64 = 8) keeps scores in a
+          stable range regardless of model size — a fix introduced in the original
+          "Attention Is All You Need" paper.
+        </Gloss>{" "}
+        to stop scores from growing too large, then apply{" "}
+        <Gloss term="softmax">
+          Converts a vector of real numbers into probabilities summing to 1 using
+          eˣⁱ / Σeˣ. The exponential amplifies differences non-linearly: a score advantage
+          of 2.0 gives ~7× more weight, not 2×. This means the highest-scoring token
+          captures a disproportionately large fraction of the attention budget — attention
+          concentrates rather than spreading evenly.
+        </Gloss>{" "}
+        to convert scores into probabilities that sum to 1. Finally, each token's output is a{" "}
+        <Gloss term="weighted sum">
+          output = Σᵢ wᵢ · Vᵢ. Before this step every token has a fixed, context-free
+          embedding. After it, each token's representation is a blend of all Value vectors
+          weighted by attention. The same word produces a different output in every sentence
+          because the weights change with context — this is how "it" comes to encode that
+          it refers to an animal rather than a street.
+        </Gloss>{" "}
+        of all Value vectors, where the weights are those probabilities.
       </p>
       <p className="text-muted-foreground leading-relaxed max-w-2xl">
-        Click any token below to step through the computation using real BERT
-        attention weights from the selected example.
+        Click any token below to step through the computation using real BERT attention
+        weights. Use the head selector to see how different heads specialize in different
+        relationships.
       </p>
-      <QKVBreakdown key={selectedIdx} tokens={tokens} attentionMatrix={attentionMatrix} rawScoresMatrix={rawScoresMatrix} />
+      <QKVBreakdown
+        key={selectedIdx}
+        tokens={tokens}
+        attentionMatrix={attentionMatrix}
+        rawScoresMatrix={rawScoresMatrix}
+        multiHeadAttention={multiHeadAttention}
+        multiHeadRawScores={multiHeadRawScores}
+        queryVectors={queryVectors}
+        keyVectors={keyVectors}
+        headIndices={headIndices}
+      />
     </section>
   );
 }
@@ -121,6 +189,10 @@ const EXAMPLE_INTERPRETATION: Record<string, string> = {
     '"himself" attends most strongly to "hurt" — the verb it is the object of — rather than back to "John." The model is tracking the grammatical role here: "himself" belongs to "hurt." The word "while" also points to "hurt," linking the two parts of the sentence.',
   coordination:
     '"and" attends to "cats" and "dogs" attends back to "and," forming the two-way link between the joined nouns. "wonderful" points to "make," connecting the adjective to the verb it modifies.',
+  winograd:
+    'Multiple tokens converge on "large" — the adjective that explains why the trophy doesn\'t fit. The subject "trophy" itself draws broad attention as the sentence anchor. The pronoun "it" does not strongly resolve to "trophy" in the averaged view; that coreference signal lives in individual heads rather than the average.',
+  negation:
+    '"not" attends strongly to "did" and "chase" attends back to "not," capturing the three-word negation unit as a single semantic block. Almost every token also pulls toward "cat" — the model treats the direct object as the focal point of the sentence, even when the action it undergoes is negated.',
 };
 
 // ─── Per-example, per-head hand-written analyses ─────────────────────────────
@@ -263,6 +335,50 @@ const HEAD_ANALYSIS: Record<string, HeadAnalysis[]> = {
         '"dogs," "and," and "cats" attend almost exclusively to each other. This head has nearly entirely captured the conjunction structure, treating "and" as the hinge between the two nouns. It is the clearest example of a positional head accidentally encoding something linguistically meaningful.',
     },
   ],
+  winograd: [
+    {
+      label: "Subject anchoring",
+      description:
+        'Most tokens across the sentence — "the," "fit," "in," "suitcase" — attend toward "trophy." This head treats the sentence subject as the primary anchor, pulling in article, verb, and preposition alike. Notably, "it" does not strongly resolve to "trophy" here — that role falls to a different head. This one maps the structural gravity of the subject rather than resolving the pronoun.',
+    },
+    {
+      label: "Clause-internal chain",
+      description:
+        '"is" attends almost exclusively to "it," and "in" points strongly to "fit." This head tracks the syntactic backbone within each clause — predicate to subject pronoun, preposition to verb — making one direct dependency step at a time rather than bridging across clause boundaries.',
+    },
+    {
+      label: "Predicate anchor",
+      description:
+        'Nearly every token attends toward "large" — the adjective that answers why the trophy doesn\'t fit. "trophy," "doesn\'t," "in," and "suitcase" all point there. This head has identified the key predicate adjective as the semantic endpoint of the sentence, effectively converging on the stated cause regardless of position.',
+    },
+    {
+      label: "Sequential backbone",
+      description:
+        'Extremely strong consecutive links: "is" attends to "it," "it" attends to "because," "in" points to "fit," "too" points to "is." This head builds the left-to-right syntactic chain of the sentence. The pronoun "it" bridges the two clauses by linking to "because" rather than to "trophy" — encoding clause structure rather than coreference.',
+    },
+  ],
+  negation: [
+    {
+      label: "Self-preservation",
+      description:
+        'Most tokens attend primarily to themselves — "chase," "did," and the second "the" all show high self-attention. The pair "did not" shows modest mutual linking. This head is largely preserving each token\'s own representation rather than redistributing information. Across examples this pattern appears in heads that serve as identity residuals rather than dependency-tracking heads.',
+    },
+    {
+      label: "Negation structure",
+      description:
+        '"not" attends almost entirely to "did," and "chase" splits its attention between "not" and "did." This head has captured the three-word negation sequence "did not chase" as a unit — the main verb traces back through the negation to the auxiliary. The second "the" also points to "chase," linking the article of the object to the governing verb.',
+    },
+    {
+      label: "Object fixation",
+      description:
+        'Every token in the sentence attends heavily toward "cat" — subject, auxiliary, negation, verb, and determiners all converge there. Only "cat" itself breaks the pattern, pointing back to "dog." This head has latched on to the direct object as the semantic endpoint. Across examples this type of fixation appears in heads that anchor on the most goal-oriented or concrete noun in the sentence.',
+    },
+    {
+      label: "Subject–auxiliary chain",
+      description:
+        '"did" attends almost entirely to "dog," and "not" also strongly attends to "did" and "dog." The second "the" points almost entirely to "chase." This head is encoding the subject–auxiliary dependency and the determiner–verb relationship — the structural skeleton of the verb phrase. The strength of "did" → "dog" is especially notable: the auxiliary has locked on to its subject.',
+    },
+  ],
 };
 
 // ─── Head pattern detector ────────────────────────────────────────────────────
@@ -328,15 +444,20 @@ function detectHeadPattern(rawMatrix: number[][], rawTokens: string[]): HeadPatt
 }
 
 
-// ─── Section 3 + 4 (shared state) ─────────────────────────────────────────────
+// ─── Section 3 + 4 ────────────────────────────────────────────────────────────
 
-function Sections3And4({ selectedIdx }: { selectedIdx: number }) {
-  const [liveResult, setLiveResult] = useState<AttentionResult | null>(null);
-
+function Sections3And4({
+  selectedIdx,
+  liveResult,
+  setLiveResult,
+}: {
+  selectedIdx: number;
+  liveResult: AttentionResult | null;
+  setLiveResult: (r: AttentionResult | null) => void;
+}) {
   const activeExample = liveResult
     ? { ...examples[selectedIdx], ...liveResult }
     : examples[selectedIdx];
-
 
   return (
     <>
@@ -371,42 +492,11 @@ function Sections3And4({ selectedIdx }: { selectedIdx: number }) {
           <HeatmapSVG tokens={activeExample.tokens} matrix={activeExample.attentionMatrix} cellSize={26} />
         </div>
 
-        {EXAMPLE_INTERPRETATION[examples[selectedIdx].id] && (
+        {!liveResult && EXAMPLE_INTERPRETATION[examples[selectedIdx].id] && (
           <p className="text-muted-foreground leading-relaxed max-w-2xl">
             {EXAMPLE_INTERPRETATION[examples[selectedIdx].id]}
           </p>
         )}
-
-        {/* Live inference — commented out until backend is ready
-        <div className="rounded-lg border border-border bg-card p-4 space-y-3 max-w-xl">
-          <p className="text-sm font-medium">Try your own sentence</p>
-          <div className="flex gap-2">
-            <Input
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              placeholder="The cat sat on the mat"
-              onKeyDown={(e) => e.key === "Enter" && handleCompute()}
-              className="flex-1"
-            />
-            <Button
-              onClick={handleCompute}
-              disabled={inferenceStatus === "loading" || !userInput.trim()}
-            >
-              Compute
-            </Button>
-          </div>
-          {inferenceStatus === "loading" && (
-            <p className="text-sm text-muted-foreground animate-pulse">
-              Loading BERT… this may take a few seconds on first run.
-            </p>
-          )}
-          {inferenceStatus === "error" && (
-            <p className="text-sm text-destructive">
-              Couldn&apos;t reach the model — try one of the examples above.
-            </p>
-          )}
-        </div>
-        */}
       </section>
 
       {/* Section 4 */}
@@ -556,7 +646,7 @@ function Section5() {
         entity recognition, question answering, sentence classification.
       </p>
       <p className="text-muted-foreground leading-relaxed max-w-2xl">
-        The models you interact with day-to-day — GPT, Claude, Llama, Mistral —
+        The models you interact with day-to-day such as GPT, Claude, Llama, and Mistral 
         are <strong>decoder-only</strong>. They generate text one token at a time,
         left to right. Because each token is produced before the ones that follow
         it, future tokens don't exist yet and must be masked out. The attention
@@ -651,16 +741,50 @@ function FurtherReading() {
 
 export default function TransformerVizClient() {
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [liveResult, setLiveResult] = useState<AttentionResult | null>(null);
+  const [userInput, setUserInput] = useState("");
+  const [inferenceStatus, setInferenceStatus] = useState<"idle" | "loading" | "error">("idle");
+
+  async function handleCompute() {
+    const sentence = userInput.trim();
+    if (!sentence) return;
+    setInferenceStatus("loading");
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_ATTENTION_API_URL}/attention`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sentence }),
+        }
+      );
+      if (!res.ok) throw new Error(`${res.status}`);
+      const data = await res.json();
+      setLiveResult(data as AttentionResult);
+      setInferenceStatus("idle");
+    } catch {
+      setInferenceStatus("error");
+    }
+  }
+
   const rawTokens = examples[selectedIdx].tokens;
   const keepIndices = rawTokens
     .map((t, i) => (!/^\[.*\]$/.test(t) ? i : -1))
     .filter((i) => i >= 0);
   const tokens = keepIndices.map((i) => rawTokens[i]);
-  const strip = (m: number[][]) => keepIndices.map((i) => keepIndices.map((j) => m[i][j]));
-  const attentionMatrix = strip(examples[selectedIdx].attentionMatrix);
-  const rawScoresMatrix = examples[selectedIdx].rawScoresMatrix
-    ? strip(examples[selectedIdx].rawScoresMatrix!)
-    : undefined;
+  const ex = examples[selectedIdx];
+
+  // Strip [CLS]/[SEP] from 2-D matrices
+  const strip2 = (m: number[][]) => keepIndices.map((i) => keepIndices.map((j) => m[i][j]));
+  // Strip [CLS]/[SEP] from per-head vector arrays: [heads × seq × dim] → [heads × stripped_seq × dim]
+  const stripVecs = (v: number[][][]) => v.map((head) => keepIndices.map((i) => head[i]));
+
+  const attentionMatrix     = strip2(ex.attentionMatrix);
+  const rawScoresMatrix     = ex.rawScoresMatrix     ? strip2(ex.rawScoresMatrix)     : undefined;
+  const multiHeadAttention  = ex.multiHeadAttention  ? ex.multiHeadAttention.map((h) => strip2(h)) : undefined;
+  const multiHeadRawScores  = ex.multiHeadRawScores  ? ex.multiHeadRawScores.map((h) => strip2(h)) : undefined;
+  const queryVectors        = ex.queryVectors        ? stripVecs(ex.queryVectors)        : undefined;
+  const keyVectors          = ex.keyVectors          ? stripVecs(ex.keyVectors)          : undefined;
 
   return (
     <div className="p-4 max-w-9xl mx-auto space-y-12">
@@ -677,29 +801,105 @@ export default function TransformerVizClient() {
 
       <Section1 />
 
-      <div className="flex flex-col gap-2 max-w-sm">
-        <label className="text-sm font-medium" htmlFor="example-select">
-          Example sentence
-        </label>
-        <Select
-          value={String(selectedIdx)}
-          onValueChange={(v) => setSelectedIdx(Number(v))}
-        >
-          <SelectTrigger id="example-select" className="w-full">
-            <SelectValue placeholder="Choose an example" />
-          </SelectTrigger>
-          <SelectContent>
-            {examples.map((ex, i) => (
-              <SelectItem key={ex.id} value={String(i)}>
-                {ex.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Sentence chooser — example picker + live input side by side */}
+      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <p className="text-sm font-medium">Choose a sentence</p>
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Example picker */}
+          <div className="flex flex-col gap-1.5 flex-1">
+            <label className="text-xs text-muted-foreground" htmlFor="example-select">
+              Pick an example
+            </label>
+            <Select
+              value={String(selectedIdx)}
+              onValueChange={(v) => { setSelectedIdx(Number(v)); setLiveResult(null); }}
+            >
+              <SelectTrigger id="example-select" className="w-full">
+                <SelectValue placeholder="Choose an example" />
+              </SelectTrigger>
+              <SelectContent>
+                {examples.map((ex, i) => (
+                  <SelectItem key={ex.id} value={String(i)}>
+                    {ex.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Divider */}
+          <div className="hidden sm:flex items-center">
+            <span className="text-xs text-muted-foreground px-2">or</span>
+          </div>
+
+          {/* Live input */}
+          <div className="flex flex-col gap-1.5 flex-1">
+            <label className="text-xs text-muted-foreground">Try your own</label>
+            <div className="flex gap-2">
+              <Input
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                placeholder="The cat sat on the mat"
+                onKeyDown={(e) => e.key === "Enter" && handleCompute()}
+                className="flex-1"
+              />
+              <Button
+                onClick={handleCompute}
+                disabled={inferenceStatus === "loading" || !userInput.trim()}
+                className="flex items-center gap-2"
+              >
+                {inferenceStatus === "loading" && (
+                  <svg
+                    className="animate-spin h-3.5 w-3.5 shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12" cy="12" r="10"
+                      stroke="currentColor" strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                  </svg>
+                )}
+                {inferenceStatus === "loading" ? "Loading…" : "Compute"}
+              </Button>
+            </div>
+            {inferenceStatus === "error" && (
+              <p className="text-xs text-destructive">
+                Couldn&apos;t reach the model — try one of the examples above.
+              </p>
+            )}
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed border-t border-border pt-3">
+          The examples above are hand-picked to surface clear patterns. Your own sentence
+          may not — transformers don&apos;t always reveal clean structure, and that&apos;s part
+          of what makes them interesting. Look for pronouns and what they refer to, verbs and
+          their subjects, or a modifier and the noun it belongs to.
+        </p>
       </div>
 
-      <Section2 tokens={tokens} attentionMatrix={attentionMatrix} rawScoresMatrix={rawScoresMatrix} selectedIdx={selectedIdx} />
-      <Sections3And4 selectedIdx={selectedIdx} />
+      <Section2
+        tokens={tokens}
+        attentionMatrix={attentionMatrix}
+        rawScoresMatrix={rawScoresMatrix}
+        multiHeadAttention={multiHeadAttention}
+        multiHeadRawScores={multiHeadRawScores}
+        queryVectors={queryVectors}
+        keyVectors={keyVectors}
+        headIndices={ex.headIndices}
+        selectedIdx={selectedIdx}
+      />
+      <Sections3And4
+        selectedIdx={selectedIdx}
+        liveResult={liveResult}
+        setLiveResult={setLiveResult}
+      />
       <Section5 />
       <FurtherReading />
 

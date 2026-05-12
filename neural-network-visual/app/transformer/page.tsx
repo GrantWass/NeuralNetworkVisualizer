@@ -12,7 +12,6 @@ export const metadata: Metadata = {
     description:
       "Explore self-attention, the mechanism behind GPT, Claude, BERT, and every modern language model. Click through real attention patterns and see how transformers handle pronouns, agreement, and long-range dependencies.",
     url: "https://nn-visual.com/transformer",
-    images: ["/og/transformer.png"],
   },
 };
 
@@ -63,7 +62,7 @@ const articleLd = {
     name: "Grant Wasserman",
   },
   datePublished: "2026-05-11",
-  dateModified: "2026-05-11",
+  dateModified: "2026-05-12",
 };
 
 export default function TransformerPage() {

@@ -164,7 +164,6 @@ export const metadata: Metadata = {
     description:
       "An interactive tool for understanding how neural networks learn. Configure hidden layers, train on real data, and watch forward and backpropagation step by step.",
     url: "https://nn-visual.com",
-    images: ["/og/home.png"],
   },
 };
 

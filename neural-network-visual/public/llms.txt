@@ -4,18 +4,44 @@ A free interactive visualizer for neural networks and transformer attention. Bui
 
 ## Pages
 
-- [Neural Network Visualizer](https://nn-visual.com/): Interactive tool for understanding forward and backpropagation. Configurable architecture, real-time training visualization, written explanation of how neural networks learn.
-- [Transformer Visualization](https://nn-visual.com/transformer): Interactive exploration of self-attention. BERT attention patterns on real sentences, user-provided input, multi-head attention comparison.
+- [Neural Network Visualizer](https://nn-visual.com/): Configure a neural network architecture, train it on real datasets (Iris, Auto MPG), and watch forward propagation and backpropagation step by step. Includes a full written explanation of how neural networks learn.
+
+- [Transformer Visualization](https://nn-visual.com/transformer): Interactive exploration of self-attention using real BERT weights. Eight hand-curated sentences illustrate specific linguistic phenomena. Users can also enter their own sentence and run live BERT inference.
+
+## Transformer page features
+
+- **Attention heatmap**: Token-to-token attention weights from BERT layer 6, averaged across all 12 heads. Rows are querying tokens; columns are keys.
+- **Multi-head attention grid**: Four individual heads shown side by side (heads 1, 4, 8, 12), each with a hand-written analysis of what relationship it has learned to track.
+- **Query / Key breakdown**: For each token, the raw 64-dimensional Q and K projection vectors are shown as color-coded strips, along with pre-softmax dot-product scores and final softmax attention weights.
+- **Live inference**: Users can submit any sentence; the backend runs BERT and returns attention weights, Q/K vectors, and pre-softmax scores in real time.
+- **Encoder vs. decoder section**: Explains bidirectional (BERT) vs. causal (GPT/Claude) attention with an interactive causal mask diagram.
+
+## Curated linguistic examples
+
+1. Anaphora — pronoun coreference ("The animal didn't cross the street because it was too tired")
+2. PP attachment ambiguity ("The man saw the woman with the telescope")
+3. Ditransitive verb ("John gave Mary a book")
+4. Winograd schema ("The trophy doesn't fit in the suitcase because it is too large")
+5. Subject-verb agreement across an intervening phrase ("The cat on the mats is sleeping")
+6. Negation ("The dog did not chase the cat")
+7. Reflexive pronoun ("John hurt himself while cooking")
+8. Coordination ("Cats and dogs make wonderful pets")
 
 ## Key concepts covered
 
-- Neural networks: architecture, weights, activations
+- Neural networks: architecture, weights, activations, forward propagation
 - Backpropagation and gradient descent
-- Self-attention: queries, keys, values
-- Multi-head attention
-- Transformer architecture
-- Real-world phenomena: anaphora resolution, subject-verb agreement, long-range dependencies
+- Self-attention: queries, keys, values, dot-product scores, softmax
+- Multi-head attention and head specialization
+- Encoder-only (BERT), decoder-only (GPT/Claude), and encoder-decoder (T5) transformer architectures
+- Real linguistic phenomena: anaphora resolution, PP attachment, subject-verb agreement, negation, reflexive binding
+
+## Technical details
+
+- Frontend: Next.js 15, React, Tailwind CSS, TypeScript
+- Attention weights extracted from bert-base-uncased (layer 6, heads [0, 3, 7, 11])
+- Backend: FastAPI on AWS Lambda, returns attention weights + Q/K/raw-score tensors
 
 ## About
 
-Built by Grant Wasserman (https://grantwasserman.com), an graduate student at the University of Nebraska–Lincoln studying CS and math.
+Built by Grant Wasserman (https://grantwasserman.com), a graduate student at the University of Nebraska–Lincoln studying CS and math.

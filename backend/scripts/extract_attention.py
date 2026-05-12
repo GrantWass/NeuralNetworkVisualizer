@@ -130,6 +130,11 @@ def extract_for_sentence(model, tokenizer, sentence: str, layer: int) -> dict:
     # Per-head raw scores for the 4 displayed heads
     multi_head_raw_scores = [raw[h].tolist() for h in head_indices]
 
+    # Q and K vectors for each of the 4 displayed heads
+    # Shape: 4 × seq_len × HEAD_DIM — lets the frontend show real vector patterns
+    query_vectors = [q[h].tolist() for h in head_indices]
+    key_vectors   = [k[h].tolist() for h in head_indices]
+
     return {
         "tokens": tokens,
         "attentionMatrix": main_attention,
@@ -138,6 +143,8 @@ def extract_for_sentence(model, tokenizer, sentence: str, layer: int) -> dict:
         "headIndices": head_indices,
         "rawScoresMatrix": raw_scores_matrix,
         "multiHeadRawScores": multi_head_raw_scores,
+        "queryVectors": query_vectors,
+        "keyVectors": key_vectors,
     }
 
 

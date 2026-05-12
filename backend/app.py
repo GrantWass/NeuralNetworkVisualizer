@@ -1,12 +1,16 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import numpy as np
+import math
 from NeuralNetwork import NeuralNetwork
 from datasets import load_dataset  # Assume a function to load the dataset
 import uuid
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional, Union
 from mangum import Mangum
+
+NUM_HEADS = 12
+HEAD_DIM = 64
 
 # ── BERT model — loaded once at cold start, reused across invocations ──────────
 # Cold start: 5–15 s (model load from disk + tokenizer init).
@@ -234,6 +238,10 @@ class AttentionResponse(BaseModel):
     multiHeadAttention: List[List[List[float]]]
     headLayer: int
     headIndices: List[int]
+    rawScoresMatrix: List[List[float]]             # pre-softmax Q·K/√d averaged across all heads
+    multiHeadRawScores: List[List[List[float]]]    # pre-softmax scores for each of the 4 displayed heads
+    queryVectors: List[List[List[float]]]          # 4 heads × seq × 64
+    keyVectors: List[List[List[float]]]            # 4 heads × seq × 64
 
 # Smoke-test curl:
 #   curl -X POST http://localhost:8000/attention \
@@ -243,7 +251,8 @@ class AttentionResponse(BaseModel):
 @app.post("/attention", response_model=AttentionResponse)
 def get_attention(request: AttentionRequest):
     """
-    Return BERT self-attention weights for a given sentence.
+    Return BERT self-attention weights for a given sentence, including pre-softmax
+    Q·K/√d scores and the raw Q/K projection vectors for the 4 displayed heads.
 
     Cold start: 5–15 s (model loads from disk).  Warm: <1 s.
     Requires Lambda memory ≥ 2048 MB.
@@ -264,19 +273,49 @@ def get_attention(request: AttentionRequest):
         )
 
     tokens = _tokenizer.convert_ids_to_tokens(inputs["input_ids"][0])
-
     layer = max(0, min(request.layer, 11))
 
-    with torch.no_grad():
-        outputs = _model(**inputs)
+    # Register forward hooks to capture Q and K projections from the target layer.
+    # Each hook receives the linear layer output (batch, seq, hidden=768), reshapes to
+    # (batch, seq, num_heads, head_dim) and permutes to (num_heads, seq, head_dim).
+    store: dict = {}
+
+    def q_hook(_, __, output):
+        b, s, _ = output.shape
+        store["q"] = output.detach().view(b, s, NUM_HEADS, HEAD_DIM).permute(0, 2, 1, 3)[0]
+
+    def k_hook(_, __, output):
+        b, s, _ = output.shape
+        store["k"] = output.detach().view(b, s, NUM_HEADS, HEAD_DIM).permute(0, 2, 1, 3)[0]
+
+    target_self = _model.encoder.layer[layer].attention.self
+    q_handle = target_self.query.register_forward_hook(q_hook)
+    k_handle = target_self.key.register_forward_hook(k_hook)
+
+    try:
+        with torch.no_grad():
+            outputs = _model(**inputs)
+    finally:
+        q_handle.remove()
+        k_handle.remove()
 
     # outputs.attentions: tuple[num_layers] of (batch=1, num_heads=12, seq, seq)
     attentions = outputs.attentions[layer][0]  # (12, seq, seq)
-
     main_attention = attentions.mean(dim=0).tolist()
 
     head_indices = [0, 3, 7, 11]
     multi_head = [attentions[h].tolist() for h in head_indices]
+
+    # Pre-softmax scores: Q·Kᵀ / √d  →  (num_heads, seq, seq)
+    q = store["q"]  # (12, seq, 64)
+    k = store["k"]  # (12, seq, 64)
+    raw_scores = torch.matmul(q, k.transpose(-1, -2)) / math.sqrt(HEAD_DIM)  # (12, seq, seq)
+
+    raw_scores_avg = raw_scores.mean(dim=0).tolist()
+    multi_head_raw_scores = [raw_scores[h].tolist() for h in head_indices]
+
+    query_vectors = [q[h].tolist() for h in head_indices]
+    key_vectors = [k[h].tolist() for h in head_indices]
 
     return AttentionResponse(
         tokens=tokens,
@@ -284,6 +323,10 @@ def get_attention(request: AttentionRequest):
         multiHeadAttention=multi_head,
         headLayer=layer,
         headIndices=head_indices,
+        rawScoresMatrix=raw_scores_avg,
+        multiHeadRawScores=multi_head_raw_scores,
+        queryVectors=query_vectors,
+        keyVectors=key_vectors,
     )
 
 
