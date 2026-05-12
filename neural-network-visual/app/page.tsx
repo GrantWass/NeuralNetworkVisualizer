@@ -222,8 +222,12 @@ export default function NeuralNetworkViz() {
       <JsonLd data={learningResourceLd} />
       <JsonLd data={articleLd} />
 
-      <header className="mt-4 mb-6 space-y-3">
-        <h1 className="text-3xl font-bold">Interactive Neural Network Visualization</h1>
+      <header className="mt-4 mb-6 space-y-4 pb-6 border-b border-border">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-500" />
+          Interactive Visualization
+        </span>
+        <h1 className="text-3xl font-bold tracking-tight">Neural Network Visualizer</h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
           Configure a network, train it on real data, and watch forward and
           backpropagation step by step. Below the visualizer, a written

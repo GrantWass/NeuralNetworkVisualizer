@@ -12,21 +12,30 @@ from mangum import Mangum
 NUM_HEADS = 12
 HEAD_DIM = 64
 
-# ── BERT model — loaded once at cold start, reused across invocations ──────────
-# Cold start: 5–15 s (model load from disk + tokenizer init).
-# Warm invocations: <1 s.
-# Memory: requires Lambda allocation ≥ 2048 MB.
-try:
-    from transformers import BertTokenizer, BertModel  # type: ignore
-    import torch  # type: ignore
-    _tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-    _model = BertModel.from_pretrained("bert-base-uncased", output_attentions=True)
-    _model.eval()
-    _model_error: Optional[str] = None
-except Exception as _e:
-    _tokenizer = None  # type: ignore
-    _model = None  # type: ignore
-    _model_error = str(_e)
+# ── BERT model — lazy-loaded on first /attention call ─────────────────────────
+# Loaded eagerly at module level caused every cold start (including /init_model,
+# /train, etc.) to block for 5–15 s while BERT loaded, exceeding API Gateway's
+# 29-second integration timeout and returning 503s for unrelated endpoints.
+# Lazy-loading means non-BERT endpoints respond immediately on cold start.
+# Warm /attention calls are unaffected (<1 s) since the module is already loaded.
+_tokenizer = None
+_model = None
+_model_error: Optional[str] = None
+_bert_loaded = False
+
+def _load_bert():
+    global _tokenizer, _model, _model_error, _bert_loaded
+    if _bert_loaded:
+        return
+    _bert_loaded = True
+    try:
+        from transformers import BertTokenizer, BertModel  # type: ignore
+        import torch as _torch  # type: ignore
+        _tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+        _model = BertModel.from_pretrained("bert-base-uncased", output_attentions=True)
+        _model.eval()
+    except Exception as _e:
+        _model_error = str(_e)
 
 app = FastAPI()
 
@@ -254,9 +263,12 @@ def get_attention(request: AttentionRequest):
     Return BERT self-attention weights for a given sentence, including pre-softmax
     Q·K/√d scores and the raw Q/K projection vectors for the 4 displayed heads.
 
-    Cold start: 5–15 s (model loads from disk).  Warm: <1 s.
+    First call: 5–15 s (BERT loads from disk).  Subsequent calls: <1 s.
     Requires Lambda memory ≥ 2048 MB.
     """
+    _load_bert()
+    import torch  # type: ignore  # available after _load_bert()
+
     if _model_error:
         raise HTTPException(status_code=500, detail=f"Model failed to load: {_model_error}")
 

@@ -85,7 +85,7 @@ const StepDataset = ({
       </div>
 
       {/* Dataset cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {DATASETS.map((ds) => {
           const d = DATASET_DETAILS[ds];
           return (
@@ -94,17 +94,17 @@ const StepDataset = ({
               onClick={() => onDatasetChange(ds)}
               className={`text-left p-4 rounded-xl border-2 transition-all ${
                 dataset === ds
-                  ? "border-black bg-black text-white"
-                  : "border-gray-200 bg-white hover:border-gray-400"
+                  ? "border-indigo-500 bg-indigo-500 text-white"
+                  : "border-border bg-card hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30"
               }`}
             >
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-semibold text-sm">{ds}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ml-auto ${
-                  dataset === ds ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
+                  dataset === ds ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
                 }`}>{d.task}</span>
               </div>
-              <p className={`text-xs mt-1 ${dataset === ds ? "text-white/80" : "text-gray-500"}`}>{d.taskType}</p>
+              <p className={`text-xs mt-1 ${dataset === ds ? "text-white/80" : "text-muted-foreground"}`}>{d.taskType}</p>
             </button>
           );
         })}

@@ -793,8 +793,12 @@ export default function TransformerVizClient() {
 
   return (
     <div className="p-4 max-w-9xl mx-auto space-y-12">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-bold">Interactive Transformer Visualization</h1>
+      <header className="space-y-4 py-6 border-b border-border">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-500" />
+          Interactive Visualization
+        </span>
+        <h1 className="text-3xl font-bold tracking-tight">Transformer &amp; Self-Attention</h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
           The transformer is the architecture behind GPT, BERT, and almost every
           modern language model. Its core idea — <strong>self-attention</strong> —

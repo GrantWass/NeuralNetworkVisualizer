@@ -79,7 +79,7 @@ XOR is the classic proof that hidden layers matter. A single layer of neurons ca
 
 **Architecture:** 2 inputs → ${archDesc} → 1 output (${totalParams} learnable parameters total).
 
-**What to expect:** XOR has only 4 training patterns, so each cycle passes through all of them. The network needs to learn a non-linear decision boundary — if your hidden layer has enough neurons and the learning rate is reasonable (0.1–0.5 works well for XOR), it should converge to 100% accuracy within 100–500 cycles. If it gets stuck, try a slightly higher learning rate or re-initialize.`;
+**What to expect:** XOR has only 4 training patterns, so each cycle passes through all of them. The network needs to learn a non-linear decision boundary — if your hidden layer has enough neurons and the learning rate is reasonable (0.3–0.7 works well for XOR), it should converge to 100% accuracy within 50–200 cycles. If it gets stuck, re-initialize — random weight initialization can occasionally land in a poor starting point.`;
     }
   }
 
@@ -138,7 +138,7 @@ ${progressComment}${trend}
 Binary cross-entropy measures how far each sigmoid output is from the true 0 or 1 label. A loss of 0 means perfect confidence on all 4 patterns. Values above 0.5 mean the network is still uncertain or wrong on multiple examples.
 
 
-**What to try:** ${metric >= 100 ? "XOR is solved. Try re-initializing with fewer hidden neurons to see the minimum architecture required, or switch to a harder dataset." : "XOR often needs a moderate-to-high learning rate (0.1–0.5) to converge. If stuck, try re-initializing — random weight initialization can land in a poor starting point for this dataset."}`;
+**What to try:** ${metric >= 100 ? "XOR is solved. Try re-initializing with fewer hidden neurons to see the minimum architecture required, or switch to a harder dataset." : "XOR converges most reliably with a learning rate of 0.3–0.7. If stuck, re-initialize — the sigmoid activations ensure no dead neurons, but a bad random seed can still stall progress."}`;
   }
 
   return "";

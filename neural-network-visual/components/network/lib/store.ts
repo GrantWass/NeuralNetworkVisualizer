@@ -199,8 +199,11 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   },
 
   clearSessionAndReset: async () => {
-    const { sessionId } = get();
+    const { sessionId, dataset } = get();
     if (!sessionId) return;
+    const resetDefaults = dataset === "xor"
+      ? { learningRate: 0.5, activations: ["sigmoid", "sigmoid"], hiddenLayers: [4, 4] }
+      : { learningRate: 0.1, activations: ["relu", "relu"], hiddenLayers: [4, 4] };
     try {
       await fetch(`${URL}/clear_session?session_id=${sessionId}`, { method: "POST" });
       set({
@@ -209,12 +212,10 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         hoveredConnection: null,
         hoveredNode: null,
         epoch: 0,
-        learningRate: 0.1,
-        activations: ["relu", "relu"],
-        hiddenLayers: [4, 4],
         losses: [],
         accuracies: [],
         originalData: [],
+        ...resetDefaults,
       });
       toast("Model reset");
       get().setSessionId(null);
@@ -377,9 +378,14 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   },
 
   handleDatasetChange: (newDataset: string) => {
+    // XOR needs sigmoid activations (ReLU dies on 4 samples) and a higher LR
+    const datasetDefaults = newDataset === "xor"
+      ? { activations: ["sigmoid", "sigmoid"], hiddenLayers: [4, 4], learningRate: 0.5 }
+      : { activations: ["relu", "relu"], hiddenLayers: [4, 4], learningRate: 0.1 };
     set({
       dataset: newDataset,
       datasetInfo: DATASET_INFO[newDataset],
+      ...datasetDefaults,
     });
     get().initModelFrontend();
   },

@@ -104,7 +104,7 @@ const ConnectionLines: React.FC<{
                   x2={toX}
                   y2={toY}
                   stroke={baseColor}
-                  strokeWidth={wAbs * (SVGWIDTH > 600 ? 2.5 : 1.8) + 0.8}
+                  strokeWidth={wAbs * (SVGWIDTH > 600 ? 2.5 : 1.8) + 1.8}
                 />
                 {/* Flash overlay for most-changed connections */}
                 {flashEntry && (
