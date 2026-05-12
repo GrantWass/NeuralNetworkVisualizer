@@ -809,30 +809,63 @@ const Explain = () => {
 
                                                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-12 flex-wrap">
                                                     <div className="flex flex-col items-center gap-2">
-                                                        <p className="text-sm text-gray-600">dW = (1/m) &Sigma; A<sub>prev</sub><sup>T</sup> &middot; dZ averaged over all samples:</p>
-                                                        <p className="text-xs text-gray-600 italic">*One sample shown for illustration — the actual dW is the average across all {dataset === "xor" ? "4 XOR patterns (which have opposing gradients that partially cancel)" : "training samples"}*</p>
-                                                        <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
-                                                            {renderMatrix(reshapeTo2D(outputLayerIndex - index === -1 ? network.input[sampleIndex] : network.layers[outputLayerIndex - index].A[sampleIndex]), `Sample A_prev`, "one sample, for reference", false)}
-                                                            <span className="text-lg sm:text-2xl mt-2 sm:mt-6">×</span>
-                                                            {renderVector(layer.dZ[sampleIndex], `dZ`, "one sample", false)}
-                                                            <span className="text-lg sm:text-2xl mt-2 sm:mt-6">≠</span>
-                                                            {renderMatrix(layer.dW, `dW (batch avg)`, "∇ Weights", true)}
-                                                        </div>
+                                                        {dataset === "xor" ? (
+                                                            <>
+                                                                <p className="text-sm text-gray-600">dW = (1/4) × A<sub>prev</sub><sup>T</sup> · dZ — all 4 XOR patterns:</p>
+                                                                <p className="text-xs text-gray-600 italic">*Gradients from Y=0 patterns and Y=1 patterns partially cancel, giving small but non-zero dW*</p>
+                                                                <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
+                                                                    {renderMatrix(
+                                                                        transpose(outputLayerIndex - index === -1 ? network.input : network.layers[outputLayerIndex - index].A) ?? [],
+                                                                        `A_prev.T`, "neurons × samples", true
+                                                                    )}
+                                                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">×</span>
+                                                                    {renderMatrix(layer.dZ, `dZ`, "samples × outputs", true)}
+                                                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">/ 4 =</span>
+                                                                    {renderMatrix(layer.dW, `dW`, "∇ Weights", true)}
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <p className="text-sm text-gray-600">dW = (1/m) &Sigma; A<sub>prev</sub><sup>T</sup> &middot; dZ averaged over all samples:</p>
+                                                                <p className="text-xs text-gray-600 italic">*One sample shown for illustration — the actual dW is the average across all training samples*</p>
+                                                                <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
+                                                                    {renderMatrix(reshapeTo2D(outputLayerIndex - index === -1 ? network.input[sampleIndex] : network.layers[outputLayerIndex - index].A[sampleIndex]), `Sample A_prev`, "one sample, for reference", false)}
+                                                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">×</span>
+                                                                    {renderVector(layer.dZ[sampleIndex], `dZ`, "one sample", false)}
+                                                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">≠</span>
+                                                                    {renderMatrix(layer.dW, `dW (batch avg)`, "∇ Weights", true)}
+                                                                </div>
+                                                            </>
+                                                        )}
                                                     </div>
 
                                                     <div className="flex flex-col items-center gap-2">
-                                                        <p className="text-sm text-gray-600">Gradient of biases (dB) is the sum of dZ across samples:</p>
-                                                        <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
-                                                            <span className="text-lg sm:text-2xl mt-2 sm:mt-6">Σ</span>
-                                                            <div className="flex flex-col gap-1">
-                                                                {renderVector(layer.dZ[sampleIndex], `dZ`, "Different sample's dZ shown", false)}
-                                                                {renderVector(layer.dZ[sampleIndex + 1], ``, "", false)}
-                                                                ⋮
-                                                                {renderVector(layer.dZ[sampleIndex + 2], ``, "", false)}
-                                                            </div>
-                                                            <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
-                                                            {renderVector(layer.db, `dB`, "∇ Biases", true)}
-                                                        </div>
+                                                        {dataset === "xor" ? (
+                                                            <>
+                                                                <p className="text-sm text-gray-600">Gradient of biases (dB) = (1/4) Σ dZ across all 4 patterns:</p>
+                                                                <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
+                                                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">(1/4)</span>
+                                                                    {renderMatrix(layer.dZ, `dZ`, "all samples", true)}
+                                                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
+                                                                    {renderVector(layer.db, `dB`, "∇ Biases", true)}
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <p className="text-sm text-gray-600">Gradient of biases (dB) is the sum of dZ across samples:</p>
+                                                                <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
+                                                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">Σ</span>
+                                                                    <div className="flex flex-col gap-1">
+                                                                        {renderVector(layer.dZ[sampleIndex], `dZ`, "Different sample's dZ shown", false)}
+                                                                        {renderVector(layer.dZ[sampleIndex + 1], ``, "", false)}
+                                                                        ⋮
+                                                                        {renderVector(layer.dZ[sampleIndex + 2], ``, "", false)}
+                                                                    </div>
+                                                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
+                                                                    {renderVector(layer.db, `dB`, "∇ Biases", true)}
+                                                                </div>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
