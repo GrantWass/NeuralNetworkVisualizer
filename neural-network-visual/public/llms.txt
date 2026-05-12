@@ -40,7 +40,7 @@ A free interactive visualizer for neural networks and transformer attention. Bui
 
 - Frontend: Next.js 15, React, Tailwind CSS, TypeScript
 - Attention weights extracted from bert-base-uncased (layer 6, heads [0, 3, 7, 11])
-- Backend: FastAPI on AWS Lambda, returns attention weights + Q/K/raw-score tensors
+- Backend: FastAPI on AWS Lambda (shared with neural network visualizer), returns attention weights + Q/K/raw-score tensors
 
 ## About
 

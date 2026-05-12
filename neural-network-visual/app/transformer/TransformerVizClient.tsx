@@ -748,10 +748,15 @@ export default function TransformerVizClient() {
   async function handleCompute() {
     const sentence = userInput.trim();
     if (!sentence) return;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiBase) {
+      setInferenceStatus("error");
+      return;
+    }
     setInferenceStatus("loading");
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_ATTENTION_API_URL}/attention`,
+        `${apiBase}/attention`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
