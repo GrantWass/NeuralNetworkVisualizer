@@ -114,7 +114,7 @@ const ConnectionLines: React.FC<{
                     y1={fromY}
                     x2={toX}
                     y2={toY}
-                    stroke={flashEntry.positive ? "#22c55e" : "#f97316"}
+                    stroke={flashEntry.positive ? "#22c55e" : "#ef4444"}
                     strokeWidth={Math.abs(w) * (SVGWIDTH > 600 ? 3 : 2) + 3}
                     strokeOpacity={0.85}
                     className="weight-flash"

@@ -1,20 +1,12 @@
 import { NetworkState } from "./types";
 
-const getLRComment = (lr: number): string => {
-  if (lr < 0.01) return `Your learning rate (${lr}) is very conservative — training will be slow but stable. Consider increasing it if loss is barely moving.`;
-  if (lr < 0.05) return `Your learning rate (${lr}) is low — updates are small and steady. Good for fine-tuning but slow to start.`;
-  if (lr < 0.2)  return `Your learning rate (${lr}) is in a solid range — large enough to make progress, small enough to stay stable.`;
-  if (lr < 0.5)  return `Your learning rate (${lr}) is on the high side. If loss is oscillating or increasing, try dropping it to 0.1–0.2.`;
-  return `Your learning rate (${lr}) is very high. This can cause weights to overshoot, which may be why loss is unstable. Try 0.05–0.2.`;
-};
-
 const getTrendComment = (loss: number, prevLoss: number, epoch: number): string => {
   if (epoch <= 1 || prevLoss === 0) return "";
   const pct = ((prevLoss - loss) / prevLoss) * 100;
-  if (pct > 10) return " Loss dropped sharply this cycle — the network is learning quickly.";
-  if (pct > 2)  return " Loss is steadily decreasing — keep training.";
-  if (pct >= -1) return " Loss has nearly plateaued. Try adjusting the learning rate or running more cycles.";
-  return " Loss increased this cycle — the learning rate may be too high, causing weights to overshoot.";
+  if (pct > 10) return " Loss dropped sharply this cycle — the network is learning quickly and the current settings are working well.";
+  if (pct > 2) return " Loss is steadily decreasing — training is still making healthy progress, so keep going.";
+  if (pct >= -1) return " Loss is still improving, but more slowly — the model may be nearing a flatter part of the curve, so keep training or try a small learning-rate tweak.";
+  return " Loss increased this cycle — the learning rate may be a little too aggressive, causing the weights to overshoot before settling.";
 };
 
 export const getExplanationText = (
@@ -93,7 +85,6 @@ XOR is the classic proof that hidden layers matter. A single layer of neurons ca
 
   // ── training in progress ───────────────────────────────────────────────────
   const trend = getTrendComment(loss, prevLoss, epoch);
-  const lrComment = getLRComment(learningRate);
 
   if (dataset === "iris") {
     const pct = metric.toFixed(1);
@@ -111,8 +102,6 @@ ${progressComment}${trend}
 **Loss (cross-entropy): ${loss.toFixed(4)}**
 Cross-entropy measures how confident and correct the predictions are. A loss of 0 would mean perfect certainty on every sample. Values above 1 suggest the network is frequently wrong or unsure; below 0.3 is generally good for this dataset.
 
-**${lrComment}**
-
 **What to try:** ${metric >= 90 ? "Your model is performing well. Try comparing learning rates using the Compare LR button, or explore how the weights change across epochs in the Forward Pass tab." : metric >= 60 ? "Keep running training cycles and watch the loss curve. If it plateaus, try a learning rate of 0.05–0.15." : "Run more cycles — the model is still in the early stages of learning. If loss isn't decreasing after 20+ cycles, try adjusting the learning rate."}`;
   }
 
@@ -129,8 +118,6 @@ ${progressComment}${trend}
 
 **Loss (MSE): ${loss.toFixed(4)}**
 Mean squared error penalizes large errors more than small ones (because errors are squared before averaging). It's useful for regression but harder to interpret directly — MAE is usually the more intuitive metric here.
-
-**${lrComment}**
 
 **What to try:** ${metric < 3 ? "The model is performing well. Try the Compare LR feature to see if a different learning rate would converge faster." : "If the loss curve has flattened, try a slightly different learning rate. For regression, 0.01–0.1 often works well."}`;
   }
@@ -150,7 +137,6 @@ ${progressComment}${trend}
 **Loss (binary cross-entropy): ${loss.toFixed(4)}**
 Binary cross-entropy measures how far each sigmoid output is from the true 0 or 1 label. A loss of 0 means perfect confidence on all 4 patterns. Values above 0.5 mean the network is still uncertain or wrong on multiple examples.
 
-**${lrComment}**
 
 **What to try:** ${metric >= 100 ? "XOR is solved. Try re-initializing with fewer hidden neurons to see the minimum architecture required, or switch to a harder dataset." : "XOR often needs a moderate-to-high learning rate (0.1–0.5) to converge. If stuck, try re-initializing — random weight initialization can land in a poor starting point for this dataset."}`;
   }
@@ -159,16 +145,17 @@ Binary cross-entropy measures how far each sigmoid output is from the true 0 or 
 };
 
 // Hidden layer info
-export const HIDDEN_LAYER_INFO = `**Hidden layers** allow the model to learn **abstract features** by transforming inputs through weights and activation functions.`;
+export const HIDDEN_LAYER_INFO = `**Hidden layers** let the model learn **abstract features** by stacking transformations through weights and activation functions.
+
+Common hidden activations include **ReLU** for fast feature extraction, **tanh** for smoother centered outputs, and **sigmoid** for older or simpler setups. The right choice depends on how sharply you want the layer to respond to inputs.`;
 
 // Hidden layer detailed explanation
-export const HIDDEN_LAYER_LEARN_MORE = `More hidden layers support **deeper learning** but may require more data and computation.
-Each layer has **neurons** that process information before passing it to the next layer.
-**Activation functions** transform outputs between layers.
+export const HIDDEN_LAYER_LEARN_MORE = `More hidden layers support **deeper learning** but usually need more data and computation.
+Each layer has **neurons** that mix the previous layer's outputs, add a bias, and then apply an activation function before passing information onward.
 
-Hidden layers act as **feature detectors**:
+Hidden layers often behave like **feature detectors**:
 - **Early layers** capture simple patterns
-- **Deeper layers** recognize complex features
+- **Deeper layers** recognize more abstract relationships
 
 Too many layers can lead to **overfitting** (memorizing data).
 Regularization techniques like **dropout** and **batch normalization** help mitigate this.`;
