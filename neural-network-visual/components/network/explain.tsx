@@ -820,7 +820,7 @@ const Explain = () => {
                                                                     )}
                                                                     <span className="text-lg sm:text-2xl mt-2 sm:mt-6">×</span>
                                                                     {renderMatrix(layer.dZ, `dZ`, "samples × outputs", true)}
-                                                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">/ 4 =</span>
+                                                                    <span className="text-sm sm:text-base mt-2 sm:mt-6 text-gray-600">/ 4 =</span>
                                                                     {renderMatrix(layer.dW, `dW`, "∇ Weights", true)}
                                                                 </div>
                                                             </>
@@ -844,7 +844,7 @@ const Explain = () => {
                                                             <>
                                                                 <p className="text-sm text-gray-600">Gradient of biases (dB) = (1/4) Σ dZ across all 4 patterns:</p>
                                                                 <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
-                                                                    <span className="text-lg sm:text-2xl mt-2 sm:mt-6">(1/4)</span>
+                                                                    <span className="text-sm sm:text-base mt-2 sm:mt-6 text-gray-600">(1/4)</span>
                                                                     {renderMatrix(layer.dZ, `dZ`, "all samples", true)}
                                                                     <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
                                                                     {renderVector(layer.db, `dB`, "∇ Biases", true)}
