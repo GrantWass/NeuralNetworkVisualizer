@@ -1,0 +1,722 @@
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import ContactInfo from "../contact";
+import { HeatmapSVG } from "@/components/transformer/HeatmapSVG";
+import { QKVBreakdown } from "@/components/transformer/QKVBreakdown";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+// Button and Input are used in the live-inference block (currently commented out)
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+import type { TransformerExample, AttentionResult } from "./types";
+import examplesData from "./data.json";
+
+const examples = examplesData as TransformerExample[];
+
+// Sentence used in sections 1 and 2
+const SECTION1_SENTENCE = "The animal didn't cross the street because it was too tired";
+const SECTION1_TOKENS = SECTION1_SENTENCE.split(/\s+/);
+
+// ─── Section 1 ────────────────────────────────────────────────────────────────
+
+function Section1() {
+  return (
+    <section className="space-y-4">
+      <h2 className="text-xl font-semibold">The Problem Attention Solves</h2>
+      <p className="text-muted-foreground leading-relaxed max-w-2xl">
+        Read this sentence: <em>"{SECTION1_SENTENCE}."</em> What does "it" refer
+        to — the animal or the street? You resolved that instantly, but how?
+        Your brain didn't scan every word equally. It attended selectively,
+        weighting <strong>animal</strong> and <strong>tired</strong> heavily
+        when interpreting <strong>it</strong>.
+      </p>
+      <div
+        className="flex flex-wrap gap-2 p-4 rounded-lg border border-border bg-card"
+        aria-label="Sentence tokens"
+      >
+        {SECTION1_TOKENS.map((token, i) => {
+          const isIt = token.toLowerCase() === "it";
+          return (
+            <span
+              key={i}
+              className={[
+                "px-2.5 py-1 rounded-md text-sm font-mono border",
+                isIt
+                  ? "bg-indigo-50 border-indigo-400 ring-2 ring-indigo-400 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 font-semibold"
+                  : "bg-secondary border-border text-secondary-foreground",
+              ].join(" ")}
+            >
+              {token}
+            </span>
+          );
+        })}
+      </div>
+      <p className="text-muted-foreground leading-relaxed max-w-2xl">
+        Older architectures like RNNs read words one at a time, left to right.
+        By the time the model reached "it," the signal from "animal" had passed
+        through many intermediate steps and faded. The transformer fixes this
+        with <strong>self-attention</strong>: every token computes a direct
+        connection to every other token simultaneously, so "it" can attend to
+        "animal" in a single step regardless of how far apart they are.
+      </p>
+    </section>
+  );
+}
+
+// ─── Section 2 ────────────────────────────────────────────────────────────────
+
+function Section2({
+  tokens,
+  attentionMatrix,
+  rawScoresMatrix,
+  selectedIdx,
+}: {
+  tokens: string[];
+  attentionMatrix: number[][];
+  rawScoresMatrix?: number[][];
+  selectedIdx: number;
+}) {
+  return (
+    <section className="space-y-4">
+      <h2 className="text-xl font-semibold">How Attention Works Mechanically</h2>
+      <p className="text-muted-foreground leading-relaxed max-w-2xl">
+        For each token, the model learns three vectors:{" "}
+        <strong>Query</strong> ("what am I looking for?"),{" "}
+        <strong>Key</strong> ("what do I contain?"), and{" "}
+        <strong>Value</strong> ("what do I pass along?"). To score how much
+        token A should attend to token B, we compute the dot product of A's
+        query and B's key — a similarity score. We divide by √d (the square
+        root of the vector size) to stop the scores from growing too large,
+        then apply <strong>softmax</strong> to convert them into probabilities
+        that sum to 1. Finally, each token's output is a weighted average of
+        all value vectors, where the weights are those probabilities.
+      </p>
+      <p className="text-muted-foreground leading-relaxed max-w-2xl">
+        Click any token below to step through the computation using real BERT
+        attention weights from the selected example.
+      </p>
+      <QKVBreakdown key={selectedIdx} tokens={tokens} attentionMatrix={attentionMatrix} rawScoresMatrix={rawScoresMatrix} />
+    </section>
+  );
+}
+
+// ─── Per-example heatmap interpretation ──────────────────────────────────────
+
+const EXAMPLE_INTERPRETATION: Record<string, string> = {
+  anaphora:
+    '"it" attends most strongly to "animal" — the model correctly identifies what the pronoun refers to, even though the words "didn\'t cross the street because" sit between them. ',
+  modifier:
+    '"with" attends most strongly to "man," telling us the model reads "with the telescope" as describing the man — not the act of seeing. This is the kind of structural ambiguity ("did she use the telescope, or did the man have it?") that trips up simpler models.',
+  ditransitive:
+    '"gave" attends most strongly to "Mary," picking out who did the giving. The word "a" splits its attention between "book" and "gave," linking the object to both its own noun and the verb that governs it.',
+  agreement:
+    '"is" and "sleeping" attend strongly to each other, the model linking the helper verb to the main verb it pairs with. "on" points back to "cat" — connecting the preposition to the noun it modifies rather than the nearby "mats."',
+  reflexive:
+    '"himself" attends most strongly to "hurt" — the verb it is the object of — rather than back to "John." The model is tracking the grammatical role here: "himself" belongs to "hurt." The word "while" also points to "hurt," linking the two parts of the sentence.',
+  coordination:
+    '"and" attends to "cats" and "dogs" attends back to "and," forming the two-way link between the joined nouns. "wonderful" points to "make," connecting the adjective to the verb it modifies.',
+};
+
+// ─── Per-example, per-head hand-written analyses ─────────────────────────────
+// Heads [0, 3, 7, 11] from BERT layer 6. Each array has 4 entries matching
+// multiHeadAttention[0..3]. Used in Section 4; live sentences fall back to
+// detectHeadPattern.
+
+type HeadAnalysis = { label: string; description: string };
+
+const HEAD_ANALYSIS: Record<string, HeadAnalysis[]> = {
+  anaphora: [
+    {
+      label: "Coreference",
+      description:
+        '"it" attends strongly to "animal." Across examples this head consistently links pronouns and repeated nouns back to their antecedents — it is the closest thing BERT has to a dedicated reference-tracking head.',
+    },
+    {
+      label: "Verb dependency",
+      description:
+        '"the" and "street" both point strongly to "cross." This head pulls article and noun tokens toward the main verb of their clause — mapping out which words belong to the same predicate.',
+    },
+    {
+      label: "Clause bridging",
+      description:
+        '"was" attends back to "didn\'t" across the "because" boundary. This head often links the two verb phrases of a complex clause, building long-range structural connections rather than local ones.',
+    },
+    {
+      label: "Local chain",
+      description:
+        'Strong backward attention throughout — each token attends heavily to its left neighbor. This head is tracking local word order rather than meaning. It is the most positional of the four.',
+    },
+  ],
+  modifier: [
+    {
+      label: "Determiner tracking",
+      description:
+        '"man" attends to "the." This head traces articles back to the nouns they modify. Across examples it consistently links determiners to their noun heads rather than making longer-range connections.',
+    },
+    {
+      label: "PP attachment",
+      description:
+        '"telescope" and "the" both attend strongly to "with," and "with" then points to "man." This head is resolving the classic prepositional-phrase ambiguity — deciding the instrument belongs to the man, not to the act of seeing.',
+    },
+    {
+      label: "Semantic focus",
+      description:
+        'Almost every token attends to "telescope" — the concrete object at the end of the sentence. This head tends to fixate on the most salient content noun, treating it as the semantic anchor of the phrase.',
+    },
+    {
+      label: "Noun–modifier bond",
+      description:
+        '"with" attends almost exclusively to "man." This head captures the direct syntactic bond between a prepositional head and its governing noun. It mostly follows the immediately preceding token, but here that happens to encode the PP attachment perfectly.',
+    },
+  ],
+  ditransitive: [
+    {
+      label: "Determiner–noun",
+      description:
+        '"a" attends strongly to "book." This head links every article to the noun it determines. Across examples it is the most reliable tracker of determiner–head noun pairs.',
+    },
+    {
+      label: "Object–verb",
+      description:
+        '"book" and "a" both attend back to "gave." This head maps objects and their determiners back to the governing verb — identifying the predicate that assigns their grammatical role.',
+    },
+    {
+      label: "Argument pairing",
+      description:
+        '"mary" and "john" attend strongly to each other. This head links the two noun arguments of the clause — subject and indirect object. Across examples it consistently pairs the main participants in a sentence.',
+    },
+    {
+      label: "Local chain",
+      description:
+        'Strong backward attention following the left-to-right syntactic chain — "a" to "john," "john" to "gave." This head builds a sequential backbone rather than capturing semantic roles.',
+    },
+  ],
+  agreement: [
+    {
+      label: "Function-word spread",
+      description:
+        'Attention is diffuse here — "is" toward "on," "mats" toward "the." This head does not show a single dominant pattern for this sentence; it may be distributing context broadly across the prepositional phrase.',
+    },
+    {
+      label: "Verb–auxiliary link",
+      description:
+        '"sleeping" attends strongly to "is" and "on" points to "cat." This head connects the main verb to its auxiliary and the preposition to the noun head it modifies — both are exactly the dependencies needed to parse the subject-verb structure correctly.',
+    },
+    {
+      label: "Agreement ambiguity",
+      description:
+        '"mats" and "cat" attend strongly to each other. These are the two nouns in "the cat on the mats" — the source of the number-agreement ambiguity. This head has captured the key noun pair that determines whether the verb should be singular or plural.',
+    },
+    {
+      label: "Local chain",
+      description:
+        'Backward attention dominates — each token attends to its predecessor. In this sentence that happens to encode the preposition pointing to the noun it follows, but the pattern is structural rather than semantic.',
+    },
+  ],
+  reflexive: [
+    {
+      label: "Antecedent resolution",
+      description:
+        '"himself" attends strongly to "john" across four intervening tokens. This head also pulls "cooking" and "while" back toward "john," treating the subject as the sentence anchor. It is the closest thing BERT has to a dedicated coreference head.',
+    },
+    {
+      label: "Reflexive–verb link",
+      description:
+        '"himself" attends almost exclusively to "hurt." This head connects the reflexive to the verb it is the object of — identifying the grammatical role rather than the coreference. The difference from Head 1 is subtle but real: role vs. reference.',
+    },
+    {
+      label: "Clause-final anchor",
+      description:
+        'Most tokens attend heavily to "cooking." This head has anchored on the sentence-final verb, likely encoding the participial clause boundary. Across examples it tends to fix on the last content word as a structural endpoint.',
+    },
+    {
+      label: "Local chain",
+      description:
+        '"himself" attends to "hurt" and "cooking" attends to "while." The pattern is mostly backward attention — left-neighbor tracking — though in this sentence the neighbors happen to be meaningful pairs (reflexive after its verb, adverbial after its conjunction).',
+    },
+  ],
+  coordination: [
+    {
+      label: "Conjunct linking",
+      description:
+        '"dogs" attends strongly to "cats" and "and" attends back to "cats." This head links the second conjunct back to the first, encoding the symmetric relationship between the two nouns in the coordinate structure.',
+    },
+    {
+      label: "Predicate–modifier",
+      description:
+        '"wonderful" attends almost exclusively to "make." Predicate adjectives and conjuncts both point to their governing word. Across examples this head reliably maps dependent words — objects, adjectives, conjuncts — back to the verb or coordinator that governs them.',
+    },
+    {
+      label: "Broad context",
+      description:
+        'Attention is spread fairly evenly across all tokens with no dominant pair. This head is building a general sentence-level representation rather than encoding a specific syntactic link — useful for downstream tasks that need a global summary.',
+    },
+    {
+      label: "Coordination chain",
+      description:
+        '"dogs," "and," and "cats" attend almost exclusively to each other. This head has nearly entirely captured the conjunction structure, treating "and" as the hinge between the two nouns. It is the clearest example of a positional head accidentally encoding something linguistically meaningful.',
+    },
+  ],
+};
+
+// ─── Head pattern detector ────────────────────────────────────────────────────
+
+type HeadPattern = { label: string; description: string };
+
+function detectHeadPattern(rawMatrix: number[][], rawTokens: string[]): HeadPattern {
+  // Strip [CLS], [SEP], etc. before scoring — same filter as HeatmapSVG
+  const keep = rawTokens.map((t) => !/^\[.*\]$/.test(t));
+  const indices = keep.map((k, i) => (k ? i : -1)).filter((i) => i >= 0);
+  const matrix = indices.map((i) => indices.map((j) => rawMatrix[i][j]));
+
+  const n = matrix.length;
+  if (n < 2) return { label: "Attention pattern", description: "" };
+
+  let diagSum = 0;
+  let nextSum = 0;
+  let prevSum = 0;
+  let entropySum = 0;
+
+  for (let i = 0; i < n; i++) {
+    const row = matrix[i];
+    const rowSum = row.reduce((a, b) => a + b, 0) || 1;
+
+    diagSum += row[i] / rowSum;
+    if (i + 1 < n) nextSum += row[i + 1] / rowSum;
+    if (i - 1 >= 0) prevSum += row[i - 1] / rowSum;
+
+    // Per-row Shannon entropy (normalized to [0,1])
+    let h = 0;
+    for (const v of row) {
+      const p = v / rowSum;
+      if (p > 1e-9) h -= p * Math.log2(p);
+    }
+    entropySum += h / Math.log2(n);
+  }
+
+  const diag = diagSum / n;
+  const next = nextSum / Math.max(n - 1, 1);
+  const prev = prevSum / Math.max(n - 1, 1);
+  const entropy = entropySum / n;
+
+  // Uniform baseline: 1/n
+  const uniform = 1 / n;
+  const threshold = 3 * uniform;
+
+  const scores: [number, HeadPattern][] = [
+    [next, { label: "Forward attention", description: "Each token mostly attends to the next token — this head is picking up left-to-right word order." }],
+    [prev, { label: "Backward attention", description: "Each token mostly attends to the previous token — this head reads right-to-left, often tracking grammatical links." }],
+    [diag, { label: "Self-attention", description: "Each token attends most strongly to itself — this head is largely keeping each word's own information intact." }],
+  ];
+
+  // Pick the highest-scoring structural pattern if it clears the threshold
+  const best = scores.reduce((a, b) => (b[0] > a[0] ? b : a));
+  if (best[0] > threshold) return best[1];
+
+  // High entropy → broadly distributed
+  if (entropy > 0.75) {
+    return { label: "Broad attention", description: "Attention is spread roughly evenly — this head is building a general summary of the whole sentence rather than focusing on specific word pairs." };
+  }
+
+  return { label: "Focused attention", description: "Attention is concentrated on a small number of words — this head has learned a specific relationship, like which words refer to the same thing." };
+}
+
+
+// ─── Section 3 + 4 (shared state) ─────────────────────────────────────────────
+
+function Sections3And4({ selectedIdx }: { selectedIdx: number }) {
+  const [liveResult, setLiveResult] = useState<AttentionResult | null>(null);
+
+  const activeExample = liveResult
+    ? { ...examples[selectedIdx], ...liveResult }
+    : examples[selectedIdx];
+
+
+  return (
+    <>
+      {/* Section 3 */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold">Attention as a Heatmap</h2>
+        <p className="text-muted-foreground leading-relaxed max-w-2xl">
+          We can lay out every token-to-token attention score as a grid. Each
+          row is a token asking a question; each column is a token being
+          considered as an answer. A bright cell means the row token is paying
+          strong attention to the column token. Patterns in this grid reveal
+          what relationships the model has learned to track.
+        </p>
+
+        {liveResult && (
+          <p className="text-xs text-muted-foreground">
+            Showing live inference result.{" "}
+            <button
+              className="underline hover:no-underline"
+              onClick={() => setLiveResult(null)}
+            >
+              Clear
+            </button>
+          </p>
+        )}
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">
+            Average
+            <span className="ml-2 text-xs font-normal text-muted-foreground">all heads combined</span>
+          </p>
+          <HeatmapSVG tokens={activeExample.tokens} matrix={activeExample.attentionMatrix} cellSize={26} />
+        </div>
+
+        {EXAMPLE_INTERPRETATION[examples[selectedIdx].id] && (
+          <p className="text-muted-foreground leading-relaxed max-w-2xl">
+            {EXAMPLE_INTERPRETATION[examples[selectedIdx].id]}
+          </p>
+        )}
+
+        {/* Live inference — commented out until backend is ready
+        <div className="rounded-lg border border-border bg-card p-4 space-y-3 max-w-xl">
+          <p className="text-sm font-medium">Try your own sentence</p>
+          <div className="flex gap-2">
+            <Input
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              placeholder="The cat sat on the mat"
+              onKeyDown={(e) => e.key === "Enter" && handleCompute()}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleCompute}
+              disabled={inferenceStatus === "loading" || !userInput.trim()}
+            >
+              Compute
+            </Button>
+          </div>
+          {inferenceStatus === "loading" && (
+            <p className="text-sm text-muted-foreground animate-pulse">
+              Loading BERT… this may take a few seconds on first run.
+            </p>
+          )}
+          {inferenceStatus === "error" && (
+            <p className="text-sm text-destructive">
+              Couldn&apos;t reach the model — try one of the examples above.
+            </p>
+          )}
+        </div>
+        */}
+      </section>
+
+      {/* Section 4 */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold">Multi-Head Attention</h2>
+        <p className="text-muted-foreground leading-relaxed max-w-2xl">
+          A single attention head can only focus on one type of relationship at
+          a time. Transformers run many heads in parallel — each with its own
+          independent Query, Key, and Value weights — then concatenate all their
+          outputs. This lets different heads specialize: one might track which
+          words refer to the same thing, another might focus on which verb a
+          noun belongs to, another on nearby word order.
+        </p>
+        <p className="text-muted-foreground leading-relaxed max-w-2xl">
+          The four grids below show individual heads from BERT layer 6. Each is
+          automatically labeled by the pattern its attention forms. Compare them
+          to the averaged grid above — averaging mixes all the heads together
+          and hides the distinct roles each one plays.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {activeExample.multiHeadAttention.map((headMatrix, hi) => {
+            const headNumber = activeExample.headIndices
+              ? (activeExample.headIndices![hi] ?? hi) + 1
+              : hi + 1;
+            const curated = !liveResult && HEAD_ANALYSIS[examples[selectedIdx].id]?.[hi];
+            const { label, description } = curated || detectHeadPattern(headMatrix, activeExample.tokens);
+            return (
+              <div key={hi} className="space-y-2">
+                <div>
+                  <p className="text-sm font-medium">
+                    Head {headNumber}
+                    <span className="ml-2 text-xs font-normal text-indigo-500">{label}</span>
+                  </p>
+                  {description && (
+                    <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">{description}</p>
+                  )}
+                </div>
+                <HeatmapSVG
+                  tokens={activeExample.tokens}
+                  matrix={headMatrix}
+                  cellSize={18}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    </>
+  );
+}
+
+// ─── Section 5: Encoder vs. Decoder ──────────────────────────────────────────
+
+function CausalMaskViz() {
+  const tokens = ["The", "cat", "sat", "on", "mat"];
+  const n = tokens.length;
+  const cellSize = 32;
+  const labelPad = 36;
+  const topPad = 48;
+  const width = labelPad + n * cellSize;
+  const height = topPad + n * cellSize;
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      width={width}
+      height={height}
+      style={{ fontFamily: "var(--font-geist-mono, monospace)" }}
+      aria-label="Causal attention mask: each token can only attend to itself and earlier tokens"
+    >
+      {/* Top labels */}
+      {tokens.map((t, j) => (
+        <text
+          key={`col-${j}`}
+          x={labelPad + j * cellSize + cellSize / 2}
+          y={topPad - 6}
+          fontSize={9}
+          textAnchor="start"
+          fill="currentColor"
+          className="text-foreground"
+          transform={`rotate(-45, ${labelPad + j * cellSize + cellSize / 2}, ${topPad - 6})`}
+        >
+          {t}
+        </text>
+      ))}
+      {/* Left labels */}
+      {tokens.map((t, i) => (
+        <text
+          key={`row-${i}`}
+          x={labelPad - 4}
+          y={topPad + i * cellSize + cellSize / 2 + 4}
+          fontSize={9}
+          textAnchor="end"
+          fill="currentColor"
+          className="text-foreground"
+        >
+          {t}
+        </text>
+      ))}
+      {/* Cells */}
+      {Array.from({ length: n }, (_, i) =>
+        Array.from({ length: n }, (_, j) => {
+          const allowed = j <= i;
+          const intensity = allowed ? (i === j ? 1 : 0.45 - (i - j) * 0.07) : 0;
+          const r = Math.round(255 - intensity * (255 - 99));
+          const g = Math.round(255 - intensity * (255 - 102));
+          const b = Math.round(255 - intensity * (255 - 241));
+          const fill = allowed ? `rgb(${r},${g},${b})` : "hsl(var(--muted))";
+          return (
+            <rect
+              key={`${i}-${j}`}
+              x={labelPad + j * cellSize}
+              y={topPad + i * cellSize}
+              width={cellSize}
+              height={cellSize}
+              fill={fill}
+              stroke="rgba(0,0,0,0.06)"
+              strokeWidth={0.5}
+            />
+          );
+        })
+      )}
+      {/* "masked" label in upper-right */}
+      <text
+        x={labelPad + 2.8 * cellSize}
+        y={topPad + 0.6 * cellSize}
+        fontSize={8}
+        fill="hsl(var(--muted-foreground))"
+        textAnchor="middle"
+      >
+        masked
+      </text>
+    </svg>
+  );
+}
+
+function Section5() {
+  return (
+    <section className="space-y-4">
+      <h2 className="text-xl font-semibold">Encoder vs. Decoder</h2>
+      <p className="text-muted-foreground leading-relaxed max-w-2xl">
+        BERT, the model shown on this page, is an <strong>encoder-only</strong>{" "}
+        transformer. When processing a sentence, every token can attend to every
+        other token simultaneously — left, right, and across any distance. That
+        bidirectional view makes encoders excellent at understanding tasks: named
+        entity recognition, question answering, sentence classification.
+      </p>
+      <p className="text-muted-foreground leading-relaxed max-w-2xl">
+        The models you interact with day-to-day — GPT, Claude, Llama, Mistral —
+        are <strong>decoder-only</strong>. They generate text one token at a time,
+        left to right. Because each token is produced before the ones that follow
+        it, future tokens don't exist yet and must be masked out. The attention
+        matrix becomes lower-triangular: a token can only attend to itself and
+        everything to its left.
+      </p>
+
+      <div className="flex flex-col sm:flex-row gap-8 items-start">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">
+            Causal mask
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              decoder attention pattern
+            </span>
+          </p>
+          <CausalMaskViz />
+          <p className="text-xs text-muted-foreground max-w-xs">
+            Shaded cells are allowed; muted cells are masked to −∞ before
+            softmax, making their attention weights effectively zero.
+          </p>
+        </div>
+        <div className="space-y-3 max-w-sm text-sm text-muted-foreground leading-relaxed">
+          <p>
+            This constraint is a feature, not a limitation. Training a decoder
+            is self-supervised: given any text, the model learns by predicting
+            the next token, using only what came before as context. No labels
+            required. This objective scales to internet-scale corpora, which is
+            why decoder-only models have dominated the scaling curve.
+          </p>
+          <p>
+            There is a third family: <strong>encoder-decoder</strong>{" "}
+            transformers (T5, BART, the original translation model from
+            "Attention Is All You Need"). The encoder reads the full input; the
+            decoder generates the output one token at a time, cross-attending
+            to the encoder's representations. Translation and summarization are
+            natural fits. In practice, very large decoder-only models have
+            matched or exceeded encoder-decoder models on most benchmarks,
+            which is why the industry has largely converged on decoder-only
+            architectures.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Further Reading ──────────────────────────────────────────────────────────
+
+function FurtherReading() {
+  const links = [
+    {
+      href: "https://arxiv.org/abs/1706.03762",
+      text: "Attention Is All You Need (Vaswani et al., 2017)",
+    },
+    {
+      href: "https://jalammar.github.io/illustrated-transformer/",
+      text: "The Illustrated Transformer — Jay Alammar",
+    },
+    {
+      href: "https://arxiv.org/abs/1810.04805",
+      text: "BERT: Pre-training of Deep Bidirectional Transformers (Devlin et al., 2018)",
+    },
+    {
+      href: "https://nlp.seas.harvard.edu/2018/04/03/attention.html",
+      text: "The Annotated Transformer — Harvard NLP",
+    },
+  ];
+  return (
+    <section className="space-y-3 border-t border-border pt-6">
+      <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">
+        Further reading
+      </h2>
+      <ul className="space-y-1">
+        {links.map((l) => (
+          <li key={l.href}>
+            <a
+              href={l.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-foreground underline underline-offset-4 hover:text-muted-foreground"
+            >
+              {l.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function TransformerVizClient() {
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const rawTokens = examples[selectedIdx].tokens;
+  const keepIndices = rawTokens
+    .map((t, i) => (!/^\[.*\]$/.test(t) ? i : -1))
+    .filter((i) => i >= 0);
+  const tokens = keepIndices.map((i) => rawTokens[i]);
+  const strip = (m: number[][]) => keepIndices.map((i) => keepIndices.map((j) => m[i][j]));
+  const attentionMatrix = strip(examples[selectedIdx].attentionMatrix);
+  const rawScoresMatrix = examples[selectedIdx].rawScoresMatrix
+    ? strip(examples[selectedIdx].rawScoresMatrix!)
+    : undefined;
+
+  return (
+    <div className="p-4 max-w-9xl mx-auto space-y-12">
+      <header className="space-y-2">
+        <h1 className="text-2xl font-bold">Interactive Transformer Visualization</h1>
+        <p className="text-muted-foreground max-w-2xl leading-relaxed">
+          The transformer is the architecture behind GPT, BERT, and almost every
+          modern language model. Its core idea — <strong>self-attention</strong> —
+          lets every word in a sentence directly look at every other word to
+          decide what context it needs. This page walks through that mechanism
+          step by step, using real attention weights extracted from BERT.
+        </p>
+      </header>
+
+      <Section1 />
+
+      <div className="flex flex-col gap-2 max-w-sm">
+        <label className="text-sm font-medium" htmlFor="example-select">
+          Example sentence
+        </label>
+        <Select
+          value={String(selectedIdx)}
+          onValueChange={(v) => setSelectedIdx(Number(v))}
+        >
+          <SelectTrigger id="example-select" className="w-full">
+            <SelectValue placeholder="Choose an example" />
+          </SelectTrigger>
+          <SelectContent>
+            {examples.map((ex, i) => (
+              <SelectItem key={ex.id} value={String(i)}>
+                {ex.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Section2 tokens={tokens} attentionMatrix={attentionMatrix} rawScoresMatrix={rawScoresMatrix} selectedIdx={selectedIdx} />
+      <Sections3And4 selectedIdx={selectedIdx} />
+      <Section5 />
+      <FurtherReading />
+
+      <section className="border-t border-border pt-6">
+        <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">
+          Continue learning
+        </h2>
+        <p className="mt-2 text-muted-foreground">
+          Return to the{" "}
+          <Link href="/" className="underline underline-offset-4 hover:text-foreground">
+            neural network visualizer
+          </Link>
+          .
+        </p>
+      </section>
+
+      <ContactInfo />
+    </div>
+  );
+}

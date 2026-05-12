@@ -16,12 +16,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://nn-visual.com"),
   title: {
-    default: "Neural Network Visualizer | Interactive Deep Learning Tool",
-    template: "%s | Neural Network Visualizer",
+    template: "%s | Neural Network Visual",
+    default: "Neural Network Visual — Interactive ML Visualizations",
   },
   description:
-    "An interactive neural network visualizer that shows forward propagation, backpropagation, and gradient descent step by step — with real math, live training, and a built-in ML glossary.",
+    "Free interactive visualizations to help students understand neural networks, backpropagation, and transformer attention.",
+  authors: [{ name: "Grant Wasserman", url: "https://grantwasserman.com" }],
+  creator: "Grant Wasserman",
+  openGraph: {
+    type: "website",
+    siteName: "Neural Network Visual",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({

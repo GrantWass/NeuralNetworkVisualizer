@@ -1,0 +1,22 @@
+# AWS Lambda base image for Python 3.11
+FROM public.ecr.aws/lambda/python:3.11
+
+# Copy dependency list and install
+COPY requirements.txt  ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Pre-download BERT weights into the image so Lambda cold starts don't hit
+# HuggingFace at runtime. Adds ~440 MB to the image; total size ~2.5–3 GB
+# (well within Lambda's 10 GB container image limit).
+# COMMENTED OUT TO REDUCE IMAGE SIZE FOR NOW — can re-enable if we want to support
+# RUN python -c "\
+# from transformers import BertTokenizer, BertModel; \
+# BertModel.from_pretrained('bert-base-uncased', output_attentions=True); \
+# BertTokenizer.from_pretrained('bert-base-uncased')"
+
+# Copy application code (excluding scripts folder)
+COPY app.py datasets.py NeuralNetwork.py NeuronLayer.py optimizer.py utils.py ./
+COPY data/ ./data/
+
+# Set the Lambda handler (module.function)
+CMD ["app.lambda_handler"]

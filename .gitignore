@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+__pycache__/
+.DS_Store
+
+./
+neural-network-visual/.next/
+neural-network-visual/node_modules/

@@ -1,51 +1,77 @@
-"use client";
-import React, { useState } from "react";
-import ContactInfo from "../contact";
-import { EmbeddingsSection } from "@/components/transformer/embedding";
-import { AttentionSection } from "@/components/transformer/attention";
-import { InferenceSection } from "@/components/transformer/inference";
+import type { Metadata } from "next";
+import { JsonLd } from "@/components/JsonLd";
+import TransformerVizClient from "./TransformerVizClient";
 
-// Tokenize helper
-const tokenize = (text: string) => text.split(/\s+/).filter(Boolean);
-
-const TransformerVizPage: React.FC = () => {
-  const [promptInput, setPromptInput] = useState("cat dog king queen");
-  const [submittedPrompt, setSubmittedPrompt] = useState(promptInput);
-
-  const tokens = tokenize(submittedPrompt);
-
-  const handleSubmit = () => {
-    setSubmittedPrompt(promptInput);
-  };
-
-  return (
-    <div className="p-6 space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold">Transformer Visualization *IN PROGRESS*</h1>
-        <p className="text-sm text-slate-500">Interactive demo: embeddings → attention → inference</p>
-      </header>
-
-      <div className="flex items-center gap-2">
-        <input
-          className="border p-2 rounded flex-1"
-          value={promptInput}
-          onChange={(e) => setPromptInput(e.target.value)}
-        />
-        <button
-          className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
-          onClick={handleSubmit}
-        >
-          Submit
-        </button>
-      </div>
-
-      <EmbeddingsSection tokens={tokens} />
-      {/* <AttentionSection tokens={tokens} dim={32} heads={3} seed={2.1} />
-      <InferenceSection prompt={submittedPrompt} dim={16} seed={3.7} /> */}
-
-      <ContactInfo />
-    </div>
-  );
+export const metadata: Metadata = {
+  title: "Interactive Transformer Visualization — How Attention Works",
+  description:
+    "Explore self-attention, the mechanism behind GPT, Claude, BERT, and every modern language model. Click through real attention patterns and see how transformers handle pronouns, agreement, and long-range dependencies.",
+  alternates: { canonical: "https://nn-visual.com/transformer" },
+  openGraph: {
+    title: "Interactive Transformer Visualization — How Attention Works",
+    description:
+      "Explore self-attention, the mechanism behind GPT, Claude, BERT, and every modern language model. Click through real attention patterns and see how transformers handle pronouns, agreement, and long-range dependencies.",
+    url: "https://nn-visual.com/transformer",
+    images: ["/og/transformer.png"],
+  },
 };
 
-export default TransformerVizPage;
+const learningResourceLd = {
+  "@context": "https://schema.org",
+  "@type": "LearningResource",
+  name: "Interactive Transformer Visualization",
+  description:
+    "Explore self-attention, the mechanism behind every major language model. Click through attention patterns and see how transformers handle pronouns, agreement, and long-range dependencies.",
+  url: "https://nn-visual.com/transformer",
+  learningResourceType: "Interactive simulation",
+  educationalLevel: "Undergraduate",
+  teaches: [
+    "Self-attention",
+    "Transformers",
+    "Multi-head attention",
+    "Query Key Value vectors",
+    "BERT",
+    "Anaphora resolution",
+  ],
+  audience: {
+    "@type": "EducationalAudience",
+    educationalRole: "student",
+  },
+  isAccessibleForFree: true,
+  inLanguage: "en",
+  author: {
+    "@type": "Person",
+    name: "Grant Wasserman",
+    url: "https://grantwasserman.com",
+  },
+};
+
+const articleLd = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: "How Attention Works: An Interactive Transformer Visualization",
+  description:
+    "A hands-on explanation of self-attention, the core mechanism behind transformer models like GPT, Claude, and BERT.",
+  url: "https://nn-visual.com/transformer",
+  author: {
+    "@type": "Person",
+    name: "Grant Wasserman",
+    url: "https://grantwasserman.com",
+  },
+  publisher: {
+    "@type": "Person",
+    name: "Grant Wasserman",
+  },
+  datePublished: "2026-05-11",
+  dateModified: "2026-05-11",
+};
+
+export default function TransformerPage() {
+  return (
+    <>
+      <JsonLd data={learningResourceLd} />
+      <JsonLd data={articleLd} />
+      <TransformerVizClient />
+    </>
+  );
+}

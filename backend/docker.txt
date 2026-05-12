@@ -1,0 +1,39 @@
+# Deploying to AWS Lambda via ECR container image
+
+# Prereqs: AWS CLI configured (aws configure), Docker installed, and an ECR repo name (manual-nn-lambda)
+
+# 1) Build amd64 image and push with Docker mediatypes (required by Lambda)
+    docker buildx build \
+    --platform linux/amd64 \
+    --provenance=false --sbom=false \
+    --load \
+    -f Dockerfile.lambda \
+    -t 343218212240.dkr.ecr.us-east-2.amazonaws.com/manual-nn-lambda:latest .
+
+# 2) Create ECR repo (once)
+#    aws ecr create-repository --repository-name manual-nn-lambda --region us-east-2
+
+# 3) Authenticate Docker to ECR
+#    aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 343218212240.dkr.ecr.us-east-2.amazonaws.com
+
+# 4) Push container to ECR
+#    docker push 343218212240.dkr.ecr.us-east-2.amazonaws.com/manual-nn-lambda:latest
+
+# 4) Create or update Lambda from image
+#    # Create (once):
+    aws lambda create-function \
+      --function-name manual-nn-lambda \
+      --package-type Image \
+      --code ImageUri=343218212240.dkr.ecr.us-east-2.amazonaws.com/manual-nn-lambda:latest \
+      --role arn:aws:iam::343218212240:role/lambda-execution-role \
+      --memory-size 2048 \
+      --timeout 30 \
+      --region us-east-2
+
+    # Update code on new image push:
+    aws lambda update-function-code \
+      --function-name manual-nn-lambda \
+      --image-uri 343218212240.dkr.ecr.us-east-2.amazonaws.com/manual-nn-lambda:latest \
+      --region us-east-2
+
+# 5) Hook up API Gateway (HTTP API) to the Lambda for HTTPS access, or invoke directly:

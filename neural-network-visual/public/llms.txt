@@ -1,0 +1,21 @@
+# nn-visual.com
+
+A free interactive visualizer for neural networks and transformer attention. Built by Grant Wasserman to help students understand how modern machine learning models work.
+
+## Pages
+
+- [Neural Network Visualizer](https://nn-visual.com/): Interactive tool for understanding forward and backpropagation. Configurable architecture, real-time training visualization, written explanation of how neural networks learn.
+- [Transformer Visualization](https://nn-visual.com/transformer): Interactive exploration of self-attention. BERT attention patterns on real sentences, user-provided input, multi-head attention comparison.
+
+## Key concepts covered
+
+- Neural networks: architecture, weights, activations
+- Backpropagation and gradient descent
+- Self-attention: queries, keys, values
+- Multi-head attention
+- Transformer architecture
+- Real-world phenomena: anaphora resolution, subject-verb agreement, long-range dependencies
+
+## About
+
+Built by Grant Wasserman (https://grantwasserman.com), an graduate student at the University of Nebraska–Lincoln studying CS and math.
