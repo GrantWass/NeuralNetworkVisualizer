@@ -58,9 +58,14 @@ def loss_function(predictions, targets, type= "cross-entropy"):
         float: Loss value.
     """
     if type == "cross-entropy":
-        epsilon = 1e-9  # Small value to prevent log(0)
+        epsilon = 1e-9
         predictions = np.clip(predictions, epsilon, 1 - epsilon)
-        return -np.sum(targets * np.log(predictions)) / len(targets)
+        if predictions.shape[1] == 1:
+            # Binary cross-entropy: both y·log(p) and (1-y)·log(1-p) terms
+            return -np.mean(targets * np.log(predictions) + (1 - targets) * np.log(1 - predictions))
+        else:
+            # Categorical cross-entropy with one-hot targets
+            return -np.sum(targets * np.log(predictions)) / len(targets)
     elif type == "mse":
         errors = predictions - targets
         squared_errors = errors ** 2

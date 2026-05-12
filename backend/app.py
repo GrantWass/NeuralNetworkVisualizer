@@ -195,7 +195,7 @@ class SetWeightRequest(BaseModel):
 class SetWeightResponse(BaseModel):
     layers: List[LayerDetail]
 
-@app.post("/set_weight", response_model=SetWeightResponse)
+@app.post("/set_weights", response_model=SetWeightResponse)
 def set_weight(request: SetWeightRequest):
     session = user_sessions.get(request.session_id)
     if session is None:

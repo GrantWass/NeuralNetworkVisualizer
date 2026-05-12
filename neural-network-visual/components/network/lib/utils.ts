@@ -57,25 +57,35 @@ export const formatValue = (value: number, dataset: string) => {
   if (dataset === "auto_mpg") {
     return `${value.toFixed(1)} MPG`;
   }
+  if (dataset === "xor") {
+    const predicted = value >= 0.5 ? 1 : 0;
+    const confidence = predicted === 1 ? value : 1 - value;
+    return `${predicted} (${(confidence * 100).toFixed(0)}%)`;
+  }
   return value.toFixed(2);
 };
 
 export const outputMap: { [key: string]: string[] } = {
   auto_mpg: ["MPG"],
   iris: ["Setosa", "Versicolor", "Virginica"],
+  xor: ["XOR output"],
 };
 
 export const formatActual = (original: number[], dataset: string) => {
-  if (!original || original.length < 3){
+  if (!original || original.length < 1){
     return;
   }
   if (dataset === "iris") {
+    if (original.length < 3) return;
     const actualResults = original.slice(-3)
     const index = actualResults.findIndex((v) => v === 1);
     return outputMap[dataset]?.[index] ?? "Unknown";
   } else if (dataset === "auto_mpg") {
     const actualResults = original.slice(-1)
     return formatValue(actualResults[0], dataset);
+  } else if (dataset === "xor") {
+    const actual = original[original.length - 1];
+    return actual === 1 ? "1" : "0";
   }
   return "N/A";
 };

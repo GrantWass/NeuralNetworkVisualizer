@@ -65,6 +65,28 @@ export const renderResults = ({
         );
     }
 
+    if (dataset === "xor") {
+        const predicted = activationValue >= 0.5 ? 1 : 0;
+        const confidence = predicted === 1 ? activationValue : 1 - activationValue;
+        const actual = original && original.length > 0 ? original[original.length - 1] : null;
+        const isCorrect = actual !== null && predicted === Math.round(actual);
+        return (
+            <>
+                <text x={x} y={cy - SVGHEIGHT * 0.05} fontSize={fontSize} fontWeight="bold" textAnchor="middle" fill="#374151">
+                    XOR output
+                </text>
+                <text x={x} y={cy + SVGHEIGHT * 0.02} fontSize={fontSize + 1} fontWeight="bold" textAnchor="middle" fill="#111827">
+                    {predicted} ({(confidence * 100).toFixed(0)}%)
+                </text>
+                {actual !== null && (
+                    <text x={x} y={cy + SVGHEIGHT * 0.09} fontSize={fontSize - 1} textAnchor="middle" fill={isCorrect ? "#16a34a" : "#dc2626"} fontWeight="bold">
+                        {isCorrect ? `✓ correct (${Math.round(actual)})` : `✗ actual: ${Math.round(actual)}`}
+                    </text>
+                )}
+            </>
+        );
+    }
+
     return (
         <>
             <text x={x} y={cy - SVGHEIGHT * 0.04} fontSize={fontSize} fontWeight="bold" textAnchor="middle" fill="#374151">

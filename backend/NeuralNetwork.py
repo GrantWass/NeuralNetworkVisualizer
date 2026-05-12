@@ -1,3 +1,4 @@
+import numpy as np
 from utils import loss_function, calculate_metric
 from NeuronLayer import NeuronLayer
 
@@ -28,9 +29,17 @@ class NeuralNetwork:
         
         # Compute the initial gradient based on loss type
         if loss_type == "mse":
-            dA = 2 * (Y_hat - Y) / m  # Derivative of MSE loss w.r.t. linear output
+            dA = 2 * (Y_hat - Y)
         elif loss_type == "cross-entropy":
-            dA = Y_hat - Y  # Derivative of cross-entropy loss w.r.t. softmax output
+            if self.layers[-1].activation == "softmax":
+                # Combined dL/dZ for softmax+cross-entropy; NeuronLayer passes it through unchanged
+                dA = Y_hat - Y
+            else:
+                # True dL/dA for sigmoid+cross-entropy so NeuronLayer can chain-rule correctly:
+                # dZ = dA * sigmoid'(Z) = [-(Y/A - (1-Y)/(1-A))] * A*(1-A) = A - Y
+                epsilon = 1e-9
+                clipped = np.clip(Y_hat, epsilon, 1 - epsilon)
+                dA = -(Y / clipped - (1 - Y) / (1 - clipped))
         else:
             raise ValueError(f"Unsupported loss type: {loss_type}")
         

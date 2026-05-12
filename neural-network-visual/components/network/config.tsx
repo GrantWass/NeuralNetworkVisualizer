@@ -47,7 +47,15 @@ const DATASET_DETAILS: Record<string, {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const getLRFeedback = (lr: number): { text: string; color: string } => {
+const getLRFeedback = (lr: number, dataset: string): { text: string; color: string } => {
+  if (dataset === "xor") {
+    // XOR uses sigmoid activations and only 4 samples — higher LRs are normal and expected
+    if (lr < 0.05) return { text: "Very slow — XOR will take many cycles to converge.", color: "text-blue-600" };
+    if (lr < 0.15) return { text: "Conservative — reliable but slow for XOR.", color: "text-green-600" };
+    if (lr < 0.55) return { text: "Good range for XOR — should converge in 50–200 cycles.", color: "text-green-600" };
+    if (lr < 0.8)  return { text: "Aggressive for XOR — may oscillate on some initializations.", color: "text-yellow-600" };
+    return { text: "Very high — likely to overshoot for XOR.", color: "text-red-600" };
+  }
   if (lr < 0.01) return { text: "Very slow — may take many epochs to converge.", color: "text-blue-600" };
   if (lr < 0.05) return { text: "Conservative — stable, reliable learning.", color: "text-green-600" };
   if (lr < 0.2)  return { text: "Moderate — good default starting point.", color: "text-green-600" };
@@ -493,7 +501,7 @@ const StepTrain = ({
   onTrain: () => void;
   onChangeModel: () => void;
 }) => {
-  const lrFeedback = getLRFeedback(learningRate);
+  const lrFeedback = getLRFeedback(learningRate, dataset);
   const inputSize = dataset === "xor" ? 2 : 4;
   const outputSize = dataset === "iris" ? 3 : 1;
 

@@ -380,7 +380,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   handleDatasetChange: (newDataset: string) => {
     // XOR needs sigmoid activations (ReLU dies on 4 samples) and a higher LR
     const datasetDefaults = newDataset === "xor"
-      ? { activations: ["sigmoid", "sigmoid"], hiddenLayers: [4, 4], learningRate: 0.5 }
+      ? { activations: ["sigmoid", "sigmoid"], hiddenLayers: [4, 4], learningRate: 0.3 }
       : { activations: ["relu", "relu"], hiddenLayers: [4, 4], learningRate: 0.1 };
     set({
       dataset: newDataset,
