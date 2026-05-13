@@ -341,17 +341,17 @@ const Explain = () => {
 
     // Value tracer state
     const [highlightedValueId, setHighlightedValueId] = useState<string | null>(null);
+    const hoverClearTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+    const hoverValue = (id: string) => {
+        clearTimeout(hoverClearTimer.current);
+        setHighlightedValueId(id);
+    };
+    const unhoverValue = () => {
+        hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 600);
+    };
 
     const valueMap = useMemo(() => network ? buildValueMap(network) : new Map<string, ValueInfo>(), [network]);
-
-    const relatedValueIds = useMemo(() => {
-        if (!highlightedValueId) return new Set<string>();
-        const info = valueMap.get(highlightedValueId);
-        if (!info) return new Set<string>();
-        const ids = new Set<string>();
-        info.connections.forEach(c => { if (c.relatedValueId) ids.add(c.relatedValueId); });
-        return ids;
-    }, [highlightedValueId, valueMap]);
 
     const connectedViews = useMemo(() => {
         if (!highlightedValueId) return new Set<PropagationView>();
@@ -361,13 +361,11 @@ const Explain = () => {
     }, [highlightedValueId, valueMap]);
 
     const getHighlightStyle = (valueId?: string): { border: string; bg: string } | null => {
-        if (!valueId || !highlightedValueId) return null;
+        if (!valueId || valueId !== highlightedValueId) return null;
         const type = valueId.split(':')[0];
         const styles = VALUE_TYPE_STYLES[type];
         if (!styles) return null;
-        if (valueId === highlightedValueId) return { border: `border-2 ${styles.primaryBorder}`, bg: styles.bg };
-        if (relatedValueIds.has(valueId)) return { border: `border-2 ${styles.relatedBorder}`, bg: styles.bg };
-        return null;
+        return { border: `border-2 ${styles.primaryBorder}`, bg: styles.bg };
     };
 
     // Step-by-step forward pass mode
@@ -534,8 +532,8 @@ const Explain = () => {
         return (
             <div
                 className={`inline-block p-1 mx-1 rounded transition-colors ${valueId ? 'cursor-default' : ''}`}
-                onMouseEnter={valueId ? () => setHighlightedValueId(valueId) : undefined}
-                onMouseLeave={valueId ? () => setHighlightedValueId(null) : undefined}
+                onMouseEnter={valueId ? () => hoverValue(valueId) : undefined}
+                onMouseLeave={valueId ? unhoverValue : undefined}
             >
                 <p className="text-xs sm:text-sm text-gray-600 text-center mb-1">{label}</p>
                 {subLabel && <p className="text-xs text-gray-500 text-center mb-1">{subLabel}</p>}
@@ -561,8 +559,8 @@ const Explain = () => {
         return (
             <div
                 className={`inline-block px-1 mx-1 ${valueId ? 'cursor-default' : ''}`}
-                onMouseEnter={valueId ? () => setHighlightedValueId(valueId) : undefined}
-                onMouseLeave={valueId ? () => setHighlightedValueId(null) : undefined}
+                onMouseEnter={valueId ? () => hoverValue(valueId) : undefined}
+                onMouseLeave={valueId ? unhoverValue : undefined}
             >
                 <div className="flex flex-row items-center justify-center gap-1 relative group">
                     <p className="text-xs sm:text-sm text-gray-600 text-center mb-1">{label}</p>
@@ -714,42 +712,58 @@ const Explain = () => {
                 <Glossary />
             </div>)}
 
-            {/* Value tracer banner */}
-            {hasTrained && highlightedValueId && (() => {
-                const info = valueMap.get(highlightedValueId);
-                if (!info) return null;
-                const styles = VALUE_TYPE_STYLES[info.type];
-                if (!styles) return null;
-                return (
-                    <div className={`mb-3 px-3 py-2 rounded-lg border-2 ${styles.primaryBorder} ${styles.bg} flex flex-wrap items-start gap-x-3 gap-y-1.5`}>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${styles.badge}`}>{info.type}</span>
-                            <span className="text-xs font-semibold text-gray-800">{info.label}</span>
-                            <span className="text-xs text-gray-400 hidden sm:inline">— connections:</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 items-center">
-                            {info.connections.map((conn, ci) => (
-                                <div key={ci} className="flex items-center gap-1 text-xs bg-white/80 border border-gray-200 rounded px-2 py-0.5">
-                                    <span className="font-medium text-gray-500">{VIEW_LABELS[conn.view]}</span>
-                                    <span className="text-gray-300 select-none">·</span>
-                                    <span className="text-gray-700">{conn.description}</span>
-                                    {conn.view !== view && (
-                                        <button
-                                            onClick={() => setView(conn.view)}
-                                            className={`ml-0.5 font-bold ${styles.text} hover:underline`}
-                                        >
-                                            →
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                );
-            })()}
-
             {hasTrained && (
-                <div className="text-center">
+                <div className="flex gap-4 items-start">
+                {/* ── Sticky sidebar ── */}
+                <div
+                    className="hidden xl:flex flex-col w-56 shrink-0 sticky top-4 self-start"
+                    onMouseEnter={() => clearTimeout(hoverClearTimer.current)}
+                    onMouseLeave={unhoverValue}
+                >
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Value Tracer</p>
+                    {highlightedValueId && valueMap.get(highlightedValueId) ? (() => {
+                        const info = valueMap.get(highlightedValueId)!;
+                        const styles = VALUE_TYPE_STYLES[info.type];
+                        return (
+                            <div className={`rounded-lg border-2 ${styles.primaryBorder} ${styles.bg} p-3 flex flex-col gap-3`}>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${styles.badge}`}>{info.type}</span>
+                                    <span className="text-xs font-semibold text-gray-800 leading-tight">{info.label}</span>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    {info.connections.map((conn, ci) => {
+                                        const isCurrent = conn.view === view;
+                                        return (
+                                            <div key={ci} className="flex flex-col gap-0.5 bg-white/70 border border-gray-200 rounded p-2">
+                                                <div className="flex items-center justify-between gap-1">
+                                                    <span className="text-xs font-semibold text-gray-600">{VIEW_LABELS[conn.view]}</span>
+                                                    {isCurrent ? (
+                                                        <span className="text-xs text-gray-400">here</span>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => setView(conn.view)}
+                                                            className={`text-xs font-bold ${styles.text} hover:underline shrink-0`}
+                                                        >
+                                                            jump →
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-gray-600 leading-snug">{conn.description}</p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })() : (
+                        <div className="rounded-lg border border-dashed border-gray-300 p-3 text-center">
+                            <p className="text-xs text-gray-400 leading-relaxed">Hover any labeled value to trace where it comes from and where it&apos;s used</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Main view content ── */}
+                <div className="flex-1 min-w-0 text-center">
                     {view === 'forward' ? (
                         <>
 
@@ -1136,6 +1150,7 @@ const Explain = () => {
                             </div>
                         </div>
                     )}
+                </div>
                 </div>
             )}
 
