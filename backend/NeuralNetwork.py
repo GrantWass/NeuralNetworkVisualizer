@@ -29,7 +29,7 @@ class NeuralNetwork:
         
         # Compute the initial gradient based on loss type
         if loss_type == "mse":
-            dA = 2 * (Y_hat - Y) / m
+            dA = 2 * (Y_hat - Y)
         elif loss_type == "cross-entropy":
             if self.layers[-1].activation == "softmax":
                 # Combined dL/dZ for softmax+cross-entropy; NeuronLayer passes it through unchanged
