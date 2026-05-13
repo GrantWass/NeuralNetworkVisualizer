@@ -63,13 +63,15 @@ class InitModelResponse(BaseModel):
     layer_sizes: List[int]
     original_train_data: list
     network: dict  # Serialized network as dictionary
+    y_mean: Optional[float] = None
+    y_std: Optional[float] = None
 
 @app.post("/init_model", response_model=InitModelResponse)
 def init_model(request: InitModelRequest):
     session_id = str(uuid.uuid4())  # Generate a unique session ID
 
     # Load dataset
-    X_train, _, Y_train, _, input_size, output_size, output_activation, original_train_data = load_dataset(request.dataset)
+    X_train, _, Y_train, _, input_size, output_size, output_activation, original_train_data, y_mean, y_std = load_dataset(request.dataset)
 
     layers = [input_size] + request.layer_sizes + [output_size]
 
@@ -92,7 +94,9 @@ def init_model(request: InitModelRequest):
         session_id=session_id,
         layer_sizes=layers,
         original_train_data=original_train_data[:30],
-        network=network.to_dict()  # Return serialized network
+        network=network.to_dict(),
+        y_mean=y_mean,
+        y_std=y_std,
     )
 
 

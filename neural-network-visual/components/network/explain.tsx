@@ -42,11 +42,15 @@ const PredictionSummary = ({
   network,
   sampleIndex,
   originalData,
+  yMean,
+  yStd,
 }: {
   dataset: string;
   network: import("@/components/network/static/types").NetworkState | null;
   sampleIndex: number;
   originalData: number[][];
+  yMean: number | null;
+  yStd: number | null;
 }) => {
   if (!network) return null;
   const outputLayer = network.layers[network.layers.length - 2];
@@ -123,7 +127,7 @@ const PredictionSummary = ({
 
   if (dataset === "auto_mpg") {
     const actualMPG = sample[sample.length - 1];
-    const predMPG = prediction[0];
+    const predMPG = yMean !== null && yStd !== null ? prediction[0] * yStd + yMean : prediction[0];
     const error = Math.abs(predMPG - actualMPG);
     return (
       <div className="w-full bg-white border border-gray-200 rounded-lg p-3 shadow-sm h-full">
@@ -209,6 +213,8 @@ const Explain = () => {
       hoveredConnection,
       hoveredNode,
       setWeight,
+      yMean,
+      yStd,
     } = useStore();
 
     const [view, setView] = useState<PropagationView>('forward');
@@ -468,12 +474,20 @@ const Explain = () => {
                                             <span className="font-mono font-medium text-gray-900">{network.layers[hoveredNode.layerIndex - 1].Z[sampleIndex][hoveredNode.nodeIndex].toFixed(4)}</span>
                                         </div>
                                     )}
-                                    {network.layers[hoveredNode.layerIndex - 1]?.A?.[sampleIndex]?.[hoveredNode.nodeIndex] !== undefined && (
+                                    {network.layers[hoveredNode.layerIndex - 1]?.A?.[sampleIndex]?.[hoveredNode.nodeIndex] !== undefined && (() => {
+                                        const rawA = network.layers[hoveredNode.layerIndex - 1].A[sampleIndex][hoveredNode.nodeIndex];
+                                        const isOutputLayer = hoveredNode.layerIndex === network.layers.length - 1;
+                                        const displayA = isOutputLayer && dataset === "auto_mpg" && yMean !== null && yStd !== null
+                                            ? rawA * yStd + yMean
+                                            : rawA;
+                                        const label = isOutputLayer && dataset === "auto_mpg" ? "Prediction (MPG)" : "Post-activation (A)";
+                                        return (
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-gray-500">Post-activation (A)</span>
-                                            <span className="font-mono font-medium text-gray-900">{network.layers[hoveredNode.layerIndex - 1].A[sampleIndex][hoveredNode.nodeIndex].toFixed(4)}</span>
+                                            <span className="text-gray-500">{label}</span>
+                                            <span className="font-mono font-medium text-gray-900">{displayA.toFixed(4)}</span>
                                         </div>
-                                    )}
+                                        );
+                                    })()}
                                 </div>
                             ) : (
                                 <p className="text-sm text-gray-500">Input node — values come from the dataset.</p>
@@ -494,6 +508,8 @@ const Explain = () => {
                             network={network}
                             sampleIndex={sampleIndex}
                             originalData={originalData}
+                            yMean={yMean}
+                            yStd={yStd}
                         />
                     </div>
                 )}
@@ -729,7 +745,10 @@ const Explain = () => {
                             {network?.layers.slice().reverse().map((layer: NeuronLayer, index: number) => {
                                 const initialContent = index === 0;
                                 const outputLayerIndex = network.layers.length - 2;
-                                const actual = originalData[sampleIndex].slice(dataset === "iris" ? -3 : -1);
+                                const actualRaw = originalData[sampleIndex].slice(dataset === "iris" ? -3 : -1);
+                                const actual = dataset === "auto_mpg" && yMean !== null && yStd !== null
+                                    ? actualRaw.map(v => (v - yMean) / yStd)
+                                    : actualRaw;
                                 const dA = multiplyMatrices([layer.dZ[sampleIndex]], transpose(network.layers[outputLayerIndex - index + 1]?.weights));
 
                                 return (

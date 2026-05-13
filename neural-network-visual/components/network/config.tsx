@@ -397,11 +397,15 @@ const SampleStory = ({
   dataset,
   originalData,
   network,
+  yMean,
+  yStd,
 }: {
   sampleIndex: number;
   dataset: string;
   originalData: number[][];
   network: import("@/components/network/static/types").NetworkState | null;
+  yMean: number | null;
+  yStd: number | null;
 }) => {
   const sample = originalData[sampleIndex];
   if (!sample || !network) return null;
@@ -433,7 +437,7 @@ const SampleStory = ({
 
   if (dataset === "auto_mpg") {
     const actualMPG = sample[sample.length - 1];
-    const predMPG = prediction[0];
+    const predMPG = yMean !== null && yStd !== null ? prediction[0] * yStd + yMean : prediction[0];
     const err = Math.abs(predMPG - actualMPG).toFixed(1);
     return (
       <div className="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2">
@@ -479,6 +483,8 @@ const StepTrain = ({
   originalData,
   network,
   sessionId,
+  yMean,
+  yStd,
   onSetLR,
   onSetSample,
   onTrain,
@@ -496,6 +502,8 @@ const StepTrain = ({
   originalData: number[][];
   network: import("@/components/network/static/types").NetworkState | null;
   sessionId: string | null;
+  yMean: number | null;
+  yStd: number | null;
   onSetLR: (v: number) => void;
   onSetSample: (v: number) => void;
   onTrain: () => void;
@@ -576,6 +584,8 @@ const StepTrain = ({
               dataset={dataset}
               originalData={originalData}
               network={network}
+              yMean={yMean}
+              yStd={yStd}
             />
           </div>
         </div>
@@ -658,6 +668,8 @@ const Config = () => {
     network,
     originalData,
     sampleIndex,
+    yMean,
+    yStd,
     setLearningRate,
     initModel,
     clearSessionAndReset,
@@ -749,6 +761,8 @@ const Config = () => {
             originalData={originalData}
             network={network}
             sessionId={sessionId}
+            yMean={yMean}
+            yStd={yStd}
             onSetLR={setLearningRate}
             onSetSample={setSampleIndex}
             onTrain={runTrainingCycle}

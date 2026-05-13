@@ -4,11 +4,13 @@ from utils import one_hot_encode, train_test_split_np, StandardScalerNP
 
 def load_dataset(dataset_name):
     if dataset_name == "iris":
-        return load_iris_dataset()
+        X_train, X_test, Y_train, Y_test, inp, out, act, data = load_iris_dataset()
+        return X_train, X_test, Y_train, Y_test, inp, out, act, data, None, None
     elif dataset_name == "auto_mpg":
         return load_auto_mpg_dataset()
     elif dataset_name == "xor":
-        return load_xor_dataset()
+        X_train, X_test, Y_train, Y_test, inp, out, act, data = load_xor_dataset()
+        return X_train, X_test, Y_train, Y_test, inp, out, act, data, None, None
     else:
         raise ValueError("Unsupported dataset. Choose 'iris', 'auto_mpg', or 'xor'.")
 
@@ -44,7 +46,7 @@ def load_auto_mpg_dataset():
     y_train = y_scaler.fit_transform(y_train)
     y_test = y_scaler.transform(y_test)
 
-    return X_train, X_test, y_train, y_test, X_train.shape[1], y_train.shape[1], "linear", original_train_data
+    return X_train, X_test, y_train, y_test, X_train.shape[1], y_train.shape[1], "linear", original_train_data, float(y_scaler.mean_[0]), float(y_scaler.scale_[0])
 
 def load_iris_dataset():
     data_path = os.path.join(os.path.dirname(__file__), "data", "iris.csv")

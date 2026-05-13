@@ -35,6 +35,8 @@ interface TrainingState {
   originalData: number[][];
   changedConnections: ChangedConnection[];
   stepLayerHighlight: number | null;
+  yMean: number | null;
+  yStd: number | null;
 }
 
 interface TrainingActions {
@@ -86,6 +88,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   originalData: [],
   changedConnections: [],
   stepLayerHighlight: null,
+  yMean: null,
+  yStd: null,
 
   setEpoch: (epoch) => set({ epoch }),
   setSampleIndex: (sampleIndex) => set({ sampleIndex }),
@@ -149,7 +153,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
           }
           return layer;
         });
-        set({ network: { input: [[]], layers, initialized: true }, originalData: data.original_train_data, configOpen: false });
+        set({ network: { input: [[]], layers, initialized: true }, originalData: data.original_train_data, configOpen: false, yMean: data.y_mean ?? null, yStd: data.y_std ?? null });
         const arch = data.layer_sizes.join(" → ");
         toast.success("Model ready", {
           description: `Architecture: ${arch} · ${data.layer_sizes.reduce((a: number, b: number, i: number, arr: number[]) => i < arr.length - 1 ? a + arr[i] * arr[i+1] + arr[i+1] : a, 0)} parameters`,
@@ -215,6 +219,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
         losses: [],
         accuracies: [],
         originalData: [],
+        yMean: null,
+        yStd: null,
         ...resetDefaults,
       });
       toast("Model reset");
@@ -228,7 +234,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   },
 
   runTrainingCycle: async () => {
-    const { sessionId, learningRate } = get();
+    const { sessionId, learningRate, yStd } = get();
     if (!sessionId) {
       toast.error("No model initialized", {
         description: "Complete step 3 to initialize the model before training.",
@@ -309,10 +315,10 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
             epoch: state.epoch + epochs,
             loss: result.loss,
             prevLoss: prevLossValue,
-            metric: result.metric,
+            metric: result.name === "mae" && yStd !== null ? result.metric * yStd : result.metric,
             name: result.name,
             losses: [...state.losses, result.loss],
-            accuracies: [...state.accuracies, result.metric],
+            accuracies: [...state.accuracies, result.name === "mae" && yStd !== null ? result.metric * yStd : result.metric],
             changedConnections: changedConns.slice(0, 5),
           };
         });
