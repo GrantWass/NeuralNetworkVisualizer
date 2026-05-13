@@ -779,7 +779,8 @@ export default function TransformerVizClient() {
           modern language model. Its core idea — <strong>self-attention</strong> —
           lets every word in a sentence directly look at every other word to
           decide what context it needs. This page walks through that mechanism
-          step by step, using real attention weights extracted from BERT.
+          step by step, using real attention weights extracted from BERT (Bidirectional
+          Encoder Representations from Transformers).”
         </p>
       </header>
 

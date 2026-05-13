@@ -63,6 +63,7 @@ const VALUE_TYPE_STYLES: Record<string, {
   dZ:    { primaryBorder: 'border-amber-500',  relatedBorder: 'border-amber-300',  bg: 'bg-amber-50',   badge: 'bg-amber-100 text-amber-800',  text: 'text-amber-600',  dot: 'bg-amber-500'  },
   dW:    { primaryBorder: 'border-rose-500',   relatedBorder: 'border-rose-300',   bg: 'bg-rose-50',    badge: 'bg-rose-100 text-rose-800',    text: 'text-rose-600',   dot: 'bg-rose-500'   },
   dB:    { primaryBorder: 'border-pink-500',   relatedBorder: 'border-pink-300',   bg: 'bg-pink-50',    badge: 'bg-pink-100 text-pink-800',    text: 'text-pink-600',   dot: 'bg-pink-500'   },
+  B:     { primaryBorder: 'border-violet-500', relatedBorder: 'border-violet-300', bg: 'bg-violet-50',  badge: 'bg-violet-100 text-violet-800', text: 'text-violet-600', dot: 'bg-violet-500' },
   input: { primaryBorder: 'border-green-500',  relatedBorder: 'border-green-300',  bg: 'bg-green-50',   badge: 'bg-green-100 text-green-800',  text: 'text-green-600',  dot: 'bg-green-500'  },
 };
 
@@ -145,7 +146,16 @@ function buildValueMap(network: NetworkState): Map<string, ValueInfo> {
       type: 'dB',
       connections: [
         { view: 'backward', description: 'Computed as Σ dZ / m across all samples', relatedValueId: `dZ:${i}` },
-        { view: 'backward', description: 'Applied in bias update: b_new = b_prev − η · dB' },
+        { view: 'backward', description: 'Applied in bias update: b_new = b_prev − η · dB', relatedValueId: `B:${i}` },
+      ],
+    });
+
+    map.set(`B:${i}`, {
+      label: `${lbl} biases`,
+      type: 'B',
+      connections: [
+        { view: 'forward', description: 'Added to the weighted sum: Z = A_prev × W + b', relatedValueId: `Z:${i}` },
+        { view: 'backward', description: 'Previous value used in update equation: b_new = b_prev − η · dB', relatedValueId: `dB:${i}` },
       ],
     });
   }
@@ -342,6 +352,7 @@ const Explain = () => {
     // Value tracer state
     const [highlightedValueId, setHighlightedValueId] = useState<string | null>(null);
     const hoverClearTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const viewSectionRef = useRef<HTMLDivElement>(null);
 
     const hoverValue = (id: string) => {
         clearTimeout(hoverClearTimer.current);
@@ -526,12 +537,13 @@ const Explain = () => {
         },
     }), [baseChartOptions, name]);
 
-    const renderMatrix = (matrix: number[][] | undefined | null, label: string, subLabel?: string, extendDecimal?: boolean, valueId?: string) => {
+    const renderMatrix = (matrix: number[][] | undefined | null, label: string, subLabel?: string, extendDecimal?: boolean, valueId?: string, tip?: string) => {
         if (!matrix || matrix.length === 0) return null;
         const hl = getHighlightStyle(valueId);
         return (
             <div
-                className={`inline-block p-1 mx-1 rounded transition-colors ${valueId ? 'cursor-default' : ''}`}
+                className={`inline-block p-1 mx-1 rounded transition-colors ${valueId ? 'cursor-default' : ''} ${tip && !valueId ? 'cursor-help' : ''}`}
+                title={tip && !valueId ? tip : undefined}
                 onMouseEnter={valueId ? () => hoverValue(valueId) : undefined}
                 onMouseLeave={valueId ? unhoverValue : undefined}
             >
@@ -553,12 +565,13 @@ const Explain = () => {
         );
     };
 
-    const renderVector = (vector: number[] | undefined | null, label: string, subLabel?: string, extendDecimal?: boolean, tooltip?: React.ReactNode, valueId?: string) => {
+    const renderVector = (vector: number[] | undefined | null, label: string, subLabel?: string, extendDecimal?: boolean, tooltip?: React.ReactNode, valueId?: string, tip?: string) => {
         if (!vector || vector.length === 0) return null;
         const hl = getHighlightStyle(valueId);
         return (
             <div
-                className={`inline-block px-1 mx-1 ${valueId ? 'cursor-default' : ''}`}
+                className={`inline-block px-1 mx-1 ${valueId ? 'cursor-default' : ''} ${tip && !valueId ? 'cursor-help' : ''}`}
+                title={tip && !valueId ? tip : undefined}
                 onMouseEnter={valueId ? () => hoverValue(valueId) : undefined}
                 onMouseLeave={valueId ? unhoverValue : undefined}
             >
@@ -713,57 +726,9 @@ const Explain = () => {
             </div>)}
 
             {hasTrained && (
-                <div className="flex gap-4 items-start">
-                {/* ── Sticky sidebar ── */}
-                <div
-                    className="hidden xl:flex flex-col w-56 shrink-0 sticky top-4 self-start"
-                    onMouseEnter={() => clearTimeout(hoverClearTimer.current)}
-                    onMouseLeave={unhoverValue}
-                >
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Value Tracer</p>
-                    {highlightedValueId && valueMap.get(highlightedValueId) ? (() => {
-                        const info = valueMap.get(highlightedValueId)!;
-                        const styles = VALUE_TYPE_STYLES[info.type];
-                        return (
-                            <div className={`rounded-lg border-2 ${styles.primaryBorder} ${styles.bg} p-3 flex flex-col gap-3`}>
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${styles.badge}`}>{info.type}</span>
-                                    <span className="text-xs font-semibold text-gray-800 leading-tight">{info.label}</span>
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                    {info.connections.map((conn, ci) => {
-                                        const isCurrent = conn.view === view;
-                                        return (
-                                            <div key={ci} className="flex flex-col gap-0.5 bg-white/70 border border-gray-200 rounded p-2">
-                                                <div className="flex items-center justify-between gap-1">
-                                                    <span className="text-xs font-semibold text-gray-600">{VIEW_LABELS[conn.view]}</span>
-                                                    {isCurrent ? (
-                                                        <span className="text-xs text-gray-400">here</span>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => setView(conn.view)}
-                                                            className={`text-xs font-bold ${styles.text} hover:underline shrink-0`}
-                                                        >
-                                                            jump →
-                                                        </button>
-                                                    )}
-                                                </div>
-                                                <p className="text-xs text-gray-600 leading-snug">{conn.description}</p>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        );
-                    })() : (
-                        <div className="rounded-lg border border-dashed border-gray-300 p-3 text-center">
-                            <p className="text-xs text-gray-400 leading-relaxed">Hover any labeled value to trace where it comes from and where it&apos;s used</p>
-                        </div>
-                    )}
-                </div>
-
+                <>
                 {/* ── Main view content ── */}
-                <div className="flex-1 min-w-0 text-center">
+                <div className="text-center" ref={viewSectionRef}>
                     {view === 'forward' ? (
                         <>
 
@@ -863,7 +828,7 @@ const Explain = () => {
                                                 <span className="text-sm sm:text-lg mt-2 sm:mt-5 mx-1">+</span>
 
                                                 <div className="flex flex-col items-center">
-                                                    {renderVector(layer.prevBias, `Biases`)}
+                                                    {renderVector(layer.prevBias, `Biases`, undefined, false, undefined, `B:${layerIndex}`)}
                                                 </div>
 
                                                 <span className="text-sm sm:text-lg mt-2 sm:mt-5 mx-1">=</span>
@@ -1021,17 +986,17 @@ const Explain = () => {
                                             <span className="text-xs sm:text-sm mt-2 sm:mt-8 text-gray-600"><strong className="text-lg sm:text-xl text-gray-600">η</strong> ×</span>
                                             {renderMatrix(layer.dW, `Change in Weights`, "dW (∇Weights)", true, `dW:${li}`)}
                                             <span className="text-lg sm:text-xl mt-2 sm:mt-8">=</span>
-                                            {renderMatrix(layer.weights, `Current Weights`, "", true, `W:${li}`)}
+                                            {renderMatrix(layer.weights, `Current Weights`, "", true, undefined, "These are the updated weights now stored in the model — visible in the Forward Pass view")}
                                         </div>
 
                                         {/* Biases Equation */}
                                         <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
-                                            {renderVector(layer.prevBias, `Previous Biases`, "", true)}
+                                            {renderVector(layer.prevBias, `Previous Biases`, "", true, undefined, `B:${li}`)}
                                             <span className="text-lg sm:text-xxl mt-2 sm:mt-8">-</span>
                                             <span className="text-xs sm:text-sm mt-2 sm:mt-8 text-gray-600"><strong className="text-lg sm:text-xl text-gray-600">η</strong> ×</span>
                                             {renderVector(layer.db, `Change in Biases`, "dB (∇Biases)", true, undefined, `dB:${li}`)}
                                             <span className="text-lg sm:text-xl mt-2 sm:mt-8">=</span>
-                                            {renderVector(layer.biases, `Current Biases`, "", true)}
+                                            {renderVector(layer.biases, `Current Biases`, "", true, undefined, undefined, "These are the updated biases now stored in the model — visible in the Forward Pass view")}
                                         </div>
                                     </div>
                                 );
@@ -1151,7 +1116,58 @@ const Explain = () => {
                         </div>
                     )}
                 </div>
+
+                {/* ── Bottom drawer value tracer ── */}
+                <div
+                    className="mt-4 transition-all duration-200"
+                    onMouseEnter={() => clearTimeout(hoverClearTimer.current)}
+                    onMouseLeave={unhoverValue}
+                >
+                    {highlightedValueId && valueMap.get(highlightedValueId) ? (() => {
+                        const info = valueMap.get(highlightedValueId)!;
+                        const styles = VALUE_TYPE_STYLES[info.type];
+                        return (
+                            <div className={`rounded-lg border-2 ${styles.primaryBorder} ${styles.bg} p-3`}>
+                                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${styles.badge}`}>{info.type}</span>
+                                    <span className="text-xs font-semibold text-gray-800">{info.label}</span>
+                                    <span className="text-xs text-gray-400 ml-auto">Value Tracer — hover to explore connections</span>
+                                </div>
+                                <div className="flex flex-row flex-wrap gap-2">
+                                    {info.connections.map((conn, ci) => {
+                                        const isCurrent = conn.view === view;
+                                        return (
+                                            <div key={ci} className="flex flex-col gap-0.5 bg-white/70 border border-gray-200 rounded p-2 min-w-[180px] flex-1">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-xs font-semibold text-gray-600">{VIEW_LABELS[conn.view]}</span>
+                                                    {isCurrent ? (
+                                                        <span className="text-xs text-gray-400 shrink-0">here</span>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => {
+                                                                setView(conn.view);
+                                                                setTimeout(() => viewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                                                            }}
+                                                            className={`text-xs font-bold ${styles.text} hover:underline shrink-0`}
+                                                        >
+                                                            jump →
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-gray-600 leading-snug">{conn.description}</p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })() : (
+                        <div className="rounded-lg border border-dashed border-gray-300 px-4 py-2 text-center">
+                            <p className="text-xs text-gray-400">Hover any labeled value to trace where it comes from and where it&apos;s used</p>
+                        </div>
+                    )}
                 </div>
+                </>
             )}
 
             {/* Loss and Accuracy Charts */}
