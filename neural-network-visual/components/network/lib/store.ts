@@ -202,7 +202,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     const { sessionId, dataset } = get();
     if (!sessionId) return;
     const resetDefaults = dataset === "xor"
-      ? { learningRate: 0.5, activations: ["sigmoid", "sigmoid"], hiddenLayers: [4, 4] }
+      ? { learningRate: 0.3, activations: ["tanh", "tanh"], hiddenLayers: [4, 4] }
       : { learningRate: 0.1, activations: ["relu", "relu"], hiddenLayers: [4, 4] };
     try {
       await fetch(`${URL}/clear_session?session_id=${sessionId}`, { method: "POST" });
@@ -378,9 +378,9 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   },
 
   handleDatasetChange: (newDataset: string) => {
-    // XOR needs sigmoid activations (ReLU dies on 4 samples) and a higher LR
+    // XOR: tanh avoids sigmoid's vanishing gradients (max derivative 0.25) without dying ReLU risk on 4 samples
     const datasetDefaults = newDataset === "xor"
-      ? { activations: ["sigmoid", "sigmoid"], hiddenLayers: [4, 4], learningRate: 0.3 }
+      ? { activations: ["tanh", "tanh"], hiddenLayers: [4, 4], learningRate: 0.3 }
       : { activations: ["relu", "relu"], hiddenLayers: [4, 4], learningRate: 0.1 };
     set({
       dataset: newDataset,
