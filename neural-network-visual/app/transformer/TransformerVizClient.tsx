@@ -14,6 +14,7 @@ import {
 // import { Button } from "@/components/ui/button";   // live inference disabled
 // import { Input } from "@/components/ui/input";      // live inference disabled
 import { Gloss } from "@/components/transformer/Gloss";
+import { EmbeddingExplorer } from "@/components/transformer/EmbeddingExplorer";
 import type { TransformerExample, AttentionResult } from "./types";
 import examplesData from "./data.json";
 
@@ -783,6 +784,8 @@ export default function TransformerVizClient() {
           Encoder Representations from Transformers).”
         </p>
       </header>
+
+      <EmbeddingExplorer />
 
       <Section1 />
 

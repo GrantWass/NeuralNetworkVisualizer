@@ -65,7 +65,6 @@ const VALUE_TYPE_STYLES: Record<string, {
   dB:    { primaryBorder: 'border-pink-500',   relatedBorder: 'border-pink-300',   bg: 'bg-pink-50',    badge: 'bg-pink-100 text-pink-800',    text: 'text-pink-600',   dot: 'bg-pink-500'   },
   B:     { primaryBorder: 'border-violet-500', relatedBorder: 'border-violet-300', bg: 'bg-violet-50',  badge: 'bg-violet-100 text-violet-800', text: 'text-violet-600', dot: 'bg-violet-500' },
   input: { primaryBorder: 'border-green-500',  relatedBorder: 'border-green-300',  bg: 'bg-green-50',   badge: 'bg-green-100 text-green-800',  text: 'text-green-600',  dot: 'bg-green-500'  },
-  note:  { primaryBorder: 'border-gray-400',   relatedBorder: 'border-gray-300',   bg: 'bg-gray-50',    badge: 'bg-gray-100 text-gray-700',    text: 'text-gray-600',   dot: 'bg-gray-400'   },
 };
 
 const VIEW_LABELS: Record<PropagationView, string> = {
@@ -162,7 +161,7 @@ function buildValueMap(network: NetworkState): Map<string, ValueInfo> {
 
     map.set(`currentW:${i}`, {
       label: `${lbl} current weights (after update)`,
-      type: 'note',
+      type: 'W',
       connections: [
         { view: 'backward', description: 'Result of this step — W_new = W_prev − η · dW. These weights are now stored in the model and used in the next forward pass.' },
       ],
@@ -170,7 +169,7 @@ function buildValueMap(network: NetworkState): Map<string, ValueInfo> {
 
     map.set(`currentB:${i}`, {
       label: `${lbl} current biases (after update)`,
-      type: 'note',
+      type: 'B',
       connections: [
         { view: 'backward', description: 'Result of this step — b_new = b_prev − η · dB. These biases are now stored in the model and used in the next forward pass.' },
       ],
@@ -384,7 +383,12 @@ const Explain = () => {
         jumpLockRef.current = true;
         clearTimeout(hoverClearTimer.current);
         setView(targetView);
-        setTimeout(() => viewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+        setTimeout(() => {
+            const el = viewSectionRef.current;
+            if (!el) return;
+            const top = el.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.18;
+            window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+        }, 50);
         // Hold highlight for 2s, then release lock and start normal fade
         setTimeout(() => {
             jumpLockRef.current = false;
@@ -567,7 +571,7 @@ const Explain = () => {
         },
     }), [baseChartOptions, name]);
 
-    const renderMatrix = (matrix: number[][] | undefined | null, label: string, subLabel?: string, extendDecimal?: boolean, valueId?: string) => {
+    const renderMatrix = (matrix: number[][] | undefined | null, label: string, subLabel?: string, valueId?: string) => {
         if (!matrix || matrix.length === 0) return null;
         const hl = getHighlightStyle(valueId);
         return (
@@ -585,7 +589,7 @@ const Explain = () => {
                     {matrix.map((row, rowIndex) => (
                         row.map((val, colIndex) => (
                             <span key={`${rowIndex}-${colIndex}`} className={`px-1 sm:px-1.5 py-0.5 text-xs sm:text-${fontSize}`}>
-                                {val.toFixed(extendDecimal ? 3 : 2)}
+                                {val.toFixed(dataset === 'xor' ? 3 : 2)}
                             </span>
                         ))
                     ))}
@@ -594,7 +598,7 @@ const Explain = () => {
         );
     };
 
-    const renderVector = (vector: number[] | undefined | null, label: string, subLabel?: string, extendDecimal?: boolean, tooltip?: React.ReactNode, valueId?: string) => {
+    const renderVector = (vector: number[] | undefined | null, label: string, subLabel?: string, tooltip?: React.ReactNode, valueId?: string) => {
         if (!vector || vector.length === 0) return null;
         const hl = getHighlightStyle(valueId);
         return (
@@ -610,7 +614,7 @@ const Explain = () => {
                 {subLabel && <p className="text-xs text-gray-500 text-center mb-1">{subLabel}</p>}
                 <div className={`flex flex-row justify-center px-1 py-0.5 rounded shadow-sm overflow-x-auto transition-all duration-150 ${hl ? `${hl.border} ${hl.bg}` : 'border border-gray-400 bg-white'}`}>
                     {vector.map((val, index) => (
-                        <span key={index} className={`px-1 py-0.5 text-xs sm:text-${fontSize}`}>{val.toFixed(extendDecimal ? 3 : 2)}</span>
+                        <span key={index} className={`px-1 py-0.5 text-xs sm:text-${fontSize}`}>{val.toFixed(dataset === 'xor' ? 3 : 2)}</span>
                     ))}
                 </div>
             </div>
@@ -839,7 +843,6 @@ const Explain = () => {
                                                             : network?.layers[layerIndex - 1].A[sampleIndex],
                                                         (layerIndex === 0 ? "Input Features" : `Layer ${layerIndex} Activations`),
                                                         layerIndex === 0 ? "Original input data" : "Output from previous layer",
-                                                        false,
                                                         layerIndex === 0
                                                             ? <InputInfo dataset={dataset} input={network?.input[sampleIndex]} originalInput={originalData[sampleIndex]} />
                                                             : null,
@@ -850,13 +853,13 @@ const Explain = () => {
                                                 <span className="text-sm sm:text-lg mt-2 sm:mt-5 mx-1">×</span>
 
                                                 <div className="flex flex-col items-center">
-                                                    {renderMatrix(layer.prevWeights, `Weights`, "Connection strengths between neurons", false, `W:${layerIndex}`)}
+                                                    {renderMatrix(layer.prevWeights, `Weights`, "Connection strengths between neurons", `W:${layerIndex}`)}
                                                 </div>
 
                                                 <span className="text-sm sm:text-lg mt-2 sm:mt-5 mx-1">+</span>
 
                                                 <div className="flex flex-col items-center">
-                                                    {renderVector(layer.prevBias, `Biases`, undefined, false, undefined, `B:${layerIndex}`)}
+                                                    {renderVector(layer.prevBias, `Biases`, undefined, undefined, `B:${layerIndex}`)}
                                                 </div>
 
                                                 <span className="text-sm sm:text-lg mt-2 sm:mt-5 mx-1">=</span>
@@ -867,7 +870,7 @@ const Explain = () => {
                                                             {renderVector(
                                                                 layer.Z[sampleIndex],
                                                                 isOutputComputation ? "Raw Output" : `Pre-activations`,
-                                                                undefined, false, undefined,
+                                                                undefined, undefined,
                                                                 `Z:${layerIndex}`
                                                             )}
                                                             <div className="relative flex flex-row justify-center items-center py-4">
@@ -881,7 +884,6 @@ const Explain = () => {
                                                             layer.A[sampleIndex],
                                                             isOutputComputation ? "Final Output" : `Activations`,
                                                             "",
-                                                            isOutputComputation ? true : false,
                                                             isOutputComputation
                                                                 ? <OutputInfo dataset={dataset} output={layer.A[sampleIndex]} actual={originalData[sampleIndex]} />
                                                                 : null,
@@ -935,12 +937,12 @@ const Explain = () => {
                                                         <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
                                                             {renderMatrix(
                                                                 transpose(aPrevIdx < 0 ? network.input : network.layers[aPrevIdx].A) ?? [],
-                                                                `A_prev.T`, "neurons × samples", true, aPrevId
+                                                                `A_prev.T`, "neurons × samples", aPrevId
                                                             )}
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">×</span>
-                                                            {renderMatrix(layer.dZ, `dZ`, "samples × outputs", true, `dZ:${li}`)}
+                                                            {renderMatrix(layer.dZ, `dZ`, "samples × outputs", `dZ:${li}`)}
                                                             <span className="text-sm sm:text-base mt-2 sm:mt-6 text-gray-600">× (1/4) =</span>
-                                                            {renderMatrix(layer.dW, `dW`, "∇ Weights", true, `dW:${li}`)}
+                                                            {renderMatrix(layer.dW, `dW`, "∇ Weights", `dW:${li}`)}
                                                         </div>
                                                     </>
                                                 ) : (() => {
@@ -952,21 +954,21 @@ const Explain = () => {
                                                             <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
                                                                 <div className="flex flex-col gap-1 items-center">
                                                                     <p className="text-xs sm:text-sm text-gray-600 text-center mb-1">A_prev rows</p>
-                                                                    {renderVector(aPrev[0], ``, "", false, undefined, aPrevId)}
-                                                                    {renderVector(aPrev[1], ``, "", false, undefined, aPrevId)}
+                                                                    {renderVector(aPrev[0], ``, "", undefined, aPrevId)}
+                                                                    {renderVector(aPrev[1], ``, "", undefined, aPrevId)}
                                                                     <span className="text-gray-400 text-center leading-none">⋮</span>
-                                                                    {renderVector(aPrev[last], ``, "", false, undefined, aPrevId)}
+                                                                    {renderVector(aPrev[last], ``, "", undefined, aPrevId)}
                                                                 </div>
                                                                 <span className="text-lg sm:text-2xl mt-2 sm:mt-6">×</span>
                                                                 <div className="flex flex-col gap-1 items-center">
                                                                     <p className="text-xs sm:text-sm text-gray-600 text-center mb-1">dZ rows</p>
-                                                                    {renderVector(layer.dZ[0], ``, "", false, undefined, `dZ:${li}`)}
-                                                                    {renderVector(layer.dZ[1], ``, "", false, undefined, `dZ:${li}`)}
+                                                                    {renderVector(layer.dZ[0], ``, "", undefined, `dZ:${li}`)}
+                                                                    {renderVector(layer.dZ[1], ``, "", undefined, `dZ:${li}`)}
                                                                     <span className="text-gray-400 text-center leading-none">⋮</span>
-                                                                    {renderVector(layer.dZ[last], ``, "", false, undefined, `dZ:${li}`)}
+                                                                    {renderVector(layer.dZ[last], ``, "", undefined, `dZ:${li}`)}
                                                                 </div>
                                                                 <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
-                                                                {renderMatrix(layer.dW, `dW`, "∇ Weights avg", true, `dW:${li}`)}
+                                                                {renderMatrix(layer.dW, `dW`, "∇ Weights avg", `dW:${li}`)}
                                                             </div>
                                                         </>
                                                     );
@@ -979,9 +981,9 @@ const Explain = () => {
                                                         <p className="text-sm text-gray-600">Gradient of biases (dB) = (1/4) Σ dZ across all 4 patterns:</p>
                                                         <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
                                                             <span className="text-sm sm:text-base mt-2 sm:mt-6 text-gray-600">(1/4)</span>
-                                                            {renderMatrix(layer.dZ, `dZ`, "all samples", true, `dZ:${li}`)}
+                                                            {renderMatrix(layer.dZ, `dZ`, "all samples", `dZ:${li}`)}
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
-                                                            {renderVector(layer.db, `dB`, "∇ Biases", true, undefined, `dB:${li}`)}
+                                                            {renderVector(layer.db, `dB`, "∇ Biases", undefined, `dB:${li}`)}
                                                         </div>
                                                     </>
                                                 ) : (() => {
@@ -993,13 +995,13 @@ const Explain = () => {
                                                                 <span className="text-lg sm:text-2xl mt-2 sm:mt-6">Σ</span>
                                                                 <div className="flex flex-col gap-1 items-center">
                                                                     <p className="text-xs sm:text-sm text-gray-600 text-center mb-1">dZ rows</p>
-                                                                    {renderVector(layer.dZ[0], ``, "", false, undefined, `dZ:${li}`)}
-                                                                    {renderVector(layer.dZ[1], ``, "", false, undefined, `dZ:${li}`)}
+                                                                    {renderVector(layer.dZ[0], ``, "", undefined, `dZ:${li}`)}
+                                                                    {renderVector(layer.dZ[1], ``, "", undefined, `dZ:${li}`)}
                                                                     <span className="text-gray-400 text-center leading-none">⋮</span>
-                                                                    {renderVector(layer.dZ[last], ``, "", false, undefined, `dZ:${li}`)}
+                                                                    {renderVector(layer.dZ[last], ``, "", undefined, `dZ:${li}`)}
                                                                 </div>
                                                                 <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
-                                                                {renderVector(layer.db, `dB`, "∇ Biases", true, undefined, `dB:${li}`)}
+                                                                {renderVector(layer.db, `dB`, "∇ Biases", undefined, `dB:${li}`)}
                                                             </div>
                                                         </>
                                                     );
@@ -1009,22 +1011,22 @@ const Explain = () => {
 
                                         {/* Weights Equation */}
                                         <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
-                                            {renderMatrix(layer.prevWeights, `Previous Weights`, "", true, `W:${li}`)}
+                                            {renderMatrix(layer.prevWeights, `Previous Weights`, "", `W:${li}`)}
                                             <span className="text-lg sm:text-xxl mt-2 sm:mt-8">-</span>
                                             <span className="text-xs sm:text-sm mt-2 sm:mt-8 text-gray-600"><strong className="text-lg sm:text-xl text-gray-600">η</strong> ×</span>
-                                            {renderMatrix(layer.dW, `Change in Weights`, "dW (∇Weights)", true, `dW:${li}`)}
+                                            {renderMatrix(layer.dW, `Change in Weights`, "dW (∇Weights)", `dW:${li}`)}
                                             <span className="text-lg sm:text-xl mt-2 sm:mt-8">=</span>
-                                            {renderMatrix(layer.weights, `Current Weights`, "", true, `currentW:${li}`)}
+                                            {renderMatrix(layer.weights, `Current Weights`, "", `currentW:${li}`)}
                                         </div>
 
                                         {/* Biases Equation */}
                                         <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
-                                            {renderVector(layer.prevBias, `Previous Biases`, "", true, undefined, `B:${li}`)}
+                                            {renderVector(layer.prevBias, `Previous Biases`, "", undefined, `B:${li}`)}
                                             <span className="text-lg sm:text-xxl mt-2 sm:mt-8">-</span>
                                             <span className="text-xs sm:text-sm mt-2 sm:mt-8 text-gray-600"><strong className="text-lg sm:text-xl text-gray-600">η</strong> ×</span>
-                                            {renderVector(layer.db, `Change in Biases`, "dB (∇Biases)", true, undefined, `dB:${li}`)}
+                                            {renderVector(layer.db, `Change in Biases`, "dB (∇Biases)", undefined, `dB:${li}`)}
                                             <span className="text-lg sm:text-xl mt-2 sm:mt-8">=</span>
-                                            {renderVector(layer.biases, `Current Biases`, "", true, undefined, `currentB:${li}`)}
+                                            {renderVector(layer.biases, `Current Biases`, "", undefined, `currentB:${li}`)}
                                         </div>
                                     </div>
                                 );
@@ -1069,12 +1071,12 @@ const Explain = () => {
                                                         <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
                                                             <span className="text-sm sm:text-base mt-2 sm:mt-6 text-gray-600">2 ×</span>
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">(</span>
-                                                            {renderVector(network.layers[outputLayerIndex].A[sampleIndex], `Prediction`, "(normalized)", true, undefined, `A:${outputLayerIndex}`)}
+                                                            {renderVector(network.layers[outputLayerIndex].A[sampleIndex], `Prediction`, "(normalized)", undefined, `A:${outputLayerIndex}`)}
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">-</span>
-                                                            {renderVector(actual, `Actual`, "(normalized)", false)}
+                                                            {renderVector(actual, `Actual`, "(normalized)")}
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">)</span>
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
-                                                            {renderVector(network.layers[outputLayerIndex].dZ[sampleIndex], `dZ`, "", true, undefined, `dZ:${outputLayerIndex}`)}
+                                                            {renderVector(network.layers[outputLayerIndex].dZ[sampleIndex], `dZ`, "", undefined, `dZ:${outputLayerIndex}`)}
                                                         </div>
                                                     </>
                                                 ) : (
@@ -1082,11 +1084,11 @@ const Explain = () => {
                                                         <p className="text-sm text-gray-600">Calculate initial error (dZ) at the output:</p>
                                                         <p className="text-xs text-gray-600 italic">*Note: this is done with all samples at once, unlike the single sample shown here*</p>
                                                         <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
-                                                            {renderVector(network.layers[outputLayerIndex].A[sampleIndex], `Prediction`, "", true, undefined, `A:${outputLayerIndex}`)}
+                                                            {renderVector(network.layers[outputLayerIndex].A[sampleIndex], `Prediction`, "", undefined, `A:${outputLayerIndex}`)}
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">-</span>
-                                                            {renderVector(actual, `Actual`, "", false)}
+                                                            {renderVector(actual, `Actual`, "")}
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
-                                                            {renderVector(network.layers[outputLayerIndex].dZ[sampleIndex], `Error`, "", true, undefined, `dZ:${outputLayerIndex}`)}
+                                                            {renderVector(network.layers[outputLayerIndex].dZ[sampleIndex], `Error`, "", undefined, `dZ:${outputLayerIndex}`)}
                                                         </div>
                                                     </>
                                                 )}
@@ -1108,17 +1110,17 @@ const Explain = () => {
                                                     )}
                                                     <div className="flex flex-col items-center gap-2 flex-wrap justify-center">
                                                         <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
-                                                            {renderVector(layer.dZ[sampleIndex], `dZ`, "Calculated above", true, undefined, `dZ:${li}`)}
+                                                            {renderVector(layer.dZ[sampleIndex], `dZ`, "Calculated above", undefined, `dZ:${li}`)}
                                                             {(outputLayerIndex - index + 1) !== 0 ? <>
                                                                 <span className="text-lg sm:text-2xl mt-2 sm:mt-6">×</span>
-                                                                {renderMatrix(transpose(network.layers[outputLayerIndex - index + 1]?.prevWeights), `Wᵀ`, "Transposed weights from backwards layer", true, `W:${li}`)}
+                                                                {renderMatrix(transpose(network.layers[outputLayerIndex - index + 1]?.prevWeights), `Wᵀ`, "Transposed weights from backwards layer", `W:${li}`)}
                                                                 <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
-                                                                {renderMatrix(dA, `dA`, "∇ Activations", true)}
+                                                                {renderMatrix(dA, `dA`, "∇ Activations")}
                                                             </> : null}
                                                         </div>
                                                         {(outputLayerIndex - index + 1) !== 0 ? (
                                                             <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
-                                                                {renderMatrix(dA, `dA`, "∇ Activations", true)}
+                                                                {renderMatrix(dA, `dA`, "∇ Activations")}
                                                                 <span className="text-lg sm:text-2xl mt-2 sm:mt-6">×</span>
                                                                 <div className="inline-block px-1 mx-1 text-center">
                                                                     <p className="text-xs sm:text-sm text-gray-600 mb-1">{"Activation Derivative (σ′(Z))"}</p>
@@ -1129,7 +1131,7 @@ const Explain = () => {
                                                                     </div>
                                                                 </div>
                                                                 <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
-                                                                {renderVector(network.layers[outputLayerIndex - index]?.dZ[sampleIndex], `dZ`, "Error to pass to backwards layer", true, undefined, li > 0 ? `dZ:${li - 1}` : undefined)}
+                                                                {renderVector(network.layers[outputLayerIndex - index]?.dZ[sampleIndex], `dZ`, "Error to pass to backwards layer", undefined, li > 0 ? `dZ:${li - 1}` : undefined)}
                                                             </div>
                                                         ) : null}
                                                     </div>
