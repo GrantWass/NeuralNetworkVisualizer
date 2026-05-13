@@ -11,6 +11,8 @@ type RenderResultsParams = {
     activationValue: number;
     original?: number[];
     fontSize: number;
+    yMean?: number | null;
+    yStd?: number | null;
 };
 
 export const renderResults = ({
@@ -23,12 +25,15 @@ export const renderResults = ({
     activationValue,
     original,
     fontSize,
+    yMean,
+    yStd,
 }: RenderResultsParams) => {
     if (!dataset) return null;
 
     const x = cx + SVGWIDTH * 0.11;
 
     if (dataset === "auto_mpg") {
+        const displayValue = yMean != null && yStd != null ? activationValue * yStd + yMean : activationValue;
         const actual = formatActual(original || [], dataset);
         return (
             <>
@@ -36,7 +41,7 @@ export const renderResults = ({
                     {outputMap[dataset]?.[ni]}
                 </text>
                 <text x={x} y={cy - SVGHEIGHT * 0.01} fontSize={fontSize + 1} fontWeight="bold" textAnchor="middle" fill="#111827">
-                    {formatValue(activationValue, dataset)}
+                    {formatValue(displayValue, dataset)}
                 </text>
                 <text x={x} y={cy + SVGHEIGHT * 0.07} fontSize={fontSize - 1} textAnchor="middle" fill="#9ca3af">
                     actual {actual}

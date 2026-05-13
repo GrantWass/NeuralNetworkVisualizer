@@ -48,6 +48,8 @@ const Graph = () => {
         originalData,
         changedConnections,
         stepLayerHighlight,
+        yMean,
+        yStd,
     } = useStore();
 
     // Flash changed connections for 2s after each training cycle
@@ -82,6 +84,8 @@ const Graph = () => {
                     flashConnections={flashConnections}
                     flashKey={flashKey}
                     stepLayerHighlight={stepLayerHighlight}
+                    yMean={yMean}
+                    yStd={yStd}
                 />
             </svg>
 

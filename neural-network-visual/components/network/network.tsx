@@ -26,6 +26,8 @@ interface NetworkSVGProps {
   flashConnections?: FlashConnection[];
   flashKey?: number;
   stepLayerHighlight?: number | null;
+  yMean?: number | null;
+  yStd?: number | null;
 }
 
 // --------------------
@@ -150,7 +152,9 @@ const NodeCircles: React.FC<{
   original?: number[];
   onNodeClick: (hovered: HoveredNode | null) => void;
   stepLayerHighlight?: number | null;
-}> = ({ network, SVGWIDTH, SVGHEIGHT, dataset, sampleIndex, original, onNodeClick, stepLayerHighlight }) => {
+  yMean?: number | null;
+  yStd?: number | null;
+}> = ({ network, SVGWIDTH, SVGHEIGHT, dataset, sampleIndex, original, onNodeClick, stepLayerHighlight, yMean, yStd }) => {
   const { layerSpacing, SHIFT } = computeLayout(SVGWIDTH, network.layers.length);
   const fontSize = fontSizeForWidth(SVGWIDTH);
   const features = featureList(dataset, SVGWIDTH);
@@ -208,7 +212,7 @@ const NodeCircles: React.FC<{
                 renderInputValues(cx, cy, original, ni, activationValue, fontSize, INPUTLABELOFFSET, SVGWIDTH, SVGHEIGHT)
               }
               {isOutput && dataset &&
-                renderResults({ SVGWIDTH, SVGHEIGHT, cx, cy, dataset, ni, activationValue, original, fontSize })
+                renderResults({ SVGWIDTH, SVGHEIGHT, cx, cy, dataset, ni, activationValue, original, fontSize, yMean, yStd })
               }
             </g>
           );
@@ -278,6 +282,8 @@ export const Network: React.FC<NetworkSVGProps> = ({
   flashConnections = [],
   flashKey = 0,
   stepLayerHighlight,
+  yMean,
+  yStd,
 }) => {
   if (!network) return null;
   return (
@@ -300,6 +306,8 @@ export const Network: React.FC<NetworkSVGProps> = ({
         original={original}
         onNodeClick={setHoveredNode}
         stepLayerHighlight={stepLayerHighlight}
+        yMean={yMean}
+        yStd={yStd}
       />
       <LayerLabels SVGWIDTH={SVGWIDTH} SVGHEIGHT={SVGHEIGHT} network={network} />
     </>
