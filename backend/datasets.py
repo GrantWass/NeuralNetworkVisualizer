@@ -39,6 +39,11 @@ def load_auto_mpg_dataset():
     scaler = StandardScalerNP()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
+
+    y_scaler = StandardScalerNP()
+    y_train = y_scaler.fit_transform(y_train)
+    y_test = y_scaler.transform(y_test)
+
     return X_train, X_test, y_train, y_test, X_train.shape[1], y_train.shape[1], "linear", original_train_data
 
 def load_iris_dataset():
