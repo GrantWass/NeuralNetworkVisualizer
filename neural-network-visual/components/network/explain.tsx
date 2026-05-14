@@ -819,7 +819,7 @@ const Explain = () => {
                             >
                                 {labels[v]}
                                 {hasConnection && dotColor && (
-                                    <span className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                                    <span className={`absolute top-16 right-1 w-1.5 h-1.5 rounded-full ${dotColor}`} />
                                 )}
                             </button>
                         );

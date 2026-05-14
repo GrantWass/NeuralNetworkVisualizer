@@ -63,13 +63,14 @@ const nodeColors = (isInput: boolean, isOutput: boolean, val: number) => ({
 // --------------------
 const MnistInputGrid: React.FC<{
   pixels: number[];  // 784 values 0-1
-  cx: number;        // center x of the input column
+  cx: number;        // x of the input column — grid right-aligns here
   SVGHEIGHT: number;
 }> = ({ pixels, cx, SVGHEIGHT }) => {
-  const CELL = 2;
   const GRID = 28;
-  const SIZE = GRID * CELL; // 56px
-  const x0 = cx - SIZE / 2;
+  // Fill the available left space: right-align grid to cx, cell size fills the room
+  const CELL = Math.max(2, Math.min(5, Math.floor((cx - 8) / GRID)));
+  const SIZE = GRID * CELL;
+  const x0 = cx - SIZE;                      // right edge flush with input column
   const y0 = SVGHEIGHT / 2 - SIZE / 2;
 
   return (
@@ -106,8 +107,9 @@ const MnistConnections: React.FC<{
   stepLayerHighlight?: number | null;
 }> = ({ inputWeights, inputCx, SVGWIDTH, SVGHEIGHT, layerSpacing, SHIFT, hiddenSize, stepLayerHighlight }) => {
   const GRID = 28;
-  const SIZE = GRID * 2;
-  const gridRight = inputCx + SIZE / 2;
+  const CELL = Math.max(2, Math.min(5, Math.floor((inputCx - 8) / GRID)));
+  const SIZE = GRID * CELL;
+  const gridRight = inputCx; // right edge of grid is flush with input column
   const inStepMode = stepLayerHighlight !== null && stepLayerHighlight !== undefined;
   const isActive = !inStepMode || stepLayerHighlight === 0 || stepLayerHighlight === 1;
 

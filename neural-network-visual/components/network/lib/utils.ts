@@ -87,6 +87,9 @@ export const formatActual = (original: number[], dataset: string) => {
   } else if (dataset === "xor") {
     const actual = original[original.length - 1];
     return actual === 1 ? "1" : "0";
+  } else if (dataset === "mnist") {
+    const digit = Math.round(original[784] ?? original[original.length - 1]);
+    return String(digit);
   }
   return "N/A";
 };
