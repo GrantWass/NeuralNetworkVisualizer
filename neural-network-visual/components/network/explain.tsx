@@ -367,32 +367,83 @@ const Explain = () => {
 
     // Value tracer state
     const [highlightedValueId, setHighlightedValueId] = useState<string | null>(null);
+    const [lockedValueId, setLockedValueId] = useState<string | null>(null);
+    const lockedValueIdRef = useRef<string | null>(null);
     const hoverClearTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const jumpLockRef = useRef(false);
     const viewSectionRef = useRef<HTMLDivElement>(null);
 
     const hoverValue = (id: string) => {
         if (jumpLockRef.current) return;
+        if (lockedValueIdRef.current) return; // locked, hover doesn't override
         clearTimeout(hoverClearTimer.current);
         setHighlightedValueId(id);
     };
     const unhoverValue = () => {
+        if (lockedValueIdRef.current) return; // locked, don't fade on mouse leave
         hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 600);
     };
+    const clickValue = (id: string) => {
+        clearTimeout(hoverClearTimer.current);
+        jumpLockRef.current = false;
+        if (lockedValueIdRef.current === id) {
+            // Toggle off: clicking the same locked value unlocks
+            lockedValueIdRef.current = null;
+            setLockedValueId(null);
+            hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 600);
+        } else {
+            lockedValueIdRef.current = id;
+            setLockedValueId(id);
+            setHighlightedValueId(id);
+        }
+    };
+    const clearLock = () => {
+        if (!lockedValueIdRef.current) return;
+        lockedValueIdRef.current = null;
+        setLockedValueId(null);
+        clearTimeout(hoverClearTimer.current);
+        hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 600);
+    };
+
+    // Clear lock when user clicks outside a tracked value
+    useEffect(() => {
+        const handleDocClick = () => {
+            if (!lockedValueIdRef.current) return;
+            lockedValueIdRef.current = null;
+            setLockedValueId(null);
+            clearTimeout(hoverClearTimer.current);
+            hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 600);
+        };
+        document.addEventListener('click', handleDocClick);
+        return () => document.removeEventListener('click', handleDocClick);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
     const jumpToView = (targetView: PropagationView) => {
         jumpLockRef.current = true;
         clearTimeout(hoverClearTimer.current);
+        const targetValueId = highlightedValueId;
         setView(targetView);
         setTimeout(() => {
+            // Scroll to the specific highlighted element if possible
+            if (targetValueId) {
+                const valueEl = document.querySelector(`[data-value-id="${targetValueId}"]`);
+                if (valueEl) {
+                    valueEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
+                }
+            }
+            // Fallback: scroll to top of view section
             const el = viewSectionRef.current;
             if (!el) return;
             const top = el.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.18;
             window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
-        }, 50);
+        }, 100);
         // Hold highlight for 2s, then release lock and start normal fade
         setTimeout(() => {
             jumpLockRef.current = false;
-            hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 1200);
+            if (!lockedValueIdRef.current) {
+                hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 1200);
+            }
         }, 2000);
     };
 
@@ -574,16 +625,19 @@ const Explain = () => {
     const renderMatrix = (matrix: number[][] | undefined | null, label: string, subLabel?: string, valueId?: string) => {
         if (!matrix || matrix.length === 0) return null;
         const hl = getHighlightStyle(valueId);
+        const isLocked = valueId ? valueId === lockedValueId : false;
         return (
             <div
-                className={`inline-block p-1 mx-1 rounded transition-colors ${valueId ? 'cursor-default' : ''}`}
+                data-value-id={valueId}
+                className={`inline-block p-1 mx-1 rounded transition-colors ${valueId ? 'cursor-pointer' : ''}`}
                 onMouseEnter={valueId ? () => hoverValue(valueId) : undefined}
                 onMouseLeave={valueId ? unhoverValue : undefined}
+                onClick={valueId ? (e) => { e.stopPropagation(); clickValue(valueId); } : undefined}
             >
                 <p className="text-xs sm:text-sm text-gray-600 text-center mb-1">{label}</p>
                 {subLabel && <p className="text-xs text-gray-500 text-center mb-1">{subLabel}</p>}
                 <div
-                    className={`grid rounded overflow-x-auto shadow-sm transition-all duration-150 ${hl ? `${hl.border} ${hl.bg}` : 'border border-gray-400 bg-white'}`}
+                    className={`grid rounded overflow-x-auto shadow-sm transition-all duration-150 ${hl ? `${hl.border} ${hl.bg}${isLocked ? ' ring-2 ring-offset-1 ring-current/20' : ''}` : 'border border-gray-400 bg-white'}`}
                     style={{ gridTemplateColumns: `repeat(${matrix[0].length}, auto)` }}
                 >
                     {matrix.map((row, rowIndex) => (
@@ -601,18 +655,21 @@ const Explain = () => {
     const renderVector = (vector: number[] | undefined | null, label: string, subLabel?: string, tooltip?: React.ReactNode, valueId?: string) => {
         if (!vector || vector.length === 0) return null;
         const hl = getHighlightStyle(valueId);
+        const isLocked = valueId ? valueId === lockedValueId : false;
         return (
             <div
-                className={`inline-block px-1 mx-1 ${valueId ? 'cursor-default' : ''}`}
+                data-value-id={valueId}
+                className={`inline-block px-1 mx-1 ${valueId ? 'cursor-pointer' : ''}`}
                 onMouseEnter={valueId ? () => hoverValue(valueId) : undefined}
                 onMouseLeave={valueId ? unhoverValue : undefined}
+                onClick={valueId ? (e) => { e.stopPropagation(); clickValue(valueId); } : undefined}
             >
                 <div className="flex flex-row items-center justify-center gap-1 relative group">
                     <p className="text-xs sm:text-sm text-gray-600 text-center mb-1">{label}</p>
                     {tooltip as React.ReactNode}
                 </div>
                 {subLabel && <p className="text-xs text-gray-500 text-center mb-1">{subLabel}</p>}
-                <div className={`flex flex-row justify-center px-1 py-0.5 rounded shadow-sm overflow-x-auto transition-all duration-150 ${hl ? `${hl.border} ${hl.bg}` : 'border border-gray-400 bg-white'}`}>
+                <div className={`flex flex-row justify-center px-1 py-0.5 rounded shadow-sm overflow-x-auto transition-all duration-150 ${hl ? `${hl.border} ${hl.bg}${isLocked ? ' ring-2 ring-offset-1 ring-current/20' : ''}` : 'border border-gray-400 bg-white'}`}>
                     {vector.map((val, index) => (
                         <span key={index} className={`px-1 py-0.5 text-xs sm:text-${fontSize}`}>{val.toFixed(dataset === 'xor' ? 3 : 2)}</span>
                     ))}
@@ -1218,12 +1275,22 @@ const Explain = () => {
                     style={{ borderColor: undefined }}
                     onMouseEnter={() => clearTimeout(hoverClearTimer.current)}
                     onMouseLeave={unhoverValue}
+                    onClick={(e) => e.stopPropagation()}
                 >
                     <div className={`max-w-5xl mx-auto`}>
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                             <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${styles.badge}`}>{info.type}</span>
                             <span className="text-xs font-semibold text-gray-800">{info.label}</span>
-                            <span className="text-xs text-gray-400 ml-auto">Value Tracer</span>
+                            {lockedValueId === highlightedValueId ? (
+                                <button
+                                    onClick={clearLock}
+                                    className="text-xs text-gray-500 ml-auto hover:text-gray-700"
+                                >
+                                    pinned · click to unpin
+                                </button>
+                            ) : (
+                                <span className="text-xs text-gray-400 ml-auto">click to pin · Value Tracer</span>
+                            )}
                         </div>
                         <div className="flex flex-row flex-wrap gap-2">
                             {info.connections.map((conn, ci) => {

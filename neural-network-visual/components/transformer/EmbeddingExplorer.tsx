@@ -247,7 +247,7 @@ export function EmbeddingExplorer() {
             className="rounded-lg border border-border bg-card overflow-hidden"
             style={{ height: 420 }}
           >
-            <Canvas camera={{ position: [0, 0, 2.8], fov: 55 }}>
+            <Canvas camera={{ position: [0, 0, 3.8], fov: 55 }}>
               <Scene points={points} />
             </Canvas>
           </div>

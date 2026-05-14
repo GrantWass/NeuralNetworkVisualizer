@@ -790,7 +790,7 @@ export default function TransformerVizClient() {
       <Section1 />
 
       {/* Sentence chooser — example picker + live input side by side */}
-      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+      <div className="rounded-lg border border-border bg-card p-4 space-y-3 max-w-sm">
         <p className="text-sm font-medium">Choose a sentence</p>
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Example picker */}
