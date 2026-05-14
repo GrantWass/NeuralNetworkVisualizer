@@ -13,6 +13,7 @@ type RenderResultsParams = {
     fontSize: number;
     yMean?: number | null;
     yStd?: number | null;
+    isPredicted?: boolean;
 };
 
 export const renderResults = ({
@@ -27,6 +28,7 @@ export const renderResults = ({
     fontSize,
     yMean,
     yStd,
+    isPredicted,
 }: RenderResultsParams) => {
     if (!dataset) return null;
 
@@ -57,15 +59,36 @@ export const renderResults = ({
 
     if (dataset === "iris" || dataset === "mnist") {
         const label = outputMap[dataset]?.[ni];
-        const actualLabel = formatActual(original || [], dataset);
-        const isActual = actualLabel === label;
+        const orig = original || [];
+        let actualIdx = -1;
+        if (dataset === "iris") {
+            const tail = orig.slice(-3);
+            actualIdx = tail.findIndex(v => v === 1);
+        } else {
+            const labels = orig.slice(784);
+            actualIdx = labels.length >= 10 ? labels.indexOf(Math.max(...labels)) : -1;
+        }
+        const isActual = actualIdx === ni;
+        const isCorrect = isPredicted && isActual;
+        const isWrongPred = isPredicted && !isActual;
+
+        let labelFill = "#9ca3af";
+        let labelWeight: "bold" | "normal" = "normal";
+        if (isPredicted) { labelFill = isCorrect ? "#16a34a" : "#dc2626"; labelWeight = "bold"; }
+        else if (isActual) { labelFill = "#16a34a"; labelWeight = "bold"; }
+
+        let valueFill = "#6b7280";
+        if (isPredicted) valueFill = isCorrect ? "#16a34a" : "#dc2626";
+
         return (
             <>
                 <text x={x} y={labelY} fontSize={fontSize} textAnchor="middle">
-                    <tspan fontWeight={isActual ? "bold" : "normal"} fill={isActual ? "#111827" : "#6b7280"}>{label}</tspan>
-                    {isActual && <tspan fill="#16a34a" fontWeight="bold"> ✓</tspan>}
+                    <tspan fontWeight={labelWeight} fill={labelFill}>{label}</tspan>
+                    {isPredicted && <tspan fill={isCorrect ? "#16a34a" : "#dc2626"} fontWeight="bold">{isCorrect ? " ▶ ✓" : " ▶"}</tspan>}
+                    {!isPredicted && isActual && <tspan fill="#16a34a" fontWeight="bold"> ✓</tspan>}
+                    {isWrongPred && <tspan fill="#9ca3af" fontSize={fontSize - 1}> </tspan>}
                 </text>
-                <text x={x} y={valueY} fontSize={fontSize} textAnchor="middle" fill="#374151">
+                <text x={x} y={valueY} fontSize={fontSize} fontWeight={isPredicted ? "bold" : "normal"} textAnchor="middle" fill={valueFill}>
                     {formatValue(activationValue, dataset)}
                 </text>
             </>

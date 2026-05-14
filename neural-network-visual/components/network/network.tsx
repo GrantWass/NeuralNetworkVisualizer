@@ -304,9 +304,15 @@ const NodeCircles: React.FC<{
               {isInput && dataset !== "xor" && original && activationValue && original.length > 0 &&
                 renderInputValues(cx, cy, original, ni, activationValue, fontSize, INPUTLABELOFFSET, SVGWIDTH, SVGHEIGHT)
               }
-              {isOutput && dataset &&
-                renderResults({ SVGWIDTH, SVGHEIGHT, cx, cy, dataset, ni, activationValue, original, fontSize, yMean, yStd })
-              }
+              {isOutput && dataset && (() => {
+                let isPredicted: boolean | undefined;
+                if (dataset === "iris" || dataset === "mnist") {
+                  const outputActivations = network.layers[li - 1]?.A?.[sampleIndex ?? 0] ?? [];
+                  const predIdx = outputActivations.reduce((best, v, i) => v > outputActivations[best] ? i : best, 0);
+                  isPredicted = ni === predIdx;
+                }
+                return renderResults({ SVGWIDTH, SVGHEIGHT, cx, cy, dataset, ni, activationValue, original, fontSize, yMean, yStd, isPredicted });
+              })()}
             </g>
           );
         });

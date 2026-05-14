@@ -72,6 +72,12 @@ export default function RootLayout({
               >
                 Transformers
               </Link>
+              <Link
+                href="/about"
+                className="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
+              >
+                About
+              </Link>
             </nav>
           </div>
         </header>

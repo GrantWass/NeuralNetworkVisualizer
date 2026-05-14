@@ -307,6 +307,10 @@ export default function NeuralNetworkViz() {
           <Link href="/transformer" className="underline underline-offset-4 hover:text-foreground">
             interactive transformer visualization
           </Link>
+          , or read{" "}
+          <Link href="/about" className="underline underline-offset-4 hover:text-foreground">
+            how this project started
+          </Link>
           .
         </p>
       </section>
