@@ -43,6 +43,13 @@ Unlike classification, this is a regression task: the output is a continuous num
 
 XOR is the classic proof that hidden layers matter. A single layer of neurons can only draw straight-line boundaries, and XOR cannot be separated by a straight line. You need at least one hidden layer to solve it. Watch whether your network architecture is deep enough.`;
     }
+    if (dataset === "mnist") {
+      return `Configure your network using the steps above, then click **Initialize Model** to begin.
+
+**What you'll be training:** A network that reads a 28×28 grayscale image of a handwritten digit (784 pixel values, normalized 0–1) and classifies it as one of 10 digits (0–9).
+
+This is a much harder problem than iris or XOR — 784 inputs feed into the network, and the output layer uses softmax to produce 10 probabilities. Because the input space is large, MNIST benefits from more hidden neurons and a smaller learning rate. Watch the accuracy climb as the network learns to detect edges, curves, and digit structure from raw pixels.`;
+    }
   }
 
   // ── initialized, epoch 0 ───────────────────────────────────────────────────
@@ -73,6 +80,13 @@ XOR is the classic proof that hidden layers matter. A single layer of neurons ca
 **Architecture:** ${inputLayer?.weights?.length ?? 4} inputs → ${archDesc} → 1 output (${totalParams} learnable parameters total).
 
 **What to expect:** The network will learn to map (displacement, horsepower, weight, acceleration) → MPG by minimizing mean squared error across the training set. A naive model that always predicts the mean MPG would have a MAE of roughly 6–7. A well-trained network should get below 3 MPG error. Watch the MAE curve to see how quickly it drops.`;
+    }
+    if (dataset === "mnist") {
+      return `Your network is ready. Weights have been randomly initialized — at this point, digit predictions are essentially random (10% chance per class).
+
+**Architecture:** 784 inputs → ${archDesc} → 10 outputs (${totalParams} learnable parameters total).
+
+**What to expect:** Each training cycle passes through the full dataset and adjusts weights using cross-entropy loss. Early cycles will push accuracy well above the 10% random baseline as the network starts to distinguish basic digit shapes. Watch for accuracy above 80%+ with a well-tuned architecture — the default [12, 10] hidden layers is a starting point; larger hidden layers improve capacity significantly.`;
     }
     if (dataset === "xor") {
       return `Your network is ready. Weights have been randomly initialized — at this point, outputs are near 0.5 (maximum uncertainty).
@@ -141,6 +155,24 @@ Binary cross-entropy measures how far each sigmoid output is from the true 0 or 
 **What to try:** ${metric >= 100 ? "XOR is solved. Try re-initializing with fewer hidden neurons to see the minimum architecture required, or switch to a harder dataset." : "XOR converges most reliably around LR 0.2–0.4. If stuck at 75%, re-initialize — the sigmoid activations mean no dead neurons, but some random seeds land near saddle points that are hard to escape."}
 
 **Tip:** If the loss curve has flattened, switch to the **Compute Gradients** tab and inspect the dW values — when they're near zero, weight updates have effectively stalled. The dZ column at the output layer tells you why: large dZ means the network is confidently wrong, while dZ near zero means predictions are close to the decision boundary. For XOR, a plateau at 75% usually means the weights settled near a saddle point where gradients from the four patterns nearly cancel each other out — a fresh re-initialization is often all it takes to escape.`;
+  }
+
+  if (dataset === "mnist") {
+    let progressComment = "";
+    if (metric >= 95) progressComment = `At ${metric.toFixed(1)}%, your model is classifying nearly every digit correctly. This is excellent performance for a fully-connected network on MNIST.`;
+    else if (metric >= 85) progressComment = `At ${metric.toFixed(1)}%, your model is correctly identifying the vast majority of handwritten digits. The network has learned strong representations of digit shapes.`;
+    else if (metric >= 70) progressComment = `At ${metric.toFixed(1)}%, the model is solidly above random (10%) and has learned useful digit features, but confusions remain — common ones are 4/9, 3/8, and 1/7.`;
+    else if (metric >= 40) progressComment = `At ${metric.toFixed(1)}%, the model is learning but still making many errors. It has found some digit structure but hasn't fully separated the 10 classes.`;
+    else progressComment = `At ${metric.toFixed(1)}%, the model is only slightly above the 10% random baseline. Keep training — early cycles can be slow as the network first adjusts its initial random weights.`;
+
+    return `**After ${epoch} training cycle${epoch === 1 ? "" : "s"}**
+
+${progressComment}${trend}
+
+**Loss (cross-entropy): ${loss.toFixed(4)}**
+Cross-entropy measures how confident and correct the softmax predictions are across all 10 digit classes. Lower is better — values below 0.3 indicate the network is consistently making high-confidence correct predictions.
+
+**What to try:** ${metric >= 90 ? "The model is performing well. Try increasing hidden layer sizes for more capacity, or explore how individual weights respond to specific digit shapes in the Forward Pass tab." : metric >= 60 ? "Keep training. If accuracy has plateaued, try adjusting the learning rate slightly — 0.03–0.07 tends to work well for MNIST." : "Run more cycles. MNIST takes more training than smaller datasets. If loss isn't decreasing after 20+ cycles, try re-initializing with a learning rate around 0.05."}`;
   }
 
   return "";

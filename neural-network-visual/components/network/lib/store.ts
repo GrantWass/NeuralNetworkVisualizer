@@ -43,6 +43,7 @@ interface TrainingState {
   yMean: number | null;
   yStd: number | null;
   drawnDigitPrediction: DigitPrediction | null;
+  isInitializing: boolean;
 }
 
 interface TrainingActions {
@@ -99,6 +100,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   yMean: null,
   yStd: null,
   drawnDigitPrediction: null,
+  isInitializing: false,
 
   setEpoch: (epoch) => set({ epoch }),
   setSampleIndex: (sampleIndex) => set({ sampleIndex }),
@@ -135,6 +137,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
 
   initModel: async () => {
     const { hiddenLayers, activations, dataset } = get();
+    set({ isInitializing: true });
     try {
       const response = await fetch(`${URL}/init_model`, {
         method: "POST",
@@ -175,6 +178,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       toast.error("Initialization failed", {
         description: "Could not connect to the backend. Make sure the server is running.",
       });
+    } finally {
+      set({ isInitializing: false });
     }
   },
 

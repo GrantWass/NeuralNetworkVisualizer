@@ -319,12 +319,14 @@ const StepInitialize = ({
   dataset,
   hiddenLayers,
   activations,
+  isInitializing,
   onBack,
   onInitialize,
 }: {
   dataset: string;
   hiddenLayers: number[];
   activations: string[];
+  isInitializing: boolean;
   onBack: () => void;
   onInitialize: () => void;
 }) => {
@@ -398,9 +400,17 @@ const StepInitialize = ({
       </div>
 
       <div className="flex justify-between items-center">
-        <Button variant="outline" onClick={onBack}>← Back</Button>
-        <Button onClick={onInitialize} className="px-8 py-2 text-base font-semibold">
-          Initialize Model ▶
+        <Button variant="outline" onClick={onBack} disabled={isInitializing}>← Back</Button>
+        <Button onClick={onInitialize} disabled={isInitializing} className="px-8 py-2 text-base font-semibold">
+          {isInitializing ? (
+            <span className="flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              Initializing…
+            </span>
+          ) : "Initialize Model ▶"}
         </Button>
       </div>
     </div>
@@ -606,6 +616,7 @@ const Config = () => {
     handleDatasetChange,
     initModelFrontend,
     setSampleIndex,
+    isInitializing,
   } = useStore();
 
   // Wizard step: 1=dataset, 2=configure, 3=initialize, 4=train
@@ -689,6 +700,7 @@ const Config = () => {
             dataset={dataset}
             hiddenLayers={hiddenLayers}
             activations={activations}
+            isInitializing={isInitializing}
             onBack={() => setWizardStep(2)}
             onInitialize={handleInitialize}
           />

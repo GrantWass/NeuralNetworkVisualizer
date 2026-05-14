@@ -88,7 +88,10 @@ export const formatActual = (original: number[], dataset: string) => {
     const actual = original[original.length - 1];
     return actual === 1 ? "1" : "0";
   } else if (dataset === "mnist") {
-    const digit = Math.round(original[original.length - 1]);
+    const labels = original.slice(784);
+    const digit = labels.length >= 10
+      ? labels.indexOf(Math.max(...labels))
+      : Math.round(original[original.length - 1]);
     return String(digit);
   }
   return "N/A";
