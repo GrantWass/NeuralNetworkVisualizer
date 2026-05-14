@@ -177,6 +177,9 @@ const ConnectionLines: React.FC<{
             );
 
             const wAbs = Math.abs(w);
+            const isMnist = dataset === "mnist";
+            const strokeScale = isMnist ? (SVGWIDTH > 600 ? 1.2 : 0.8) : (SVGWIDTH > 600 ? 2.5 : 1.8);
+            const strokeBase = isMnist ? 0.6 : 1.8;
             const baseColor = w >= 0
               ? `rgba(99,102,241,${(0.12 + Math.min(wAbs, 1) * 0.75).toFixed(2)})`
               : `rgba(249,115,22,${(0.12 + Math.min(wAbs, 1) * 0.75).toFixed(2)})`;
@@ -190,7 +193,7 @@ const ConnectionLines: React.FC<{
                   x2={toX}
                   y2={toY}
                   stroke={baseColor}
-                  strokeWidth={wAbs * (SVGWIDTH > 600 ? 2.5 : 1.8) + 1.8}
+                  strokeWidth={wAbs * strokeScale + strokeBase}
                 />
                 {/* Flash overlay for most-changed connections */}
                 {flashEntry && (
@@ -242,7 +245,8 @@ const NodeCircles: React.FC<{
   const { layerSpacing, SHIFT } = computeLayout(SVGWIDTH, network.layers.length);
   const fontSize = fontSizeForWidth(SVGWIDTH);
   const features = featureList(dataset, SVGWIDTH);
-  const nodeRadius = 10 + SVGWIDTH / 100;
+  const isMnistDataset = dataset === "mnist";
+  const nodeRadius = isMnistDataset ? 5 + SVGWIDTH / 180 : 10 + SVGWIDTH / 100;
   const INPUTLABELOFFSET = SVGWIDTH / 10 + 10;
   const inStepMode = stepLayerHighlight !== null && stepLayerHighlight !== undefined;
 

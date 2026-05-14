@@ -402,7 +402,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       newDataset === "xor"
         ? { activations: ["tanh", "tanh"], hiddenLayers: [4, 4], learningRate: 0.3 }
         : newDataset === "mnist"
-        ? { activations: ["relu", "relu"], hiddenLayers: [64, 32], learningRate: 0.01 }
+        ? { activations: ["relu", "relu"], hiddenLayers: [12, 10], learningRate: 0.01 }
         : { activations: ["relu", "relu"], hiddenLayers: [4, 4], learningRate: 0.1 };
     set({
       dataset: newDataset,

@@ -109,7 +109,7 @@ const StepDataset = ({
       </div>
 
       {/* Dataset cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {DATASETS.map((ds) => {
           const d = DATASET_DETAILS[ds];
           return (
@@ -463,10 +463,10 @@ const StepTrain = ({
         <span className="text-gray-500">→ Output({outputSize})</span>
       </div>
 
-      {/* Controls */}
-      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-4">
+      {/* Controls — LR on left, sample picker + preview on right */}
+      <div className="flex gap-3 items-start">
         {/* Learning rate */}
-        <div>
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <Label className="text-sm font-semibold">Learning Rate (η)</Label>
             <span className="text-sm font-mono font-bold">{learningRate.toFixed(2)}</span>
@@ -481,41 +481,44 @@ const StepTrain = ({
           <p className={`text-xs mt-1.5 ${lrFeedback.color}`}>{lrFeedback.text}</p>
         </div>
 
-        {/* Sample picker — hidden for MNIST (use drawing canvas instead) */}
-        {dataset !== "mnist" && (
-          <div>
+        {/* Sample picker + preview */}
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex-1 min-w-0 space-y-3">
+          {dataset !== "mnist" ? (
             <div className="flex items-center gap-3">
               <Label className="text-sm font-semibold whitespace-nowrap">Sample #</Label>
               <Input
                 type="number"
                 value={sampleIndex}
-                onChange={(e) => onSetSample(Math.max(0, Math.min(25, Number(e.target.value))))}
+                onChange={(e) => {
+                  const max = dataset === "xor" ? 3 : 25;
+                  onSetSample(Math.max(0, Math.min(max, Number(e.target.value))));
+                }}
                 min={0}
-                max={25}
-                className="w-20 text-center"
+                max={dataset === "xor" ? 3 : 25}
+                className="w-16 text-center"
               />
-              <span className="text-xs text-gray-400">0 – 25 from the test set</span>
+              <span className="text-xs text-gray-400">
+                0 – {dataset === "xor" ? 3 : 25}
+              </span>
             </div>
-          </div>
-        )}
-        {dataset === "mnist" && (
-          <p className="text-xs text-gray-500">
-            After training, draw a digit in the panel on the right to see what the network predicts.
-          </p>
-        )}
-      </div>
+          ) : (
+            <p className="text-xs text-gray-500">
+              After training, draw a digit in the panel on the right to see what the network predicts.
+            </p>
+          )}
 
-      {/* Sample visual */}
-      {originalData[sampleIndex] && (
-        <SampleVisual
-          dataset={dataset}
-          original={originalData[sampleIndex]}
-          network={network}
-          sampleIndex={sampleIndex}
-          yMean={yMean}
-          yStd={yStd}
-        />
-      )}
+          {originalData[sampleIndex] && (
+            <SampleVisual
+              dataset={dataset}
+              original={originalData[sampleIndex]}
+              network={network}
+              sampleIndex={sampleIndex}
+              yMean={yMean}
+              yStd={yStd}
+            />
+          )}
+        </div>
+      </div>
 
       {/* Actions */}
       <Button onClick={onTrain} disabled={!sessionId} className="w-full text-base py-5 font-semibold">
