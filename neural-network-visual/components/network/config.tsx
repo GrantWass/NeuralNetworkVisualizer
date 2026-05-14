@@ -124,16 +124,16 @@ const StepDataset = ({
             >
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-semibold text-sm">{ds}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ml-auto ${
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
                   dataset === ds ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
                 }`}>{d.task}</span>
+                {ds === "mnist" && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                    dataset === ds ? "bg-white/25 text-white" : "bg-indigo-100 text-indigo-700"
+                  }`}>✏ draw</span>
+                )}
               </div>
               <p className={`text-xs mt-1 ${dataset === ds ? "text-white/80" : "text-muted-foreground"}`}>{d.taskType}</p>
-              {ds === "mnist" && (
-                <span className={`inline-block mt-1.5 text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                  dataset === ds ? "bg-white/25 text-white" : "bg-indigo-100 text-indigo-700"
-                }`}>✏ draw your own digits</span>
-              )}
             </button>
           );
         })}

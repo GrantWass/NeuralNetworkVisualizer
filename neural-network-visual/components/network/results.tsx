@@ -61,17 +61,13 @@ export const renderResults = ({
         const isActual = actualLabel === label;
         return (
             <>
-                <text x={x} y={labelY} fontSize={fontSize} fontWeight={isActual ? "bold" : "normal"} textAnchor="middle" fill={isActual ? "#111827" : "#6b7280"}>
-                    {label}
+                <text x={x} y={labelY} fontSize={fontSize} textAnchor="middle">
+                    <tspan fontWeight={isActual ? "bold" : "normal"} fill={isActual ? "#111827" : "#6b7280"}>{label}</tspan>
+                    {isActual && <tspan fill="#16a34a" fontWeight="bold"> ✓</tspan>}
                 </text>
                 <text x={x} y={valueY} fontSize={fontSize} textAnchor="middle" fill="#374151">
                     {formatValue(activationValue, dataset)}
                 </text>
-                {isActual && (
-                    <text x={x} y={thirdY} fontSize={fontSize - 1} textAnchor="middle" fill="#16a34a" fontWeight="bold">
-                        ✓ actual
-                    </text>
-                )}
             </>
         );
     }
