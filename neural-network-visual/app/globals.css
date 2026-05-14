@@ -89,3 +89,13 @@
 .weight-flash {
   animation: weight-fade 2s ease-out forwards;
 }
+
+@keyframes grad-flow {
+  0%   { stroke-dashoffset: 60; opacity: 0.9; }
+  80%  { opacity: 0.7; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+.gradient-pulse {
+  animation: grad-flow 600ms ease-out forwards;
+}

@@ -21,6 +21,7 @@ import rehypeRaw from "rehype-raw";
 import { useMemo } from "react";
 import Glossary from "@/components/network/glossary";
 import DigitCanvas from "@/components/network/digit-canvas";
+import { DecisionBoundary } from "@/components/network/decision-boundary";
 
 // Register ChartJS components
 ChartJS.register(
@@ -692,10 +693,10 @@ const Explain = () => {
 
     return (
         <>
-            {/* Connection panel + Prediction side by side */}
+            {/* Connection panel + Decision Boundary (XOR/Iris) + Prediction side by side */}
             <div className="flex gap-3 mx-2 mt-4 mb-2">
-                {/* Left: connection / node details — 1/3 for MNIST, flex-1 otherwise */}
-                <div className={`${dataset === "mnist" ? "w-1/3 flex-shrink-0" : "flex-1"} min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm`}>
+                {/* Left: connection / node details */}
+                <div className={`${dataset === "mnist" || dataset === "xor" || dataset === "iris" ? "w-1/3 flex-shrink-0" : "flex-1"} min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm`}>
                     {hoveredConnection ? (
                         <>
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Connection</p>
@@ -774,6 +775,17 @@ const Explain = () => {
                     )}
                 </div>
 
+                {/* Middle: decision boundary for XOR and Iris */}
+                {(dataset === "xor" || dataset === "iris") && network && (
+                    <div className="w-1/3 flex-shrink-0 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                        <DecisionBoundary
+                            layers={network.layers}
+                            dataset={dataset}
+                            originalData={originalData}
+                        />
+                    </div>
+                )}
+
                 {/* Right: for MNIST — draw canvas + prediction each take 1/3; otherwise prediction summary */}
                 {dataset === "mnist" ? (
                     <>
@@ -814,7 +826,7 @@ const Explain = () => {
                         </div>
                     </>
                 ) : hasTrained && (
-                    <div className="flex-1 min-w-0">
+                    <div className={`${dataset === "xor" || dataset === "iris" ? "w-1/3 flex-shrink-0" : "flex-1"} min-w-0`}>
                         <PredictionSummary
                             dataset={dataset}
                             network={network}

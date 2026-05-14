@@ -1,8 +1,8 @@
 "use client"
 
 import useStore from "@/components/network/lib/store";
-import { Network } from "@/components/network/network";
-import { useEffect, useState } from "react";
+import { Network, GradientFlowOverlay } from "@/components/network/network";
+import { useEffect, useRef, useState } from "react";
 
 const Legend = () => (
   <div className="flex flex-wrap items-center justify-center gap-4 mt-3 text-xs text-gray-600 px-2">
@@ -35,6 +35,20 @@ const Legend = () => (
       <span>Weight decreased</span>
     </div>
     <span className="text-gray-400">| Node brightness = activation strength</span>
+    <span className="text-gray-400 hidden sm:inline">|</span>
+    <span className="text-xs text-gray-500 hidden sm:inline font-medium">After each step:</span>
+    <div className="hidden sm:flex items-center gap-1.5">
+      <div className="w-5 h-1 rounded" style={{ background: "#22d3ee" }} />
+      <span>Healthy gradient</span>
+    </div>
+    <div className="hidden sm:flex items-center gap-1.5">
+      <div className="w-5 h-1 rounded" style={{ background: "#ef4444" }} />
+      <span>Vanishing</span>
+    </div>
+    <div className="hidden sm:flex items-center gap-1.5">
+      <div className="w-5 h-1 rounded" style={{ background: "#f97316" }} />
+      <span>Exploding</span>
+    </div>
   </div>
 );
 
@@ -50,6 +64,7 @@ const Graph = () => {
         stepLayerHighlight,
         yMean,
         yStd,
+        epoch,
     } = useStore();
 
     // Flash changed connections for 2s after each training cycle
@@ -64,6 +79,21 @@ const Graph = () => {
             return () => clearTimeout(timer);
         }
     }, [changedConnections]);
+
+    // Gradient flow animation: trigger on each completed training epoch
+    const [gradAnimKey, setGradAnimKey] = useState(0);
+    const [showGradFlow, setShowGradFlow] = useState(false);
+    const prevEpochRef = useRef(0);
+
+    useEffect(() => {
+        if (epoch > 0 && epoch !== prevEpochRef.current) {
+            prevEpochRef.current = epoch;
+            setGradAnimKey(k => k + 1);
+            setShowGradFlow(true);
+            const timer = setTimeout(() => setShowGradFlow(false), 1800);
+            return () => clearTimeout(timer);
+        }
+    }, [epoch]);
 
     return (
         <div className="grid place-items-center w-full mt-8 mb-2">
@@ -87,6 +117,15 @@ const Graph = () => {
                     yMean={yMean}
                     yStd={yStd}
                 />
+                {showGradFlow && network && (
+                    <GradientFlowOverlay
+                        network={network}
+                        SVGWIDTH={1000}
+                        SVGHEIGHT={500}
+                        animKey={gradAnimKey}
+                        dataset={dataset}
+                    />
+                )}
             </svg>
 
             {/* Legend */}

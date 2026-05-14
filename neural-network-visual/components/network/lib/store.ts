@@ -74,7 +74,7 @@ interface TrainingActions {
 }
 
 // ─── Client-side forward pass (used to visualize drawn digit) ─────────────────
-function applyActivation(z: number[], activation: string): number[] {
+export function applyActivation(z: number[], activation: string): number[] {
   switch (activation) {
     case 'relu':    return z.map(v => Math.max(0, v));
     case 'tanh':    return z.map(v => Math.tanh(v));
@@ -89,7 +89,7 @@ function applyActivation(z: number[], activation: string): number[] {
   }
 }
 
-function forwardPassSingle(layers: NeuronLayer[], input: number[]): { Z: number[][], A: number[][] } {
+export function forwardPassSingle(layers: NeuronLayer[], input: number[]): { Z: number[][], A: number[][] } {
   const zAll: number[][] = [];
   const aAll: number[][] = [];
   let prev = input;

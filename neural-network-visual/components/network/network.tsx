@@ -372,6 +372,62 @@ const LayerLabels: React.FC<{ network: NetworkState; SVGWIDTH: number; SVGHEIGHT
 };
 
 // --------------------
+// Gradient Flow Overlay
+// --------------------
+export const GradientFlowOverlay: React.FC<{
+  network: NetworkState;
+  SVGWIDTH: number;
+  SVGHEIGHT: number;
+  animKey: number;
+  dataset?: string;
+}> = ({ network, SVGWIDTH, SVGHEIGHT, animKey, dataset }) => {
+  const { layerSpacing, SHIFT } = computeLayout(SVGWIDTH, network.layers.length);
+  const maxLayer = network.layers.length - 2; // last layer with dW
+
+  return (
+    <>
+      {network.layers.flatMap((layer, li) => {
+        if (dataset === "mnist" && li === 0) return [];
+        const dW = layer.dW;
+        if (!dW?.length) return [];
+
+        return dW.flatMap((row, fi) =>
+          row.map((gradVal, ti) => {
+            const next = network.layers[li + 1];
+            if (!next) return null;
+            const fromX = (li + 1) * layerSpacing + SHIFT;
+            const fromY = ((fi + 1) * SVGHEIGHT) / (layer.size + 1);
+            const toX = (li + 2) * layerSpacing + SHIFT;
+            const toY = ((ti + 1) * SVGHEIGHT) / (next.size + 1);
+
+            const mag = Math.abs(gradVal);
+            const stroke =
+              mag < 1e-4 ? "#ef4444" : mag > 0.3 ? "#f97316" : "#22d3ee";
+
+            const delayMs = (maxLayer - li) * 250;
+            return (
+              <line
+                key={`gf-${li}-${fi}-${ti}-${animKey}`}
+                x1={fromX}
+                y1={fromY}
+                x2={toX}
+                y2={toY}
+                stroke={stroke}
+                strokeWidth={2}
+                strokeDasharray="8 8"
+                strokeLinecap="round"
+                className="gradient-pulse"
+                style={{ animationDelay: `${delayMs}ms` }}
+              />
+            );
+          })
+        ).filter(Boolean);
+      })}
+    </>
+  );
+};
+
+// --------------------
 // Main Component
 // --------------------
 export const Network: React.FC<NetworkSVGProps> = ({
