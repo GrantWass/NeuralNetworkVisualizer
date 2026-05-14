@@ -482,29 +482,23 @@ const StepTrain = ({
             <p className={`text-xs mt-1.5 ${lrFeedback.color}`}>{lrFeedback.text}</p>
           </div>
 
-          {dataset !== "mnist" ? (
-            <div className="flex items-center gap-3">
-              <Label className="text-sm font-semibold whitespace-nowrap">Sample #</Label>
-              <Input
-                type="number"
-                value={sampleIndex}
-                onChange={(e) => {
-                  const max = dataset === "xor" ? 3 : 25;
-                  onSetSample(Math.max(0, Math.min(max, Number(e.target.value))));
-                }}
-                min={0}
-                max={dataset === "xor" ? 3 : 25}
-                className="w-16 text-center"
-              />
-              <span className="text-xs text-gray-400">
-                0 – {dataset === "xor" ? 3 : 25}
-              </span>
-            </div>
-          ) : (
-            <p className="text-xs text-gray-500">
-              After training, draw a digit in the panel on the right to see what the network predicts.
-            </p>
-          )}
+          <div className="flex items-center gap-3">
+            <Label className="text-sm font-semibold whitespace-nowrap">Sample #</Label>
+            <Input
+              type="number"
+              value={sampleIndex}
+              onChange={(e) => {
+                const max = dataset === "xor" ? 3 : 25;
+                onSetSample(Math.max(0, Math.min(max, Number(e.target.value))));
+              }}
+              min={0}
+              max={dataset === "xor" ? 3 : 25}
+              className="w-16 text-center"
+            />
+            <span className="text-xs text-gray-400">
+              0 – {dataset === "xor" ? 3 : 25}
+            </span>
+          </div>
         </div>
 
         {/* Right: sample preview */}
@@ -646,7 +640,7 @@ const Config = () => {
 
       {/* Floating training stats */}
       {epoch > 0 && (
-        <div className="fixed top-62 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg px-3 py-2 flex items-center gap-3 text-center">
+        <div className="fixed top-16 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg px-3 py-2 flex items-center gap-3 text-center">
           <div>
             <p className="text-lg font-bold text-gray-900 leading-none">{epoch}</p>
             <p className="text-[10px] text-gray-400 mt-0.5">epochs</p>

@@ -51,7 +51,7 @@ export function multiplyMatrices(a: number[][] | null, b: number[][] | null) {
 }
 
 export const formatValue = (value: number, dataset: string) => {
-  if (dataset === "iris") {
+  if (dataset === "iris" || dataset === "mnist") {
     return `${(value * 100).toFixed(1)}%`;
   }
   if (dataset === "auto_mpg") {
@@ -88,7 +88,7 @@ export const formatActual = (original: number[], dataset: string) => {
     const actual = original[original.length - 1];
     return actual === 1 ? "1" : "0";
   } else if (dataset === "mnist") {
-    const digit = Math.round(original[784] ?? original[original.length - 1]);
+    const digit = Math.round(original[original.length - 1]);
     return String(digit);
   }
   return "N/A";

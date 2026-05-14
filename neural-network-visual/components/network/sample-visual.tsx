@@ -516,7 +516,7 @@ const MnistDigit = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pixels = useMemo(() => original.slice(0, 784), [original]);
-  const actual = Math.round(original[784] ?? 0);
+  const actual = Math.round(original[original.length - 1]);
 
   const predIdx =
     outputActivations.length > 0
