@@ -463,26 +463,25 @@ const StepTrain = ({
         <span className="text-gray-500">→ Output({outputSize})</span>
       </div>
 
-      {/* Controls — LR on left, sample picker + preview on right */}
+      {/* Controls — LR + sample picker on left, preview on right */}
       <div className="flex gap-3 items-start">
-        {/* Learning rate */}
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
-            <Label className="text-sm font-semibold">Learning Rate (η)</Label>
-            <span className="text-sm font-mono font-bold">{learningRate.toFixed(2)}</span>
+        {/* Left: learning rate + sample picker */}
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex-1 min-w-0 space-y-4">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-sm font-semibold">Learning Rate (η)</Label>
+              <span className="text-sm font-mono font-bold">{learningRate.toFixed(2)}</span>
+            </div>
+            <Slider
+              value={[learningRate]}
+              onValueChange={(v) => onSetLR(v[0])}
+              max={1}
+              step={0.01}
+              className="w-full"
+            />
+            <p className={`text-xs mt-1.5 ${lrFeedback.color}`}>{lrFeedback.text}</p>
           </div>
-          <Slider
-            value={[learningRate]}
-            onValueChange={(v) => onSetLR(v[0])}
-            max={1}
-            step={0.01}
-            className="w-full"
-          />
-          <p className={`text-xs mt-1.5 ${lrFeedback.color}`}>{lrFeedback.text}</p>
-        </div>
 
-        {/* Sample picker + preview */}
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex-1 min-w-0 space-y-3">
           {dataset !== "mnist" ? (
             <div className="flex items-center gap-3">
               <Label className="text-sm font-semibold whitespace-nowrap">Sample #</Label>
@@ -506,8 +505,11 @@ const StepTrain = ({
               After training, draw a digit in the panel on the right to see what the network predicts.
             </p>
           )}
+        </div>
 
-          {originalData[sampleIndex] && (
+        {/* Right: sample preview */}
+        {originalData[sampleIndex] && (
+          <div className="flex-1 min-w-0">
             <SampleVisual
               dataset={dataset}
               original={originalData[sampleIndex]}
@@ -516,8 +518,8 @@ const StepTrain = ({
               yMean={yMean}
               yStd={yStd}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Actions */}
@@ -644,7 +646,7 @@ const Config = () => {
 
       {/* Floating training stats */}
       {epoch > 0 && (
-        <div className="fixed top-12 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg px-3 py-2 flex items-center gap-3 text-center">
+        <div className="fixed top-62 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg px-3 py-2 flex items-center gap-3 text-center">
           <div>
             <p className="text-lg font-bold text-gray-900 leading-none">{epoch}</p>
             <p className="text-[10px] text-gray-400 mt-0.5">epochs</p>
