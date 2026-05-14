@@ -70,19 +70,33 @@ export default function DigitCanvas() {
     };
   };
 
+  const stampBrush = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+    const r = 18;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0,   "rgba(0,0,0,1)");
+    g.addColorStop(0.35,"rgba(0,0,0,0.85)");
+    g.addColorStop(0.7, "rgba(0,0,0,0.35)");
+    g.addColorStop(1,   "rgba(0,0,0,0)");
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = g;
+    ctx.fill();
+  };
+
   const draw = useCallback((x: number, y: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
-    ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 22;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
     if (lastPos.current) {
-      ctx.beginPath();
-      ctx.moveTo(lastPos.current.x, lastPos.current.y);
-      ctx.lineTo(x, y);
-      ctx.stroke();
+      const dx = x - lastPos.current.x;
+      const dy = y - lastPos.current.y;
+      const steps = Math.max(1, Math.ceil(Math.sqrt(dx * dx + dy * dy) / 3));
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        stampBrush(ctx, lastPos.current.x + dx * t, lastPos.current.y + dy * t);
+      }
+    } else {
+      stampBrush(ctx, x, y);
     }
     lastPos.current = { x, y };
   }, []);

@@ -51,7 +51,7 @@ const DATASET_DETAILS: Record<string, {
     inputs: ["784 pixel values (28×28 grayscale image, normalized 0–1)"],
     output: "Digit class 0–9",
     loss: "Cross-Entropy Loss",
-    samples: "10,000 samples · 10 classes",
+    samples: "~2,500 samples · 10 classes (25% stratified subset)",
   },
 };
 

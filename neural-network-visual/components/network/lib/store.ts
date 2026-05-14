@@ -43,6 +43,7 @@ interface TrainingState {
   yMean: number | null;
   yStd: number | null;
   drawnDigitPrediction: DigitPrediction | null;
+  drawnDigitPixels: number[] | null;
   isInitializing: boolean;
 }
 
@@ -70,6 +71,43 @@ interface TrainingActions {
   setWeight: (layerIndex: number, fromIndex: number, toIndex: number, newValue: number) => Promise<void>;
   predictDigit: (pixels: number[]) => Promise<void>;
   clearDigitPrediction: () => void;
+}
+
+// ─── Client-side forward pass (used to visualize drawn digit) ─────────────────
+function applyActivation(z: number[], activation: string): number[] {
+  switch (activation) {
+    case 'relu':    return z.map(v => Math.max(0, v));
+    case 'tanh':    return z.map(v => Math.tanh(v));
+    case 'sigmoid': return z.map(v => 1 / (1 + Math.exp(-v)));
+    case 'softmax': {
+      const mx = Math.max(...z);
+      const e = z.map(v => Math.exp(v - mx));
+      const s = e.reduce((a, b) => a + b, 0);
+      return e.map(v => v / s);
+    }
+    default: return z;
+  }
+}
+
+function forwardPassSingle(layers: NeuronLayer[], input: number[]): { Z: number[][], A: number[][] } {
+  const zAll: number[][] = [];
+  const aAll: number[][] = [];
+  let prev = input;
+  for (let li = 0; li < layers.length - 1; li++) {
+    const { weights: W, biases: b, activation } = layers[li];
+    if (!W?.length || !W[0]?.length) break;
+    const nOut = W[0].length;
+    const z = Array.from({ length: nOut }, (_, j) => {
+      let sum = b?.[j] ?? 0;
+      for (let i = 0; i < prev.length; i++) sum += (prev[i] ?? 0) * (W[i]?.[j] ?? 0);
+      return sum;
+    });
+    const a = applyActivation(z, activation);
+    zAll.push(z);
+    aAll.push(a);
+    prev = a;
+  }
+  return { Z: zAll, A: aAll };
 }
 
 const URL = process.env.NEXT_PUBLIC_API_URL;
@@ -100,6 +138,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   yMean: null,
   yStd: null,
   drawnDigitPrediction: null,
+  drawnDigitPixels: null,
   isInitializing: false,
 
   setEpoch: (epoch) => set({ epoch }),
@@ -474,7 +513,30 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       });
       const data = await response.json();
       if (response.ok) {
-        set({ drawnDigitPrediction: { predictedClass: data.predicted_class, confidences: data.confidences } });
+        const prediction = { predictedClass: data.predicted_class, confidences: data.confidences };
+        set((state) => {
+          if (!state.network) return { drawnDigitPrediction: prediction, drawnDigitPixels: pixels };
+          const si = state.sampleIndex;
+          const { Z: zAll, A: aAll } = forwardPassSingle(state.network.layers, pixels);
+
+          const newInput = [...state.network.input];
+          newInput[si] = pixels;
+
+          const updatedLayers = state.network.layers.map((layer, li) => {
+            if (li >= aAll.length) return layer;
+            const newA = [...(layer.A ?? [])];
+            const newZ = [...(layer.Z ?? [])];
+            newA[si] = aAll[li];
+            newZ[si] = zAll[li];
+            return { ...layer, A: newA, Z: newZ };
+          });
+
+          return {
+            drawnDigitPrediction: prediction,
+            drawnDigitPixels: pixels,
+            network: { ...state.network, input: newInput, layers: updatedLayers },
+          };
+        });
       } else {
         throw new Error(data.error || "Prediction failed");
       }
@@ -484,7 +546,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     }
   },
 
-  clearDigitPrediction: () => set({ drawnDigitPrediction: null }),
+  clearDigitPrediction: () => set({ drawnDigitPrediction: null, drawnDigitPixels: null }),
 
 }));
 
