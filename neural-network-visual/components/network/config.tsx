@@ -391,85 +391,6 @@ const StepInitialize = ({
   );
 };
 
-// ─── Step 4: Train ────────────────────────────────────────────────────────────
-const SampleStory = ({
-  sampleIndex,
-  dataset,
-  originalData,
-  network,
-  yMean,
-  yStd,
-}: {
-  sampleIndex: number;
-  dataset: string;
-  originalData: number[][];
-  network: import("@/components/network/static/types").NetworkState | null;
-  yMean: number | null;
-  yStd: number | null;
-}) => {
-  const sample = originalData[sampleIndex];
-  if (!sample || !network) return null;
-  const features = DATASET_INPUT_FEATURES[dataset] || [];
-  const outputLayer = network.layers[network.layers.length - 2];
-  const prediction = outputLayer?.A?.[sampleIndex];
-  if (!prediction || prediction.length === 0) return null;
-
-  if (dataset === "iris") {
-    const classNames = ["Setosa", "Versicolor", "Virginica"];
-    const actualRaw = sample.slice(-3);
-    const actualIdx = actualRaw.findIndex((v) => v === 1);
-    const predIdx = prediction.indexOf(Math.max(...prediction));
-    const correct = actualIdx === predIdx;
-    return (
-      <div className="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2">
-        <span className="font-medium">Sample #{sampleIndex}: </span>
-        {features.map((f, i) => `${f.split(" ")[0]} ${sample[i]?.toFixed(1)}`).join(" / ")}
-        <span className="mx-1">→</span>
-        <span className="font-semibold text-gray-800">
-          {classNames[predIdx]} ({(prediction[predIdx] * 100).toFixed(0)}%)
-        </span>
-        <span className={`ml-1 font-bold ${correct ? "text-green-600" : "text-red-500"}`}>
-          {correct ? "✓" : "✗"} Actual: {classNames[actualIdx] ?? "?"}
-        </span>
-      </div>
-    );
-  }
-
-  if (dataset === "auto_mpg") {
-    const actualMPG = sample[sample.length - 1];
-    const predMPG = yMean !== null && yStd !== null ? prediction[0] * yStd + yMean : prediction[0];
-    const err = Math.abs(predMPG - actualMPG).toFixed(1);
-    return (
-      <div className="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2">
-        <span className="font-medium">Sample #{sampleIndex + 1}: </span>
-        {features.map((f, i) => `${f.split(" ")[0]} ${sample[i]?.toFixed(0)}`).join(" / ")}
-        <span className="mx-1">→</span>
-        <span className="font-semibold text-gray-800">Predicted: {predMPG.toFixed(1)} MPG</span>
-        <span className="ml-1 text-gray-500">| Actual: {actualMPG.toFixed(1)} MPG | Error: {err} MPG</span>
-      </div>
-    );
-  }
-
-  if (dataset === "xor") {
-    const prob = prediction[0];
-    const predLabel = prob >= 0.5 ? 1 : 0;
-    const actualLabel = sample[sample.length - 1];
-    const correct = predLabel === actualLabel;
-    return (
-      <div className="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2">
-        <span className="font-medium">A={sample[0]}, B={sample[1]}</span>
-        <span className="mx-1">→</span>
-        <span className="font-semibold text-gray-800">Predicted: {predLabel} ({((predLabel === 1 ? prob : 1 - prob) * 100).toFixed(0)}%)</span>
-        <span className={`ml-1 font-bold ${correct ? "text-green-600" : "text-red-500"}`}>
-          {correct ? "✓" : "✗"} Actual: {actualLabel}
-        </span>
-      </div>
-    );
-  }
-
-  return null;
-};
-
 const StepTrain = ({
   dataset,
   hiddenLayers,
@@ -526,26 +447,6 @@ const StepTrain = ({
         <span className="text-gray-500">→ Output({outputSize})</span>
       </div>
 
-      {/* Training metrics */}
-      {epoch > 0 && (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-gray-900">{epoch}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Epochs run</p>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-gray-900">{loss.toFixed(3)}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Loss</p>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-gray-900">
-              {name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)}
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">{name === "accuracy" ? "Accuracy" : "MAE"}</p>
-          </div>
-        </div>
-      )}
-
       {/* Controls */}
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-4">
         {/* Learning rate */}
@@ -577,16 +478,6 @@ const StepTrain = ({
               className="w-20 text-center"
             />
             <span className="text-xs text-gray-400">0 – 25 from the test set</span>
-          </div>
-          <div className="mt-2">
-            <SampleStory
-              sampleIndex={sampleIndex}
-              dataset={dataset}
-              originalData={originalData}
-              network={network}
-              yMean={yMean}
-              yStd={yStd}
-            />
           </div>
         </div>
       </div>
@@ -712,6 +603,28 @@ const Config = () => {
       <div className="mb-6">
         <StepIndicator currentStep={wizardStep} onClickStep={setWizardStep} />
       </div>
+
+      {/* Floating training stats */}
+      {epoch > 0 && (
+        <div className="fixed top-4 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg px-3 py-2 flex items-center gap-3 text-center">
+          <div>
+            <p className="text-lg font-bold text-gray-900 leading-none">{epoch}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">epochs</p>
+          </div>
+          <div className="w-px h-7 bg-gray-200" />
+          <div>
+            <p className="text-lg font-bold text-gray-900 leading-none">{loss.toFixed(3)}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">loss</p>
+          </div>
+          <div className="w-px h-7 bg-gray-200" />
+          <div>
+            <p className="text-lg font-bold text-gray-900 leading-none">
+              {name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)}
+            </p>
+            <p className="text-[10px] text-gray-400 mt-0.5">{name === "accuracy" ? "accuracy" : "MAE"}</p>
+          </div>
+        </div>
+      )}
 
       {/* Step content */}
       <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 shadow-sm">
