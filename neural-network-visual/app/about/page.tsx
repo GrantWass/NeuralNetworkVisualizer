@@ -73,7 +73,7 @@ export default function AboutPage() {
         <h1 className="text-3xl font-bold tracking-tight">About NN-Visual</h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
           I&apos;m Grant — a developer who built this site because a professor
-          asked a question I couldn&apos;t stop thinking about.
+          asked a question that sparked an idea.
         </p>
       </header>
 
@@ -87,35 +87,37 @@ export default function AboutPage() {
             exactly what happens at each step: how the weights update, what the gradients
             represent, why activation functions change a network&apos;s behavior. Working at that
             level gives you access to everything the higher-level libraries abstract away:
-            intermediate activations, pre-activation values, per-layer deltas during backprop.
+            intermediate activations, pre-activation values, model weights and biases, per-layer deltas during backprop.
           </p>
           <p className="text-muted-foreground leading-relaxed">
             Around the same time, a professor I respect mentioned he wished he had a better way
             to show students how neural networks actually work — not the equations in isolation,
-            not a static diagram, but something that bridged the two. The gap between the
+            not a high-level diagram, but something that bridged the two. The gap between the
             underlying math and the overall picture is where most students get lost.
           </p>
           <p className="text-muted-foreground leading-relaxed">
             I realized I already had what was needed to close that gap. The scratch implementation
             surfaced every intermediate value at every layer. All that was left was building a
-            way to show it.
+            way to show it that allowed other students to explore and build intuition for how it all fit together.
           </p>
         </section>
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">How it&apos;s evolved</h2>
           <p className="text-muted-foreground leading-relaxed">
-            The first version was simple — a visualization of a small network training on toy
-            data. Over the past couple of years the site has grown to cover more ideas and more
-            realistic datasets. You can now step through forward propagation and backpropagation
-            one layer at a time, trace individual weight and bias updates, and train on real
-            data like handwritten digits or car fuel economy figures.
+            The first version was simple — a graphical visualization of a small network training on toy
+            data and the underlying math that powered it. Over the past couple of years the site has grown to cover more ideas,
+            realistic datasets, and advanced visualizations that enable deeper exploration. You can now step through both forward
+            propagation and backpropagation, tracing how individual weights and biases update while training on real-world datasets
+            such as handwritten digits or car fuel economy data.
           </p>
           <p className="text-muted-foreground leading-relaxed">
-            The transformer visualizer came later, when attention mechanisms became the
+            The transformer visualizer came later, when the same professor challanged me to 
+            create an intuitive visualization of attention mechanisms as they became the
             concept everyone wanted to understand but few could explain concretely. The same
-            principle applied: take the intermediate state — query and key vectors, raw attention
-            scores, per-head weights — and make it something you can actually click through.
+            principle applied: take the intermediate state of query and key vectors, raw attention
+            scores, per-head weights and make it something you can actually click through. It helps students
+            draw conclusions as to how an attention mechanism draws connections and semantic understanding.
           </p>
         </section>
 
@@ -125,7 +127,7 @@ export default function AboutPage() {
             That professor has been showing it to his students consistently ever since. It has
             become a regular part of how he introduces deep learning in his courses — something
             I genuinely didn&apos;t expect when I started. Knowing it works as a teaching tool
-            is the most useful feedback I could get.
+            is the most useful and rewarding feedback I could get.
           </p>
           <p className="text-muted-foreground leading-relaxed">
             Beyond the classroom, the site is free and open to anyone building intuition for
@@ -168,7 +170,7 @@ export default function AboutPage() {
           <h2 className="text-lg font-semibold">Get in touch</h2>
           <p className="text-muted-foreground leading-relaxed">
             If you&apos;re using this in a course, have feedback, or just want to say hello —
-            I&apos;d like to hear from you.
+            I&apos;d like to hear from you and connect!
           </p>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
             <a
