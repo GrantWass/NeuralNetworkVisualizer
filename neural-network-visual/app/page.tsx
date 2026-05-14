@@ -233,6 +233,11 @@ export default function NeuralNetworkViz() {
           backpropagation step by step. Below the visualizer, a written
           explanation walks through what&apos;s happening and why.
         </p>
+        <p className="text-muted-foreground max-w-2xl leading-relaxed text-sm">
+          Build intuition for deep learning — from gradient descent and
+          loss functions to weights, biases, and activation functions. No
+          code required.
+        </p>
       </header>
 
       <Config />

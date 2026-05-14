@@ -369,28 +369,32 @@ const Explain = () => {
     const [highlightedValueId, setHighlightedValueId] = useState<string | null>(null);
     const [lockedValueId, setLockedValueId] = useState<string | null>(null);
     const lockedValueIdRef = useRef<string | null>(null);
+    // Flag set by clickValue so the document listener knows not to clear the lock
+    // (React fires before document in the bubble chain, so the flag is always set first)
+    const clickConsumedRef = useRef(false);
     const hoverClearTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const jumpLockRef = useRef(false);
     const viewSectionRef = useRef<HTMLDivElement>(null);
 
     const hoverValue = (id: string) => {
         if (jumpLockRef.current) return;
-        if (lockedValueIdRef.current) return; // locked, hover doesn't override
+        if (lockedValueIdRef.current) return;
         clearTimeout(hoverClearTimer.current);
         setHighlightedValueId(id);
     };
     const unhoverValue = () => {
-        if (lockedValueIdRef.current) return; // locked, don't fade on mouse leave
-        hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 600);
+        if (lockedValueIdRef.current) return;
+        hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 1000);
     };
     const clickValue = (id: string) => {
+        clickConsumedRef.current = true; // tell document listener to skip this click
         clearTimeout(hoverClearTimer.current);
         jumpLockRef.current = false;
         if (lockedValueIdRef.current === id) {
             // Toggle off: clicking the same locked value unlocks
             lockedValueIdRef.current = null;
             setLockedValueId(null);
-            hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 600);
+            hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 1000);
         } else {
             lockedValueIdRef.current = id;
             setLockedValueId(id);
@@ -402,17 +406,21 @@ const Explain = () => {
         lockedValueIdRef.current = null;
         setLockedValueId(null);
         clearTimeout(hoverClearTimer.current);
-        hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 600);
+        hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 1000);
     };
 
     // Clear lock when user clicks outside a tracked value
     useEffect(() => {
         const handleDocClick = () => {
+            if (clickConsumedRef.current) {
+                clickConsumedRef.current = false;
+                return;
+            }
             if (!lockedValueIdRef.current) return;
             lockedValueIdRef.current = null;
             setLockedValueId(null);
             clearTimeout(hoverClearTimer.current);
-            hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 600);
+            hoverClearTimer.current = setTimeout(() => setHighlightedValueId(null), 1000);
         };
         document.addEventListener('click', handleDocClick);
         return () => document.removeEventListener('click', handleDocClick);
@@ -632,7 +640,7 @@ const Explain = () => {
                 className={`inline-block p-1 mx-1 rounded transition-colors ${valueId ? 'cursor-pointer' : ''}`}
                 onMouseEnter={valueId ? () => hoverValue(valueId) : undefined}
                 onMouseLeave={valueId ? unhoverValue : undefined}
-                onClick={valueId ? (e) => { e.stopPropagation(); clickValue(valueId); } : undefined}
+                onClick={valueId ? () => clickValue(valueId) : undefined}
             >
                 <p className="text-xs sm:text-sm text-gray-600 text-center mb-1">{label}</p>
                 {subLabel && <p className="text-xs text-gray-500 text-center mb-1">{subLabel}</p>}
@@ -662,7 +670,7 @@ const Explain = () => {
                 className={`inline-block px-1 mx-1 ${valueId ? 'cursor-pointer' : ''}`}
                 onMouseEnter={valueId ? () => hoverValue(valueId) : undefined}
                 onMouseLeave={valueId ? unhoverValue : undefined}
-                onClick={valueId ? (e) => { e.stopPropagation(); clickValue(valueId); } : undefined}
+                onClick={valueId ? () => clickValue(valueId) : undefined}
             >
                 <div className="flex flex-row items-center justify-center gap-1 relative group">
                     <p className="text-xs sm:text-sm text-gray-600 text-center mb-1">{label}</p>
@@ -1275,7 +1283,7 @@ const Explain = () => {
                     style={{ borderColor: undefined }}
                     onMouseEnter={() => clearTimeout(hoverClearTimer.current)}
                     onMouseLeave={unhoverValue}
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={() => { clickConsumedRef.current = true; }}
                 >
                     <div className={`max-w-5xl mx-auto`}>
                         <div className="flex items-center gap-2 mb-2 flex-wrap">

@@ -459,7 +459,7 @@ const SampleStory = ({
       <div className="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2">
         <span className="font-medium">A={sample[0]}, B={sample[1]}</span>
         <span className="mx-1">→</span>
-        <span className="font-semibold text-gray-800">Predicted: {predLabel} ({(prob * 100).toFixed(0)}%)</span>
+        <span className="font-semibold text-gray-800">Predicted: {predLabel} ({((predLabel === 1 ? prob : 1 - prob) * 100).toFixed(0)}%)</span>
         <span className={`ml-1 font-bold ${correct ? "text-green-600" : "text-red-500"}`}>
           {correct ? "✓" : "✗"} Actual: {actualLabel}
         </span>
