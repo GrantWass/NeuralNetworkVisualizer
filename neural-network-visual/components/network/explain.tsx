@@ -96,7 +96,7 @@ function buildValueMap(network: NetworkState): Map<string, ValueInfo> {
       label: `${lbl} weight matrix`,
       type: 'W',
       connections: [
-        { view: 'forward', description: 'Multiplied with inputs: Z = A_prev × W + b', relatedValueId: `Z:${i}` },
+        { view: 'forward', description: 'Multiplied with the previous layer\'s activations (A) to produce Z: A × W + b', relatedValueId: `Z:${i}` },
         { view: 'calculation', description: 'Transposed (Wᵀ) to propagate error backward', relatedValueId: `dZ:${i}` },
         { view: 'backward', description: 'Updated: W_new = W_prev − η · dW', relatedValueId: `dW:${i}` },
       ],
@@ -117,8 +117,7 @@ function buildValueMap(network: NetworkState): Map<string, ValueInfo> {
       label: `${lbl} pre-activation (Z)`,
       type: 'Z',
       connections: [
-        { view: 'forward', description: 'Computed as Z = A_prev × W + b', relatedValueId: `W:${i}` },
-        { view: 'forward', description: `Passed through ${act} → A`, relatedValueId: `A:${i}` },
+        { view: 'forward', description: `Weighted sum of the previous layer's activations (A) × W + b, before the activation function. Passed through ${act} → A.`, relatedValueId: `A:${i}` },
         { view: 'calculation', description: 'Activation derivative σ′(Z) applied during backpropagation' },
       ],
     });
@@ -155,7 +154,7 @@ function buildValueMap(network: NetworkState): Map<string, ValueInfo> {
       label: `${lbl} biases`,
       type: 'B',
       connections: [
-        { view: 'forward', description: 'Added to the weighted sum: Z = A_prev × W + b', relatedValueId: `Z:${i}` },
+        { view: 'forward', description: 'Added to the weighted sum (A × W + b) to produce Z', relatedValueId: `Z:${i}` },
         { view: 'backward', description: 'Previous value used in update equation: b_new = b_prev − η · dB', relatedValueId: `dB:${i}` },
       ],
     });

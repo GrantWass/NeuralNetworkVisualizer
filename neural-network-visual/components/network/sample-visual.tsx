@@ -347,12 +347,12 @@ const AutoMpgCar = ({
   const wtN    = norm(wt,    1613, 5140);
   const accelN = norm(accel, 8,    24.8);
 
-  const rawPred = outputActivations[0] ?? -1;
-  const hasPred = rawPred >= 0;
+  const hasPred = outputActivations.length > 0;
+  const rawPred = hasPred ? outputActivations[0] : null;
   const predMpg =
-    hasPred && yMean != null && yStd != null
+    rawPred != null && yMean != null && yStd != null
       ? rawPred * yStd + yMean
-      : hasPred
+      : rawPred != null
       ? rawPred
       : null;
 
