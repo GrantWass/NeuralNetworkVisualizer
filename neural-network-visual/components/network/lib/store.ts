@@ -528,7 +528,9 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
             const newZ = [...(layer.Z ?? [])];
             newA[si] = aAll[li];
             newZ[si] = zAll[li];
-            return { ...layer, A: newA, Z: newZ };
+            layer.A = newA;
+            layer.Z = newZ;
+            return layer;
           });
 
           return {
