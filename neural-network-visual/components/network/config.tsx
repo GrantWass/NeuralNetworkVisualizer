@@ -10,7 +10,6 @@ import { DATASETS, ACTIVATION_FUNCTIONS, DATASET_INPUT_FEATURES } from "@/compon
 import { HIDDEN_LAYER_LEARN_MORE } from "@/components/network/static/explanation";
 import { useEffect, useState } from "react";
 import { ActivationInfoPopup } from "./activation";
-import { SampleVisual } from "./sample-visual";
 
 // ─── Dataset metadata for Step 1 ──────────────────────────────────────────────
 const DATASET_DETAILS: Record<string, {
@@ -424,122 +423,55 @@ const StepInitialize = ({
 
 const StepTrain = ({
   dataset,
-  hiddenLayers,
-  activations,
-  epoch,
-  loss,
-  metric,
-  name,
   learningRate,
   sampleIndex,
-  originalData,
-  network,
-  sessionId,
-  yMean,
-  yStd,
-  isDrawn,
   onSetLR,
   onSetSample,
-  onTrain,
   onChangeModel,
 }: {
   dataset: string;
-  hiddenLayers: number[];
-  activations: string[];
-  epoch: number;
-  loss: number;
-  metric: number;
-  name: string;
   learningRate: number;
   sampleIndex: number;
-  originalData: number[][];
-  network: import("@/components/network/static/types").NetworkState | null;
-  sessionId: string | null;
-  yMean: number | null;
-  yStd: number | null;
-  isDrawn: boolean;
   onSetLR: (v: number) => void;
   onSetSample: (v: number) => void;
-  onTrain: () => void;
   onChangeModel: () => void;
 }) => {
   const lrFeedback = getLRFeedback(learningRate, dataset);
-  const inputSize = getInputSize(dataset);
-  const outputSize = getOutputSize(dataset);
 
   return (
     <div className="space-y-4">
-      {/* Compact config summary */}
-      <div className="flex flex-wrap items-center gap-1.5 text-xs">
-        <span className="px-2 py-1 rounded-full bg-black text-white font-medium">{dataset}</span>
-        <span className="text-gray-300">|</span>
-        <span className="text-gray-500">Input({inputSize})</span>
-        {hiddenLayers.map((s, i) => (
-          <span key={i} className="text-gray-500">→ H{i + 1}({s}, {activations[i]})</span>
-        ))}
-        <span className="text-gray-500">→ Output({outputSize})</span>
-      </div>
-
-      {/* Controls — LR + sample picker on left, preview on right */}
-      <div className="flex gap-3 items-start">
-        {/* Left: learning rate + sample picker */}
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex-1 min-w-0 space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <Label className="text-sm font-semibold">Learning Rate (η)</Label>
-              <span className="text-sm font-mono font-bold">{learningRate.toFixed(2)}</span>
-            </div>
-            <Slider
-              value={[learningRate]}
-              onValueChange={(v) => onSetLR(v[0])}
-              max={1}
-              step={0.01}
-              className="w-full"
-            />
-            <p className={`text-xs mt-1.5 ${lrFeedback.color}`}>{lrFeedback.text}</p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Label className="text-sm font-semibold whitespace-nowrap">Sample #</Label>
-            <Input
-              type="number"
-              value={sampleIndex}
-              onChange={(e) => {
-                const max = dataset === "xor" ? 3 : 25;
-                onSetSample(Math.max(0, Math.min(max, Number(e.target.value))));
-              }}
-              min={0}
-              max={dataset === "xor" ? 3 : 25}
-              className="w-16 text-center"
-            />
-            <span className="text-xs text-gray-400">
-              0 – {dataset === "xor" ? 3 : 25}
-            </span>
-          </div>
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <Label className="text-sm font-semibold">Learning Rate (η)</Label>
+          <span className="text-sm font-mono font-bold">{learningRate.toFixed(2)}</span>
         </div>
-
-        {/* Right: sample preview */}
-        {originalData[sampleIndex] && (
-          <div className="flex-1 min-w-0">
-            <SampleVisual
-              dataset={dataset}
-              original={originalData[sampleIndex]}
-              network={network}
-              sampleIndex={sampleIndex}
-              yMean={yMean}
-              yStd={yStd}
-              isDrawn={isDrawn}
-            />
-          </div>
-        )}
+        <Slider
+          value={[learningRate]}
+          onValueChange={(v) => onSetLR(v[0])}
+          max={1}
+          step={0.01}
+          className="w-full"
+        />
+        <p className={`text-xs mt-1.5 ${lrFeedback.color}`}>{lrFeedback.text}</p>
       </div>
 
-      {/* Actions */}
-      <Button onClick={onTrain} disabled={!sessionId} className="w-full text-base py-5 font-semibold">
-        ▶ Run Training Cycle
-      </Button>
+      <div className="flex items-center gap-3">
+        <Label className="text-sm font-semibold whitespace-nowrap">Sample #</Label>
+        <Input
+          type="number"
+          value={sampleIndex}
+          onChange={(e) => {
+            const max = dataset === "xor" ? 3 : 25;
+            onSetSample(Math.max(0, Math.min(max, Number(e.target.value))));
+          }}
+          min={0}
+          max={dataset === "xor" ? 3 : 25}
+          className="w-16 text-center"
+        />
+        <span className="text-xs text-gray-400">0 – {dataset === "xor" ? 3 : 25}</span>
+      </div>
 
-      <div className="flex justify-center">
+      <div className="flex justify-center pt-1">
         <button
           onClick={onChangeModel}
           className="text-xs text-gray-400 hover:text-gray-700 underline underline-offset-2"
@@ -608,11 +540,7 @@ const Config = () => {
     loss,
     metric,
     name,
-    network,
-    originalData,
     sampleIndex,
-    yMean,
-    yStd,
     setLearningRate,
     initModel,
     clearSessionAndReset,
@@ -625,7 +553,7 @@ const Config = () => {
     initModelFrontend,
     setSampleIndex,
     isInitializing,
-    drawnDigitPixels,
+    runModel,
   } = useStore();
 
   // Wizard step: 1=dataset, 2=configure, 3=initialize, 4=train
@@ -658,25 +586,37 @@ const Config = () => {
         <StepIndicator currentStep={wizardStep} onClickStep={setWizardStep} />
       </div>
 
-      {/* Floating training stats */}
-      {epoch > 0 && (
+      {/* Floating training widget — visible from step 4 onward */}
+      {wizardStep === 4 && sessionId && (
         <div className="fixed top-16 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg px-3 py-2 flex items-center gap-3 text-center">
-          <div>
-            <p className="text-lg font-bold text-gray-900 leading-none">{epoch}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">epochs</p>
-          </div>
-          <div className="w-px h-7 bg-gray-200" />
-          <div>
-            <p className="text-lg font-bold text-gray-900 leading-none">{loss.toFixed(3)}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">loss</p>
-          </div>
-          <div className="w-px h-7 bg-gray-200" />
-          <div>
-            <p className="text-lg font-bold text-gray-900 leading-none">
-              {name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)}
-            </p>
-            <p className="text-[10px] text-gray-400 mt-0.5">{name === "accuracy" ? "accuracy" : "MAE"}</p>
-          </div>
+          {epoch > 0 && (
+            <>
+              <div>
+                <p className="text-lg font-bold text-gray-900 leading-none">{epoch}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">epochs</p>
+              </div>
+              <div className="w-px h-7 bg-gray-200" />
+              <div>
+                <p className="text-lg font-bold text-gray-900 leading-none">{loss.toFixed(3)}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">loss</p>
+              </div>
+              <div className="w-px h-7 bg-gray-200" />
+              <div>
+                <p className="text-lg font-bold text-gray-900 leading-none">
+                  {name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)}
+                </p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{name === "accuracy" ? "accuracy" : "MAE"}</p>
+              </div>
+              <div className="w-px h-7 bg-gray-200" />
+            </>
+          )}
+          <button
+            onClick={runTrainingCycle}
+            disabled={runModel}
+            className="flex items-center gap-1.5 bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+          >
+            {runModel ? "…" : "▶ Train"}
+          </button>
         </div>
       )}
 
@@ -718,23 +658,10 @@ const Config = () => {
         {wizardStep === 4 && (
           <StepTrain
             dataset={dataset}
-            hiddenLayers={hiddenLayers}
-            activations={activations}
-            epoch={epoch}
-            loss={loss}
-            metric={metric}
-            name={name}
             learningRate={learningRate}
             sampleIndex={sampleIndex}
-            originalData={originalData}
-            network={network}
-            sessionId={sessionId}
-            yMean={yMean}
-            yStd={yStd}
-            isDrawn={!!drawnDigitPixels}
             onSetLR={setLearningRate}
             onSetSample={setSampleIndex}
-            onTrain={runTrainingCycle}
             onChangeModel={handleChangeModel}
           />
         )}

@@ -22,7 +22,6 @@ import { useMemo } from "react";
 import Glossary from "@/components/network/glossary";
 import DigitCanvas from "@/components/network/digit-canvas";
 import { DecisionBoundary } from "@/components/network/decision-boundary";
-import { SampleVisual } from "@/components/network/sample-visual";
 
 // Register ChartJS components
 ChartJS.register(
@@ -182,10 +181,7 @@ function buildValueMap(network: NetworkState): Map<string, ValueInfo> {
 }
 
 // ----------------------------------------------------------------
-// Prediction confidence display
-// ----------------------------------------------------------------
-// ----------------------------------------------------------------
-// Activation mini-chart (inline SVG, no Chart.js)
+// Activation chart (Chart.js Line) shown when a node is hovered
 // ----------------------------------------------------------------
 const ACTIVATION_FNS: Record<string, (x: number) => number> = {
   relu:    (x) => Math.max(0, x),
@@ -194,74 +190,81 @@ const ACTIVATION_FNS: Record<string, (x: number) => number> = {
   linear:  (x) => x,
 };
 
-function ActivationMiniChart({ activation, zVal, aVal }: { activation: string; zVal: number; aVal: number }) {
-  const W = 200, H = 88;
-  const PAD = { t: 10, r: 14, b: 16, l: 14 };
-  const plotW = W - PAD.l - PAD.r;
-  const plotH = H - PAD.t - PAD.b;
+const ACTIVATION_DESCRIPTIONS: Record<string, string> = {
+  relu:    "Returns max(0, x). Commonly used for hidden layers — simple, effective, and reduces vanishing gradients.",
+  sigmoid: "S-shaped curve, outputs 0–1. Used in binary classification output layers where probabilities are needed.",
+  tanh:    "Outputs −1 to 1. Centers data and often converges faster than sigmoid in hidden layers.",
+  linear:  "Identity function: outputs x unchanged. Typically used for regression output layers.",
+};
 
+function ActivationMiniChart({ activation, zVal }: { activation: string; zVal: number; aVal: number }) {
   const fn = ACTIVATION_FNS[activation] ?? ((x: number) => x);
-  const xMin = Math.min(-3.5, zVal - 0.5);
-  const xMax = Math.max(3.5, zVal + 0.5);
+  const xMin = Math.min(-5, zVal - 1);
+  const xMax = Math.max(5, zVal + 1);
+  const N = 100;
+  const xs = Array.from({ length: N + 1 }, (_, i) => xMin + (i / N) * (xMax - xMin));
 
-  const N = 120;
-  const pts: [number, number][] = Array.from({ length: N + 1 }, (_, i) => {
-    const x = xMin + (i / N) * (xMax - xMin);
-    return [x, fn(x)];
-  });
+  // Index closest to zVal gets the red dot
+  const dotIdx = xs.reduce((best, x, i) => Math.abs(x - zVal) < Math.abs(xs[best] - zVal) ? i : best, 0);
 
-  const ys = pts.map(([, y]) => y);
-  const rawYMin = Math.min(...ys);
-  const rawYMax = Math.max(...ys);
-  const yPad = (rawYMax - rawYMin) * 0.15 + 0.05;
-  const yMin = rawYMin - yPad;
-  const yMax = rawYMax + yPad;
+  const data = {
+    labels: xs.map(x => x.toFixed(2)),
+    datasets: [{
+      label: activation,
+      data: xs.map(fn),
+      borderColor: '#6366f1',
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      tension: 0.3,
+      fill: false,
+      pointRadius: xs.map((_, i) => i === dotIdx ? 5 : 0),
+      pointBackgroundColor: xs.map((_, i) => i === dotIdx ? '#ef4444' : 'transparent'),
+      pointBorderColor: xs.map((_, i) => i === dotIdx ? 'white' : 'transparent'),
+      pointBorderWidth: xs.map((_, i) => i === dotIdx ? 1.5 : 0),
+    }],
+  };
 
-  const toX = (x: number) => PAD.l + ((x - xMin) / (xMax - xMin)) * plotW;
-  const toY = (y: number) => PAD.t + (1 - (y - yMin) / (yMax - yMin)) * plotH;
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 0 } as const,
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false as const },
+    },
+    scales: {
+      x: {
+        title: { display: true, text: 'Pre-activation (Z)', font: { size: 9 as const }, color: '#9ca3af' },
+        ticks: { display: false as const },
+        grid: { color: 'rgba(0,0,0,0.06)' },
+      },
+      y: {
+        title: { display: true, text: 'Post-activation (A)', font: { size: 9 as const }, color: '#9ca3af' },
+        ticks: { font: { size: 9 as const }, color: '#9ca3af' },
+        grid: { color: 'rgba(0,0,0,0.06)' },
+      },
+    },
+  };
 
-  const pathD = pts.map(([x, y], i) =>
-    `${i === 0 ? "M" : "L"}${toX(x).toFixed(1)},${toY(y).toFixed(1)}`
-  ).join(" ");
-
-  const x0 = toX(0);
-  const y0 = toY(Math.max(yMin, Math.min(0, yMax)));
-  const dotX = toX(zVal);
-  const dotY = toY(aVal);
+  const description = ACTIVATION_DESCRIPTIONS[activation];
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }} aria-hidden>
-      <rect x={PAD.l} y={PAD.t} width={plotW} height={plotH} fill="#f9fafb" rx={2} />
-      {/* Zero grid lines */}
-      <line x1={PAD.l} y1={y0} x2={PAD.l + plotW} y2={y0} stroke="#e5e7eb" strokeWidth={1} />
-      <line x1={x0} y1={PAD.t} x2={x0} y2={PAD.t + plotH} stroke="#e5e7eb" strokeWidth={1} />
-      {/* Curve */}
-      <path d={pathD} stroke="#6366f1" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      {/* Dashed drop line from dot to zero line */}
-      <line
-        x1={dotX} y1={Math.min(dotY, y0)}
-        x2={dotX} y2={Math.max(dotY, y0)}
-        stroke="#94a3b8" strokeWidth={1} strokeDasharray="3 2"
-      />
-      {/* Dot at (Z, A) */}
-      <circle cx={dotX} cy={dotY} r={4.5} fill="#ef4444" stroke="white" strokeWidth={1.5} />
-      {/* Axis labels */}
-      <text x={PAD.l + plotW / 2} y={H - 2} fontSize={8} textAnchor="middle" fill="#9ca3af">Z</text>
-      <text
-        x={6} y={PAD.t + plotH / 2}
-        fontSize={8} textAnchor="middle" dominantBaseline="middle" fill="#9ca3af"
-        transform={`rotate(-90,6,${PAD.t + plotH / 2})`}
-      >A</text>
-      {/* Function label */}
-      <text x={PAD.l + plotW - 2} y={PAD.t + 9} fontSize={8} textAnchor="end" fill="#6366f1" fontWeight="600">{activation}</text>
-    </svg>
+    <div className="mt-2">
+      {description && <p className="text-[11px] text-gray-500 mb-2 leading-relaxed">{description}</p>}
+      <div className="h-48 w-full">
+        <Line data={data} options={options} />
+      </div>
+    </div>
   );
 }
 
-function NodeStat({ label, value, dim }: { label: string; value: number | undefined; dim?: boolean }) {
+function NodeStat({ label, sub, value, dim }: { label: string; sub?: string; value: number | undefined; dim?: boolean }) {
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <span className="text-[9px] uppercase tracking-wide text-gray-400">{label}</span>
+      <div className="flex flex-col items-center leading-tight">
+        <span className="text-[9px] uppercase tracking-wide text-gray-500 text-center">{label}</span>
+        {sub && <span className="text-[8px] text-gray-300 text-center">{sub}</span>}
+      </div>
       <span className={`font-mono text-xs font-medium ${dim ? "text-gray-400" : "text-gray-900"}`}>
         {value !== undefined ? value.toFixed(3) : "—"}
       </span>
@@ -687,10 +690,10 @@ const Explain = () => {
                                 return (
                                     <>
                                         <div className="grid grid-cols-4 gap-1 mb-2 px-0.5">
-                                            <NodeStat label="Input" value={inputVal} />
+                                            <NodeStat label="Weighted sum" value={inputVal} />
                                             <NodeStat label="Bias" value={bias} />
-                                            <NodeStat label="Z" value={zVal} />
-                                            <NodeStat label={aLabel} value={aDisplay} />
+                                            <NodeStat label="Pre-activation" sub="(Z)" value={zVal} />
+                                            <NodeStat label={aLabel === "MPG" ? "MPG" : "Post-activation"} sub={aLabel === "MPG" ? undefined : "(A)"} value={aDisplay} />
                                         </div>
                                         {showChart && <ActivationMiniChart activation={activation} zVal={zVal!} aVal={aRaw!} />}
                                         {activation === "softmax" && zVal !== undefined && (
@@ -720,8 +723,8 @@ const Explain = () => {
                     </div>
                 )}
 
-                {/* Right: for MNIST — draw canvas + prediction each take 1/3; otherwise prediction summary */}
-                {dataset === "mnist" ? (
+                {/* Right: for MNIST — draw canvas + prediction each take 1/3 */}
+                {dataset === "mnist" && (
                     <>
                         <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col items-center gap-2">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide self-start">Draw a Digit</p>
@@ -759,17 +762,6 @@ const Explain = () => {
                             )}
                         </div>
                     </>
-                ) : hasTrained && originalData[sampleIndex] && (
-                    <div className={`${dataset === "xor" || dataset === "iris" ? "w-1/3 flex-shrink-0" : "flex-1"} min-w-0`}>
-                        <SampleVisual
-                            dataset={dataset}
-                            original={originalData[sampleIndex]}
-                            network={network}
-                            sampleIndex={sampleIndex}
-                            yMean={yMean}
-                            yStd={yStd}
-                        />
-                    </div>
                 )}
             </div>
         <div className="mt-2 p-4 bg-gray-100 rounded-lg mx-2 shadow-md">
