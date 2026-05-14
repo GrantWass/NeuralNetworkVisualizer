@@ -636,7 +636,7 @@ export const SampleVisual: React.FC<SampleVisualProps> = ({
       : [];
 
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+    <div>
       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2.5">
         Sample Preview
       </p>

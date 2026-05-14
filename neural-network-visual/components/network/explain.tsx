@@ -295,6 +295,7 @@ const Explain = () => {
       yMean,
       yStd,
       drawnDigitPrediction,
+      setSampleIndex,
     } = useStore();
 
     const [view, setView] = useState<PropagationView>('forward');
@@ -764,7 +765,7 @@ const Explain = () => {
                         </div>
                     </>
                 ) : hasTrained && originalData[sampleIndex] && (
-                    <div className={`${dataset === "xor" || dataset === "iris" ? "w-1/3 flex-shrink-0" : "flex-1"} min-w-0`}>
+                    <div className={`${dataset === "xor" || dataset === "iris" ? "w-1/3 flex-shrink-0" : "flex-1"} min-w-0 flex flex-col gap-2 bg-white border border-gray-200 rounded-lg p-3 shadow-sm`}>
                         <SampleVisual
                             dataset={dataset}
                             original={originalData[sampleIndex]}
@@ -773,6 +774,21 @@ const Explain = () => {
                             yMean={yMean}
                             yStd={yStd}
                         />
+                        <div className="flex items-center gap-2 px-1">
+                            <span className="text-xs text-gray-500 whitespace-nowrap">Sample #</span>
+                            <input
+                                type="number"
+                                value={sampleIndex}
+                                onChange={(e) => {
+                                    const max = dataset === "xor" ? 3 : 25;
+                                    setSampleIndex(Math.max(0, Math.min(max, Number(e.target.value))));
+                                }}
+                                min={0}
+                                max={dataset === "xor" ? 3 : 25}
+                                className="w-14 text-center text-xs border border-gray-200 rounded px-1 py-0.5"
+                            />
+                            <span className="text-xs text-gray-400">0 – {dataset === "xor" ? 3 : 25}</span>
+                        </div>
                     </div>
                 )}
             </div>

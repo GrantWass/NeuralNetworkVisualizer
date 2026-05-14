@@ -424,16 +424,12 @@ const StepInitialize = ({
 const StepTrain = ({
   dataset,
   learningRate,
-  sampleIndex,
   onSetLR,
-  onSetSample,
   onChangeModel,
 }: {
   dataset: string;
   learningRate: number;
-  sampleIndex: number;
   onSetLR: (v: number) => void;
-  onSetSample: (v: number) => void;
   onChangeModel: () => void;
 }) => {
   const lrFeedback = getLRFeedback(learningRate, dataset);
@@ -453,22 +449,6 @@ const StepTrain = ({
           className="w-full"
         />
         <p className={`text-xs mt-1.5 ${lrFeedback.color}`}>{lrFeedback.text}</p>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <Label className="text-sm font-semibold whitespace-nowrap">Sample #</Label>
-        <Input
-          type="number"
-          value={sampleIndex}
-          onChange={(e) => {
-            const max = dataset === "xor" ? 3 : 25;
-            onSetSample(Math.max(0, Math.min(max, Number(e.target.value))));
-          }}
-          min={0}
-          max={dataset === "xor" ? 3 : 25}
-          className="w-16 text-center"
-        />
-        <span className="text-xs text-gray-400">0 – {dataset === "xor" ? 3 : 25}</span>
       </div>
 
       <div className="flex justify-center pt-1">
@@ -610,6 +590,21 @@ const Config = () => {
               <div className="w-px h-7 bg-gray-200" />
             </>
           )}
+          <div className="flex flex-col items-center gap-0.5">
+            <Input
+              type="number"
+              value={sampleIndex}
+              onChange={(e) => {
+                const max = dataset === "xor" ? 3 : 25;
+                setSampleIndex(Math.max(0, Math.min(max, Number(e.target.value))));
+              }}
+              min={0}
+              max={dataset === "xor" ? 3 : 25}
+              className="w-12 text-center text-sm h-7 px-1"
+            />
+            <p className="text-[10px] text-gray-400">sample</p>
+          </div>
+          <div className="w-px h-7 bg-gray-200" />
           <button
             onClick={runTrainingCycle}
             disabled={runModel}
@@ -659,9 +654,7 @@ const Config = () => {
           <StepTrain
             dataset={dataset}
             learningRate={learningRate}
-            sampleIndex={sampleIndex}
             onSetLR={setLearningRate}
-            onSetSample={setSampleIndex}
             onChangeModel={handleChangeModel}
           />
         )}
