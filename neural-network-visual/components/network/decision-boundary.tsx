@@ -3,8 +3,6 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { forwardPassSingle } from "@/components/network/lib/store";
 import type { NeuronLayer } from "@/components/network/static/types";
 
-// XOR: class 0 = blue, class 1 = red
-// Iris: class 0 (setosa) = blue, class 1 (versicolor) = green, class 2 (virginica) = orange
 const XOR_COLORS = [
   [99, 102, 241],   // indigo
   [239, 68, 68],    // red
@@ -17,10 +15,11 @@ const IRIS_COLORS = [
 ] as const;
 
 const IRIS_CLASS_NAMES = ["Setosa", "Versicolor", "Virginica"];
+const IRIS_FEATURE_NAMES = ["Sepal length", "Sepal width", "Petal length", "Petal width"];
 
 interface HoverInfo {
-  x: number;
-  y: number;
+  cx: number; // canvas-relative x pixel
+  cy: number; // canvas-relative y pixel
   probs: number[];
   featA: number;
   featB: number;
@@ -46,30 +45,34 @@ function computeIrisStats(originalData: number[][]) {
   return { means, stds };
 }
 
+const GRID = 60;
+const CANVAS = 200;
+
 export function DecisionBoundary({ layers, dataset, originalData }: DecisionBoundaryProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hover, setHover] = useState<HoverInfo | null>(null);
 
-  const GRID = 60;
-  const CANVAS = 200;
+  // Iris axis selectors — default to petal length (2) × petal width (3)
+  const [axisA, setAxisA] = useState(2); // X axis feature index
+  const [axisB, setAxisB] = useState(3); // Y axis feature index
 
   const getRange = useCallback(() => {
     if (dataset === "xor") {
       return { minA: -0.1, maxA: 1.1, minB: -0.1, maxB: 1.1 };
     }
-    // Iris: petal_length (col 2), petal_width (col 3)
     if (originalData.length === 0) return null;
-    const vals2 = originalData.map((r) => r[2] ?? 0);
-    const vals3 = originalData.map((r) => r[3] ?? 0);
+    const valsA = originalData.map((r) => r[axisA] ?? 0);
+    const valsB = originalData.map((r) => r[axisB] ?? 0);
     const pad = 0.1;
-    const minA = Math.min(...vals2);
-    const maxA = Math.max(...vals2);
-    const minB = Math.min(...vals3);
-    const maxB = Math.max(...vals3);
-    const rangeA = (maxA - minA) * pad;
-    const rangeB = (maxB - minB) * pad;
-    return { minA: minA - rangeA, maxA: maxA + rangeA, minB: minB - rangeB, maxB: maxB + rangeB };
-  }, [dataset, originalData]);
+    const minA = Math.min(...valsA), maxA = Math.max(...valsA);
+    const minB = Math.min(...valsB), maxB = Math.max(...valsB);
+    return {
+      minA: minA - (maxA - minA) * pad,
+      maxA: maxA + (maxA - minA) * pad,
+      minB: minB - (maxB - minB) * pad,
+      maxB: maxB + (maxB - minB) * pad,
+    };
+  }, [dataset, originalData, axisA, axisB]);
 
   const predict = useCallback(
     (rawA: number, rawB: number): number[] => {
@@ -80,17 +83,17 @@ export function DecisionBoundary({ layers, dataset, originalData }: DecisionBoun
         const stats = computeIrisStats(originalData);
         if (!stats) return [0, 0, 0];
         const { means, stds } = stats;
-        input = [
-          (means[0] - means[0]) / stds[0], // sepal_length at mean → 0
-          (means[1] - means[1]) / stds[1], // sepal_width at mean → 0
-          (rawA - means[2]) / stds[2],
-          (rawB - means[3]) / stds[3],
-        ];
+        // Build full 4-feature input; fix non-displayed features at their mean (= 0 after z-score)
+        input = [0, 1, 2, 3].map((i) => {
+          if (i === axisA) return (rawA - means[i]) / stds[i];
+          if (i === axisB) return (rawB - means[i]) / stds[i];
+          return 0; // fixed at mean
+        });
       }
       const { A } = forwardPassSingle(layers, input);
       return A[A.length - 1] ?? [];
     },
-    [layers, dataset, originalData]
+    [layers, dataset, originalData, axisA, axisB]
   );
 
   useEffect(() => {
@@ -129,7 +132,6 @@ export function DecisionBoundary({ layers, dataset, originalData }: DecisionBoun
           b = Math.round(col[2] * alpha + 245 * (1 - alpha));
         }
 
-        // Fill the cell
         for (let dy = 0; dy < cellSize; dy++) {
           for (let dx = 0; dx < cellSize; dx++) {
             const px = Math.floor(gx * cellSize) + dx;
@@ -166,8 +168,8 @@ export function DecisionBoundary({ layers, dataset, originalData }: DecisionBoun
       }
     } else {
       for (const row of originalData) {
-        const rawA = row[2] ?? 0;
-        const rawBv = row[3] ?? 0;
+        const rawA = row[axisA] ?? 0;
+        const rawBv = row[axisB] ?? 0;
         const cls = [row[4] ?? 0, row[5] ?? 0, row[6] ?? 0].reduce(
           (best, v, i, arr) => (v > arr[best] ? i : best),
           0
@@ -185,7 +187,7 @@ export function DecisionBoundary({ layers, dataset, originalData }: DecisionBoun
       }
     }
     ctx.restore();
-  }, [layers, dataset, originalData, getRange, predict]);
+  }, [layers, dataset, originalData, getRange, predict, axisA, axisB]);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -203,46 +205,113 @@ export function DecisionBoundary({ layers, dataset, originalData }: DecisionBoun
       const rawA = minA + (px / CANVAS) * (maxA - minA);
       const rawB = maxB - (py / CANVAS) * (maxB - minB);
       const probs = predict(rawA, rawB);
-      setHover({ x: e.clientX - rect.left, y: e.clientY - rect.top, probs, featA: rawA, featB: rawB });
+      setHover({ cx: e.clientX - rect.left, cy: e.clientY - rect.top, probs, featA: rawA, featB: rawB });
     },
     [getRange, predict]
   );
 
   const initialized = layers.length > 0 && layers[0].weights?.length > 0;
 
-  const axisLabels =
-    dataset === "xor"
-      ? { a: "A", b: "B" }
-      : { a: "Petal length", b: "Petal width" };
+  const xLabel = dataset === "xor" ? "A" : IRIS_FEATURE_NAMES[axisA];
+  const yLabel = dataset === "xor" ? "B" : IRIS_FEATURE_NAMES[axisB];
 
   return (
     <div className="flex flex-col gap-1">
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
         Decision Boundary
       </p>
+
+      {/* Iris axis selectors */}
+      {dataset === "iris" && (
+        <div className="flex gap-1.5 text-[10px] text-gray-500">
+          <label className="flex items-center gap-1">
+            X
+            <select
+              value={axisA}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v !== axisB) setAxisA(v);
+              }}
+              className="border border-gray-200 rounded px-1 py-0.5 text-[10px] bg-white"
+            >
+              {IRIS_FEATURE_NAMES.map((name, i) => (
+                <option key={i} value={i} disabled={i === axisB}>{name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-1">
+            Y
+            <select
+              value={axisB}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v !== axisA) setAxisB(v);
+              }}
+              className="border border-gray-200 rounded px-1 py-0.5 text-[10px] bg-white"
+            >
+              {IRIS_FEATURE_NAMES.map((name, i) => (
+                <option key={i} value={i} disabled={i === axisA}>{name}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
       {!initialized ? (
         <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">
           Initialize model to see boundary
         </div>
       ) : (
         <div className="flex flex-col items-center gap-1">
+          {/* Canvas with floating tooltip */}
           <div className="relative">
+            {/* Y axis label */}
+            <span className="absolute -left-5 top-1/2 -translate-y-1/2 -rotate-90 text-[9px] text-gray-400 whitespace-nowrap">
+              {yLabel}
+            </span>
             <canvas
               ref={canvasRef}
               width={CANVAS}
               height={CANVAS}
-              className="rounded border border-gray-200 cursor-crosshair"
+              className="rounded border border-gray-200 cursor-crosshair block"
               style={{ width: CANVAS, height: CANVAS }}
               onMouseMove={handleMouseMove}
               onMouseLeave={() => setHover(null)}
             />
-            {/* Y axis label */}
-            <span className="absolute -left-5 top-1/2 -translate-y-1/2 -rotate-90 text-[9px] text-gray-400 whitespace-nowrap">
-              {axisLabels.b}
-            </span>
+            {/* Floating tooltip — follows cursor, no layout shift */}
+            {hover && (
+              <div
+                className="pointer-events-none absolute z-10 rounded border border-gray-200 bg-white/95 px-2 py-1.5 text-xs shadow-md"
+                style={{
+                  left: hover.cx + (hover.cx > CANVAS * 0.6 ? -130 : 12),
+                  top: hover.cy + (hover.cy > CANVAS * 0.7 ? -80 : 8),
+                  minWidth: 110,
+                }}
+              >
+                {dataset === "xor" ? (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-gray-400">{xLabel}={hover.featA.toFixed(2)}, {yLabel}={hover.featB.toFixed(2)}</span>
+                    <span className="font-mono font-semibold text-gray-800">
+                      P(1)={(((hover.probs[0] ?? 0)) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-0.5">
+                    {IRIS_CLASS_NAMES.map((name, i) => (
+                      <div key={name} className="flex justify-between gap-2">
+                        <span className="text-gray-500">{name}</span>
+                        <span className="font-mono font-semibold" style={{ color: `rgb(${IRIS_COLORS[i][0]},${IRIS_COLORS[i][1]},${IRIS_COLORS[i][2]})` }}>
+                          {((hover.probs[i] ?? 0) * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           {/* X axis label */}
-          <span className="text-[9px] text-gray-400">{axisLabels.a}</span>
+          <span className="text-[9px] text-gray-400">{xLabel}</span>
 
           {/* Legend */}
           <div className="flex flex-wrap gap-2 justify-center mt-0.5">
@@ -261,36 +330,6 @@ export function DecisionBoundary({ layers, dataset, originalData }: DecisionBoun
               ))
             )}
           </div>
-
-          {/* Hover tooltip */}
-          {hover && (
-            <div className="w-full rounded border border-gray-200 bg-white px-2 py-1.5 text-xs shadow-sm">
-              {dataset === "xor" ? (
-                <div className="flex justify-between gap-3">
-                  <span className="text-gray-500">
-                    A={hover.featA.toFixed(2)}, B={hover.featB.toFixed(2)}
-                  </span>
-                  <span className="font-mono font-semibold text-gray-800">
-                    P(1)={((hover.probs[0] ?? 0) * 100).toFixed(1)}%
-                  </span>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-gray-400 text-[10px]">
-                    Petal {hover.featA.toFixed(2)} × {hover.featB.toFixed(2)} cm
-                  </span>
-                  {IRIS_CLASS_NAMES.map((name, i) => (
-                    <div key={name} className="flex justify-between">
-                      <span className="text-gray-500">{name}</span>
-                      <span className="font-mono font-semibold" style={{ color: `rgb(${IRIS_COLORS[i][0]},${IRIS_COLORS[i][1]},${IRIS_COLORS[i][2]})` }}>
-                        {((hover.probs[i] ?? 0) * 100).toFixed(1)}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
     </div>

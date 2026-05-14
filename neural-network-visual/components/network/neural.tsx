@@ -117,6 +117,7 @@ const Graph = () => {
                     yMean={yMean}
                     yStd={yStd}
                 />
+                {/* Gradient flow animation — disabled for now
                 {showGradFlow && network && (
                     <GradientFlowOverlay
                         network={network}
@@ -126,6 +127,7 @@ const Graph = () => {
                         dataset={dataset}
                     />
                 )}
+                */}
             </svg>
 
             {/* Legend */}

@@ -22,6 +22,7 @@ import { useMemo } from "react";
 import Glossary from "@/components/network/glossary";
 import DigitCanvas from "@/components/network/digit-canvas";
 import { DecisionBoundary } from "@/components/network/decision-boundary";
+import { SampleVisual } from "@/components/network/sample-visual";
 
 // Register ChartJS components
 ChartJS.register(
@@ -183,162 +184,90 @@ function buildValueMap(network: NetworkState): Map<string, ValueInfo> {
 // ----------------------------------------------------------------
 // Prediction confidence display
 // ----------------------------------------------------------------
-const PredictionSummary = ({
-  dataset,
-  network,
-  sampleIndex,
-  originalData,
-  yMean,
-  yStd,
-}: {
-  dataset: string;
-  network: import("@/components/network/static/types").NetworkState | null;
-  sampleIndex: number;
-  originalData: number[][];
-  yMean: number | null;
-  yStd: number | null;
-}) => {
-  if (!network) return null;
-  const outputLayer = network.layers[network.layers.length - 2];
-  const prediction = outputLayer?.A?.[sampleIndex];
-  const sample = originalData[sampleIndex];
-  if (!prediction || prediction.length === 0 || !sample) return null;
-
-  if (dataset === "iris") {
-    const classNames = ["Setosa", "Versicolor", "Virginica"];
-    const colors = ["bg-blue-500", "bg-green-500", "bg-purple-500"];
-    const actualRaw = sample.slice(-3);
-    const actualIdx = actualRaw.findIndex((v) => v === 1);
-    const predIdx = prediction.indexOf(Math.max(...prediction));
-    const correct = actualIdx === predIdx;
-
-    return (
-      <div className="w-full bg-white border border-gray-200 rounded-lg p-3 shadow-sm h-full">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Prediction</p>
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-            {correct ? "✓ Correct" : "✗ Wrong"}
-          </span>
-        </div>
-
-        {/* Predicted / Actual summary when wrong */}
-        {!correct ? (
-          <div className="flex gap-2 mb-2.5 text-xs">
-            <div className="flex-1 rounded bg-gray-50 border border-gray-200 px-2 py-1">
-              <p className="text-gray-400 mb-0.5">Predicted</p>
-              <p className="font-semibold text-gray-900">{classNames[predIdx]}</p>
-            </div>
-            <div className="flex-1 rounded bg-gray-50 border border-gray-200 px-2 py-1">
-              <p className="text-gray-400 mb-0.5">Actual</p>
-              <p className="font-semibold text-gray-700">{classNames[actualIdx] ?? "?"}</p>
-            </div>
-          </div>
-        ) : (
-          <p className="text-xs text-green-700 font-medium mb-2">
-            {classNames[predIdx]} — {(prediction[predIdx] * 100).toFixed(1)}% confidence
-          </p>
-        )}
-
-        <div className="space-y-1.5">
-          {classNames.map((name, i) => {
-            const isPred = i === predIdx;
-            const isActual = i === actualIdx;
-            const opacity = isPred ? "opacity-100" : isActual && !correct ? "opacity-60" : "opacity-20";
-            return (
-              <div key={name} className="flex items-center gap-2">
-                <span className={`text-xs w-20 text-right ${isPred || isActual ? "font-semibold text-gray-800" : "text-gray-400"}`}>
-                  {name}
-                </span>
-                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-                  <div
-                    className={`h-2 rounded-full transition-all duration-300 ${colors[i]} ${opacity}`}
-                    style={{ width: `${(prediction[i] * 100).toFixed(1)}%` }}
-                  />
-                </div>
-                <span className={`text-xs w-10 font-mono ${isPred ? "font-bold text-gray-900" : "text-gray-400"}`}>
-                  {(prediction[i] * 100).toFixed(1)}%
-                </span>
-                <span className="w-10 text-xs">
-                  {isPred && isActual && <span className="text-green-600 font-medium">✓</span>}
-                  {isPred && !isActual && <span className="text-blue-500">pred</span>}
-                  {!isPred && isActual && <span className="text-orange-500">actual</span>}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  if (dataset === "auto_mpg") {
-    const actualMPG = sample[sample.length - 1];
-    const predMPG = yMean !== null && yStd !== null ? prediction[0] * yStd + yMean : prediction[0];
-    const error = Math.abs(predMPG - actualMPG);
-    return (
-      <div className="w-full bg-white border border-gray-200 rounded-lg p-3 shadow-sm h-full">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Prediction</p>
-        <div className="flex items-center justify-around text-center">
-          <div>
-            <p className="text-xl font-bold text-gray-900">{predMPG.toFixed(1)}</p>
-            <p className="text-xs text-gray-500">Predicted MPG</p>
-          </div>
-          <div className="h-10 w-px bg-gray-200" />
-          <div>
-            <p className="text-xl font-bold text-gray-600">{actualMPG.toFixed(1)}</p>
-            <p className="text-xs text-gray-500">Actual MPG</p>
-          </div>
-          <div className="h-10 w-px bg-gray-200" />
-          <div>
-            <p className={`text-xl font-bold ${error < 2 ? "text-green-600" : error < 5 ? "text-yellow-600" : "text-red-600"}`}>
-              {error.toFixed(1)}
-            </p>
-            <p className="text-xs text-gray-500">Error (MPG)</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (dataset === "xor") {
-    const prob = prediction[0];
-    const predLabel = prob >= 0.5 ? 1 : 0;
-    const actualLabel = sample[sample.length - 1];
-    const correct = predLabel === actualLabel;
-    return (
-      <div className="w-full bg-white border border-gray-200 rounded-lg p-3 shadow-sm h-full">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Prediction</p>
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-            {correct ? "✓ Correct" : "✗ Wrong"}
-          </span>
-        </div>
-        <div className="space-y-1.5">
-          {[0, 1].map((label) => (
-            <div key={label} className="flex items-center gap-2">
-              <span className={`text-xs w-6 text-right font-medium ${predLabel === label ? "text-gray-900" : "text-gray-400"}`}>{label}</span>
-              <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
-                <div
-                  className={`h-3 rounded-full transition-all duration-300 ${label === 1 ? "bg-blue-500" : "bg-gray-400"} ${predLabel === label ? "opacity-100" : "opacity-30"}`}
-                  style={{ width: `${((label === 1 ? prob : 1 - prob) * 100).toFixed(1)}%` }}
-                />
-              </div>
-              <span className={`text-xs w-10 font-mono ${predLabel === label ? "font-bold text-gray-900" : "text-gray-400"}`}>
-                {((label === 1 ? prob : 1 - prob) * 100).toFixed(1)}%
-              </span>
-              {actualLabel === label && <span className="text-xs text-gray-400 italic">← actual</span>}
-            </div>
-          ))}
-        </div>
-        <p className="text-xs text-gray-400 mt-2">
-          A={sample[0]}, B={sample[1]} → XOR={actualLabel}
-        </p>
-      </div>
-    );
-  }
-
-  return null;
+// ----------------------------------------------------------------
+// Activation mini-chart (inline SVG, no Chart.js)
+// ----------------------------------------------------------------
+const ACTIVATION_FNS: Record<string, (x: number) => number> = {
+  relu:    (x) => Math.max(0, x),
+  sigmoid: (x) => 1 / (1 + Math.exp(-x)),
+  tanh:    (x) => Math.tanh(x),
+  linear:  (x) => x,
 };
+
+function ActivationMiniChart({ activation, zVal, aVal }: { activation: string; zVal: number; aVal: number }) {
+  const W = 200, H = 88;
+  const PAD = { t: 10, r: 14, b: 16, l: 14 };
+  const plotW = W - PAD.l - PAD.r;
+  const plotH = H - PAD.t - PAD.b;
+
+  const fn = ACTIVATION_FNS[activation] ?? ((x: number) => x);
+  const xMin = Math.min(-3.5, zVal - 0.5);
+  const xMax = Math.max(3.5, zVal + 0.5);
+
+  const N = 120;
+  const pts: [number, number][] = Array.from({ length: N + 1 }, (_, i) => {
+    const x = xMin + (i / N) * (xMax - xMin);
+    return [x, fn(x)];
+  });
+
+  const ys = pts.map(([, y]) => y);
+  const rawYMin = Math.min(...ys);
+  const rawYMax = Math.max(...ys);
+  const yPad = (rawYMax - rawYMin) * 0.15 + 0.05;
+  const yMin = rawYMin - yPad;
+  const yMax = rawYMax + yPad;
+
+  const toX = (x: number) => PAD.l + ((x - xMin) / (xMax - xMin)) * plotW;
+  const toY = (y: number) => PAD.t + (1 - (y - yMin) / (yMax - yMin)) * plotH;
+
+  const pathD = pts.map(([x, y], i) =>
+    `${i === 0 ? "M" : "L"}${toX(x).toFixed(1)},${toY(y).toFixed(1)}`
+  ).join(" ");
+
+  const x0 = toX(0);
+  const y0 = toY(Math.max(yMin, Math.min(0, yMax)));
+  const dotX = toX(zVal);
+  const dotY = toY(aVal);
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }} aria-hidden>
+      <rect x={PAD.l} y={PAD.t} width={plotW} height={plotH} fill="#f9fafb" rx={2} />
+      {/* Zero grid lines */}
+      <line x1={PAD.l} y1={y0} x2={PAD.l + plotW} y2={y0} stroke="#e5e7eb" strokeWidth={1} />
+      <line x1={x0} y1={PAD.t} x2={x0} y2={PAD.t + plotH} stroke="#e5e7eb" strokeWidth={1} />
+      {/* Curve */}
+      <path d={pathD} stroke="#6366f1" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Dashed drop line from dot to zero line */}
+      <line
+        x1={dotX} y1={Math.min(dotY, y0)}
+        x2={dotX} y2={Math.max(dotY, y0)}
+        stroke="#94a3b8" strokeWidth={1} strokeDasharray="3 2"
+      />
+      {/* Dot at (Z, A) */}
+      <circle cx={dotX} cy={dotY} r={4.5} fill="#ef4444" stroke="white" strokeWidth={1.5} />
+      {/* Axis labels */}
+      <text x={PAD.l + plotW / 2} y={H - 2} fontSize={8} textAnchor="middle" fill="#9ca3af">Z</text>
+      <text
+        x={6} y={PAD.t + plotH / 2}
+        fontSize={8} textAnchor="middle" dominantBaseline="middle" fill="#9ca3af"
+        transform={`rotate(-90,6,${PAD.t + plotH / 2})`}
+      >A</text>
+      {/* Function label */}
+      <text x={PAD.l + plotW - 2} y={PAD.t + 9} fontSize={8} textAnchor="end" fill="#6366f1" fontWeight="600">{activation}</text>
+    </svg>
+  );
+}
+
+function NodeStat({ label, value, dim }: { label: string; value: number | undefined; dim?: boolean }) {
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <span className="text-[9px] uppercase tracking-wide text-gray-400">{label}</span>
+      <span className={`font-mono text-xs font-medium ${dim ? "text-gray-400" : "text-gray-900"}`}>
+        {value !== undefined ? value.toFixed(3) : "—"}
+      </span>
+    </div>
+  );
+}
 
 // ----------------------------------------------------------------
 // Main Explain component
@@ -734,37 +663,42 @@ const Explain = () => {
                         </>
                     ) : hoveredNode && network ? (
                         <>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Node</p>
-                            {hoveredNode.layerIndex > 0 ? (
-                                <div className="space-y-1.5">
-                                    {network.layers[hoveredNode.layerIndex - 1]?.biases?.[hoveredNode.nodeIndex] !== undefined && (
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-gray-500">Bias</span>
-                                            <span className="font-mono font-medium text-gray-900">{network.layers[hoveredNode.layerIndex - 1].biases[hoveredNode.nodeIndex].toFixed(4)}</span>
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Node</p>
+                                {hoveredNode.layerIndex > 0 && (
+                                    <span className="text-[10px] font-mono text-indigo-500">
+                                        {network.layers[hoveredNode.layerIndex - 1]?.activation ?? ""}
+                                    </span>
+                                )}
+                            </div>
+                            {hoveredNode.layerIndex > 0 ? (() => {
+                                const layerObj = network.layers[hoveredNode.layerIndex - 1];
+                                const ni = hoveredNode.nodeIndex;
+                                const bias = layerObj?.biases?.[ni];
+                                const zVal = layerObj?.Z?.[sampleIndex]?.[ni];
+                                const aRaw = layerObj?.A?.[sampleIndex]?.[ni];
+                                const inputVal = zVal !== undefined && bias !== undefined ? zVal - bias : undefined;
+                                const isOutputLayer = hoveredNode.layerIndex === network.layers.length - 1;
+                                const aDisplay = isOutputLayer && dataset === "auto_mpg" && yMean !== null && yStd !== null && aRaw !== undefined
+                                    ? aRaw * yStd + yMean : aRaw;
+                                const aLabel = isOutputLayer && dataset === "auto_mpg" ? "MPG" : "A";
+                                const activation = layerObj?.activation ?? "linear";
+                                const showChart = zVal !== undefined && aRaw !== undefined && activation !== "softmax";
+                                return (
+                                    <>
+                                        <div className="grid grid-cols-4 gap-1 mb-2 px-0.5">
+                                            <NodeStat label="Input" value={inputVal} />
+                                            <NodeStat label="Bias" value={bias} />
+                                            <NodeStat label="Z" value={zVal} />
+                                            <NodeStat label={aLabel} value={aDisplay} />
                                         </div>
-                                    )}
-                                    {network.layers[hoveredNode.layerIndex - 1]?.Z?.[sampleIndex]?.[hoveredNode.nodeIndex] !== undefined && (
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-gray-500">Pre-activation (Z)</span>
-                                            <span className="font-mono font-medium text-gray-900">{network.layers[hoveredNode.layerIndex - 1].Z[sampleIndex][hoveredNode.nodeIndex].toFixed(4)}</span>
-                                        </div>
-                                    )}
-                                    {network.layers[hoveredNode.layerIndex - 1]?.A?.[sampleIndex]?.[hoveredNode.nodeIndex] !== undefined && (() => {
-                                        const rawA = network.layers[hoveredNode.layerIndex - 1].A[sampleIndex][hoveredNode.nodeIndex];
-                                        const isOutputLayer = hoveredNode.layerIndex === network.layers.length - 1;
-                                        const displayA = isOutputLayer && dataset === "auto_mpg" && yMean !== null && yStd !== null
-                                            ? rawA * yStd + yMean
-                                            : rawA;
-                                        const label = isOutputLayer && dataset === "auto_mpg" ? "Prediction (MPG)" : "Post-activation (A)";
-                                        return (
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-gray-500">{label}</span>
-                                            <span className="font-mono font-medium text-gray-900">{displayA.toFixed(4)}</span>
-                                        </div>
-                                        );
-                                    })()}
-                                </div>
-                            ) : (
+                                        {showChart && <ActivationMiniChart activation={activation} zVal={zVal!} aVal={aRaw!} />}
+                                        {activation === "softmax" && zVal !== undefined && (
+                                            <p className="text-[10px] text-gray-400 text-center mt-1">softmax — output depends on all logits</p>
+                                        )}
+                                    </>
+                                );
+                            })() : (
                                 <p className="text-sm text-gray-500">Input node — values come from the dataset.</p>
                             )}
                         </>
@@ -825,13 +759,13 @@ const Explain = () => {
                             )}
                         </div>
                     </>
-                ) : hasTrained && (
+                ) : hasTrained && originalData[sampleIndex] && (
                     <div className={`${dataset === "xor" || dataset === "iris" ? "w-1/3 flex-shrink-0" : "flex-1"} min-w-0`}>
-                        <PredictionSummary
+                        <SampleVisual
                             dataset={dataset}
+                            original={originalData[sampleIndex]}
                             network={network}
                             sampleIndex={sampleIndex}
-                            originalData={originalData}
                             yMean={yMean}
                             yStd={yStd}
                         />
