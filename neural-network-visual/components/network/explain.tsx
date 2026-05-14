@@ -360,6 +360,7 @@ const Explain = () => {
       setWeight,
       yMean,
       yStd,
+      drawnDigitPrediction,
     } = useStore();
 
     const [view, setView] = useState<PropagationView>('forward');
@@ -692,9 +693,9 @@ const Explain = () => {
     return (
         <>
             {/* Connection panel + Prediction side by side */}
-            <div className="flex flex-col sm:flex-row gap-3 mx-2 mt-4 mb-2">
-                {/* Left: connection / node details */}
-                <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+            <div className="flex gap-3 mx-2 mt-4 mb-2">
+                {/* Left: connection / node details — 1/3 for MNIST, flex-1 otherwise */}
+                <div className={`${dataset === "mnist" ? "w-1/3 flex-shrink-0" : "flex-1"} min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm`}>
                     {hoveredConnection ? (
                         <>
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Connection</p>
@@ -773,12 +774,45 @@ const Explain = () => {
                     )}
                 </div>
 
-                {/* Right: digit canvas for MNIST, prediction summary for other datasets */}
+                {/* Right: for MNIST — draw canvas + prediction each take 1/3; otherwise prediction summary */}
                 {dataset === "mnist" ? (
-                    <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col items-center gap-2">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide self-start">Draw a Digit</p>
-                        <DigitCanvas />
-                    </div>
+                    <>
+                        <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col items-center gap-2">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide self-start">Draw a Digit</p>
+                            <DigitCanvas hidePrediction />
+                        </div>
+                        <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Prediction</p>
+                            {drawnDigitPrediction ? (
+                                <div className="space-y-1">
+                                    {drawnDigitPrediction.confidences.map((conf, digit) => {
+                                        const isPredicted = digit === drawnDigitPrediction.predictedClass;
+                                        const pct = (conf * 100).toFixed(1);
+                                        return (
+                                            <div key={digit} className="flex items-center gap-2">
+                                                <span className={`w-4 text-xs font-mono text-right flex-shrink-0 ${isPredicted ? "font-bold text-indigo-700" : "text-gray-500"}`}>
+                                                    {digit}
+                                                </span>
+                                                <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full rounded-full transition-all duration-300 ${isPredicted ? "bg-indigo-500" : "bg-gray-300"}`}
+                                                        style={{ width: `${pct}%` }}
+                                                    />
+                                                </div>
+                                                <span className={`w-10 text-xs text-right flex-shrink-0 ${isPredicted ? "font-bold text-indigo-700" : "text-gray-400"}`}>
+                                                    {pct}%
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center h-full min-h-[60px]">
+                                    <p className="text-sm text-gray-400">Draw a digit and click Predict</p>
+                                </div>
+                            )}
+                        </div>
+                    </>
                 ) : hasTrained && (
                     <div className="flex-1 min-w-0">
                         <PredictionSummary

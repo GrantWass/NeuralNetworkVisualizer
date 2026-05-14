@@ -508,10 +508,12 @@ const AutoMpgCar = ({
 const MnistDigit = ({
   original,
   outputActivations,
+  isDrawn,
   onDrawOwn,
 }: {
   original: number[];
   outputActivations: number[];
+  isDrawn?: boolean;
   onDrawOwn?: () => void;
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -555,41 +557,40 @@ const MnistDigit = ({
       />
 
       <div className="flex flex-col gap-2 flex-1">
-        <div className="flex flex-col gap-0.5">
-          {predIdx >= 0 ? (
-            <div className="flex items-start gap-2">
-              <div>
-                <div className="flex items-end gap-1">
-                  <span
-                    className={`text-3xl font-bold leading-none ${
-                      isCorrect ? "text-green-600" : "text-red-500"
-                    }`}
-                  >
-                    {predIdx}
-                  </span>
-                  <span className="text-[10px] text-gray-400 pb-0.5">
-                    predicted
-                  </span>
-                </div>
-                <div className="text-[10px] text-gray-500 mt-0.5">
-                  {(predConf * 100).toFixed(1)}% confidence
-                </div>
+        {predIdx >= 0 ? (
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-end gap-1">
+                <span
+                  className={`text-3xl font-bold leading-none ${
+                    isCorrect ? "text-green-600" : "text-red-500"
+                  }`}
+                >
+                  {predIdx}
+                </span>
+                <span className="text-[10px] text-gray-400 pb-0.5">
+                  predicted
+                </span>
               </div>
+              <div className="text-[10px] text-gray-500">
+                {(predConf * 100).toFixed(1)}% confidence
+              </div>
+            </div>
+            {!isDrawn && (
               <div
-                className={`text-[10px] font-medium pt-1 flex-shrink-0 ${
+                className={`text-[10px] font-medium flex-shrink-0 ${
                   isCorrect ? "text-green-600" : "text-red-500"
                 }`}
               >
                 {isCorrect ? "✓" : "✗"} actual: {actual}
               </div>
-            </div>
-          ) : (
-            <div className="text-[10px] text-gray-400">
-              Not trained — actual: {actual}
-            </div>
-          )}
-        </div>
-
+            )}
+          </div>
+        ) : (
+          <div className="text-[10px] text-gray-400">
+            {isDrawn ? "Draw a digit and click Predict" : `Not trained — actual: ${actual}`}
+          </div>
+        )}
         {onDrawOwn && (
           <button
             onClick={onDrawOwn}
@@ -611,6 +612,7 @@ interface SampleVisualProps {
   sampleIndex: number;
   yMean: number | null;
   yStd: number | null;
+  isDrawn?: boolean;
   onDrawOwn?: () => void;
 }
 
@@ -621,6 +623,7 @@ export const SampleVisual: React.FC<SampleVisualProps> = ({
   sampleIndex,
   yMean,
   yStd,
+  isDrawn,
   onDrawOwn,
 }) => {
   if (!original || original.length === 0) return null;
@@ -656,6 +659,7 @@ export const SampleVisual: React.FC<SampleVisualProps> = ({
         <MnistDigit
           original={original}
           outputActivations={outputActivations}
+          isDrawn={isDrawn}
           onDrawOwn={onDrawOwn}
         />
       )}

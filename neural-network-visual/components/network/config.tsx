@@ -129,6 +129,11 @@ const StepDataset = ({
                 }`}>{d.task}</span>
               </div>
               <p className={`text-xs mt-1 ${dataset === ds ? "text-white/80" : "text-muted-foreground"}`}>{d.taskType}</p>
+              {ds === "mnist" && (
+                <span className={`inline-block mt-1.5 text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                  dataset === ds ? "bg-white/25 text-white" : "bg-indigo-100 text-indigo-700"
+                }`}>✏ draw your own digits</span>
+              )}
             </button>
           );
         })}
@@ -432,6 +437,7 @@ const StepTrain = ({
   sessionId,
   yMean,
   yStd,
+  isDrawn,
   onSetLR,
   onSetSample,
   onTrain,
@@ -451,6 +457,7 @@ const StepTrain = ({
   sessionId: string | null;
   yMean: number | null;
   yStd: number | null;
+  isDrawn: boolean;
   onSetLR: (v: number) => void;
   onSetSample: (v: number) => void;
   onTrain: () => void;
@@ -521,6 +528,7 @@ const StepTrain = ({
               sampleIndex={sampleIndex}
               yMean={yMean}
               yStd={yStd}
+              isDrawn={isDrawn}
             />
           </div>
         )}
@@ -617,6 +625,7 @@ const Config = () => {
     initModelFrontend,
     setSampleIndex,
     isInitializing,
+    drawnDigitPixels,
   } = useStore();
 
   // Wizard step: 1=dataset, 2=configure, 3=initialize, 4=train
@@ -722,6 +731,7 @@ const Config = () => {
             sessionId={sessionId}
             yMean={yMean}
             yStd={yStd}
+            isDrawn={!!drawnDigitPixels}
             onSetLR={setLearningRate}
             onSetSample={setSampleIndex}
             onTrain={runTrainingCycle}

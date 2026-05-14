@@ -37,7 +37,7 @@ function downsample(ctx: CanvasRenderingContext2D): number[] {
   return pixels;
 }
 
-export default function DigitCanvas() {
+export default function DigitCanvas({ hidePrediction = false }: { hidePrediction?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
@@ -177,7 +177,7 @@ export default function DigitCanvas() {
       </div>
 
       {/* Prediction result */}
-      {drawnDigitPrediction && (
+      {!hidePrediction && drawnDigitPrediction && (
         <div className="w-full max-w-[340px] space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-gray-700">Prediction</p>
