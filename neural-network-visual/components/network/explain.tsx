@@ -22,6 +22,7 @@ import { useMemo } from "react";
 import Glossary from "@/components/network/glossary";
 import DigitCanvas from "@/components/network/digit-canvas";
 import { DecisionBoundary } from "@/components/network/decision-boundary";
+import { SampleVisual } from "@/components/network/sample-visual";
 
 // Register ChartJS components
 ChartJS.register(
@@ -723,8 +724,8 @@ const Explain = () => {
                     </div>
                 )}
 
-                {/* Right: for MNIST — draw canvas + prediction each take 1/3 */}
-                {dataset === "mnist" && (
+                {/* Right: for MNIST — draw canvas + prediction; otherwise sample preview */}
+                {dataset === "mnist" ? (
                     <>
                         <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col items-center gap-2">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide self-start">Draw a Digit</p>
@@ -762,6 +763,17 @@ const Explain = () => {
                             )}
                         </div>
                     </>
+                ) : hasTrained && originalData[sampleIndex] && (
+                    <div className={`${dataset === "xor" || dataset === "iris" ? "w-1/3 flex-shrink-0" : "flex-1"} min-w-0`}>
+                        <SampleVisual
+                            dataset={dataset}
+                            original={originalData[sampleIndex]}
+                            network={network}
+                            sampleIndex={sampleIndex}
+                            yMean={yMean}
+                            yStd={yStd}
+                        />
+                    </div>
                 )}
             </div>
         <div className="mt-2 p-4 bg-gray-100 rounded-lg mx-2 shadow-md">

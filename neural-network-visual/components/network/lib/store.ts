@@ -398,6 +398,8 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       toast.error("Training failed", {
         description: "Could not complete the training cycle. Please try again.",
       });
+    } finally {
+      get().setRunModel(false);
     }
   },
 

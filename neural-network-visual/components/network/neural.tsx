@@ -67,6 +67,7 @@ const Graph = () => {
         epoch,
     } = useStore();
 
+
     // Flash changed connections for 2s after each training cycle
     const [flashConnections, setFlashConnections] = useState<typeof changedConnections>([]);
     const [flashKey, setFlashKey] = useState(0);
@@ -132,6 +133,7 @@ const Graph = () => {
 
             {/* Legend */}
             <Legend />
+
 
         </div>
     );
