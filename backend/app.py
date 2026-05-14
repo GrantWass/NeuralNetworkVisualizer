@@ -227,6 +227,31 @@ def set_weight(request: SetWeightRequest):
     return SetWeightResponse(layers=layers)
 
 
+# ------------------ Predict (MNIST) ------------------ #
+class PredictRequest(BaseModel):
+    session_id: str
+    pixels: List[float]  # 784 values in [0, 1]
+
+class PredictResponse(BaseModel):
+    predicted_class: int
+    confidences: List[float]
+
+@app.post("/predict", response_model=PredictResponse)
+def predict(request: PredictRequest):
+    session = user_sessions.get(request.session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found. Call /init_model first.")
+    if len(request.pixels) != 784:
+        raise HTTPException(status_code=400, detail="pixels must have exactly 784 values.")
+
+    network = session["network"]
+    X = np.array(request.pixels, dtype=np.float32).reshape(1, 784)
+    Y_hat = network.forward(X)
+    confidences = Y_hat[0].tolist()
+    predicted_class = int(np.argmax(Y_hat[0]))
+    return PredictResponse(predicted_class=predicted_class, confidences=confidences)
+
+
 # ------------------ Clear Session ------------------ #
 @app.post("/clear_session")
 def clear_session(session_id: str):

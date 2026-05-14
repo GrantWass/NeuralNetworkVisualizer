@@ -1,4 +1,4 @@
-const DATASETS = ["auto_mpg", "iris", "xor"];
+const DATASETS = ["auto_mpg", "iris", "xor", "mnist"];
 
 const ACTIVATION_FUNCTIONS = ["relu", "sigmoid", "tanh", "linear"];
 

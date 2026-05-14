@@ -10,6 +10,7 @@ import { DATASETS, ACTIVATION_FUNCTIONS, DATASET_INPUT_FEATURES } from "@/compon
 import { HIDDEN_LAYER_LEARN_MORE } from "@/components/network/static/explanation";
 import { useEffect, useState } from "react";
 import { ActivationInfoPopup } from "./activation";
+import { SampleVisual } from "./sample-visual";
 
 // ─── Dataset metadata for Step 1 ──────────────────────────────────────────────
 const DATASET_DETAILS: Record<string, {
@@ -44,6 +45,14 @@ const DATASET_DETAILS: Record<string, {
     loss: "Binary Cross-Entropy",
     samples: "4 patterns (the full XOR truth table)",
   },
+  mnist: {
+    task: "Classification",
+    taskType: "Which handwritten digit is this?",
+    inputs: ["784 pixel values (28×28 grayscale image, normalized 0–1)"],
+    output: "Digit class 0–9",
+    loss: "Cross-Entropy Loss",
+    samples: "10,000 samples · 10 classes",
+  },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -63,10 +72,17 @@ const getLRFeedback = (lr: number, dataset: string): { text: string; color: stri
   return { text: "Very high — high risk of divergence. Loss may increase.", color: "text-red-600" };
 };
 
+const getInputSize = (dataset: string) =>
+  dataset === "xor" ? 2 : dataset === "mnist" ? 784 : 4;
+
+const getOutputSize = (dataset: string) =>
+  dataset === "iris" || dataset === "mnist" ? (dataset === "mnist" ? 10 : 3) : 1;
+
+const getOutputActivation = (dataset: string) =>
+  dataset === "iris" || dataset === "mnist" ? "softmax" : dataset === "xor" ? "sigmoid" : "linear";
+
 const countParams = (hiddenLayers: number[], dataset: string) => {
-  const inputSize = dataset === "xor" ? 2 : 4;
-  const outputSize = dataset === "iris" ? 3 : 1;
-  const sizes = [inputSize, ...hiddenLayers, outputSize];
+  const sizes = [getInputSize(dataset), ...hiddenLayers, getOutputSize(dataset)];
   let total = 0;
   for (let i = 0; i < sizes.length - 1; i++) {
     total += sizes[i] * sizes[i + 1] + sizes[i + 1];
@@ -183,8 +199,8 @@ const StepConfigure = ({
   onNext: () => void;
 }) => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const inputSize = dataset === "xor" ? 2 : 4;
-  const outputSize = dataset === "iris" ? 3 : 1;
+  const inputSize = getInputSize(dataset);
+  const outputSize = getOutputSize(dataset);
 
   return (
     <div className="space-y-5">
@@ -255,9 +271,9 @@ const StepConfigure = ({
               <Input
                 type="number"
                 value={nodes}
-                onChange={(e) => onUpdateLayer(index, Math.max(1, Math.min(6, Number(e.target.value))))}
+                onChange={(e) => onUpdateLayer(index, Math.max(1, Math.min(dataset === "mnist" ? 128 : 6, Number(e.target.value))))}
                 min={1}
-                max={6}
+                max={dataset === "mnist" ? 128 : 6}
                 className="text-center"
               />
               <span className="text-sm text-gray-600 font-medium">Layer {index + 1}</span>
@@ -312,8 +328,8 @@ const StepInitialize = ({
   onBack: () => void;
   onInitialize: () => void;
 }) => {
-  const inputSize = dataset === "xor" ? 2 : 4;
-  const outputSize = dataset === "iris" ? 3 : 1;
+  const inputSize = getInputSize(dataset);
+  const outputSize = getOutputSize(dataset);
   const totalParams = countParams(hiddenLayers, dataset);
   const allLayers = [
     { label: "Input Layer", size: inputSize, activation: null, color: "bg-blue-50 border-blue-200 text-blue-800" },
@@ -326,7 +342,7 @@ const StepInitialize = ({
     {
       label: "Output Layer",
       size: outputSize,
-      activation: dataset === "iris" ? "softmax" : dataset === "xor" ? "sigmoid" : "linear",
+      activation: getOutputActivation(dataset),
       color: "bg-red-50 border-red-200 text-red-800",
     },
   ];
@@ -431,8 +447,8 @@ const StepTrain = ({
   onChangeModel: () => void;
 }) => {
   const lrFeedback = getLRFeedback(learningRate, dataset);
-  const inputSize = dataset === "xor" ? 2 : 4;
-  const outputSize = dataset === "iris" ? 3 : 1;
+  const inputSize = getInputSize(dataset);
+  const outputSize = getOutputSize(dataset);
 
   return (
     <div className="space-y-4">
@@ -465,22 +481,41 @@ const StepTrain = ({
           <p className={`text-xs mt-1.5 ${lrFeedback.color}`}>{lrFeedback.text}</p>
         </div>
 
-        {/* Sample picker */}
-        <div>
-          <div className="flex items-center gap-3">
-            <Label className="text-sm font-semibold whitespace-nowrap">Sample #</Label>
-            <Input
-              type="number"
-              value={sampleIndex}
-              onChange={(e) => onSetSample(Math.max(0, Math.min(25, Number(e.target.value))))}
-              min={0}
-              max={25}
-              className="w-20 text-center"
-            />
-            <span className="text-xs text-gray-400">0 – 25 from the test set</span>
+        {/* Sample picker — hidden for MNIST (use drawing canvas instead) */}
+        {dataset !== "mnist" && (
+          <div>
+            <div className="flex items-center gap-3">
+              <Label className="text-sm font-semibold whitespace-nowrap">Sample #</Label>
+              <Input
+                type="number"
+                value={sampleIndex}
+                onChange={(e) => onSetSample(Math.max(0, Math.min(25, Number(e.target.value))))}
+                min={0}
+                max={25}
+                className="w-20 text-center"
+              />
+              <span className="text-xs text-gray-400">0 – 25 from the test set</span>
+            </div>
           </div>
-        </div>
+        )}
+        {dataset === "mnist" && (
+          <p className="text-xs text-gray-500">
+            After training, draw a digit in the panel on the right to see what the network predicts.
+          </p>
+        )}
       </div>
+
+      {/* Sample visual */}
+      {originalData[sampleIndex] && (
+        <SampleVisual
+          dataset={dataset}
+          original={originalData[sampleIndex]}
+          network={network}
+          sampleIndex={sampleIndex}
+          yMean={yMean}
+          yStd={yStd}
+        />
+      )}
 
       {/* Actions */}
       <Button onClick={onTrain} disabled={!sessionId} className="w-full text-base py-5 font-semibold">
@@ -606,7 +641,7 @@ const Config = () => {
 
       {/* Floating training stats */}
       {epoch > 0 && (
-        <div className="fixed top-4 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg px-3 py-2 flex items-center gap-3 text-center">
+        <div className="fixed top-12 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg px-3 py-2 flex items-center gap-3 text-center">
           <div>
             <p className="text-lg font-bold text-gray-900 leading-none">{epoch}</p>
             <p className="text-[10px] text-gray-400 mt-0.5">epochs</p>

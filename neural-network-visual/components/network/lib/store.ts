@@ -12,6 +12,11 @@ interface ChangedConnection {
   positive: boolean;
 }
 
+interface DigitPrediction {
+  predictedClass: number;
+  confidences: number[];
+}
+
 interface TrainingState {
   sessionId: string | null;
   epoch: number;
@@ -37,6 +42,7 @@ interface TrainingState {
   stepLayerHighlight: number | null;
   yMean: number | null;
   yStd: number | null;
+  drawnDigitPrediction: DigitPrediction | null;
 }
 
 interface TrainingActions {
@@ -61,6 +67,8 @@ interface TrainingActions {
   setSampleIndex: (sampleIndex: number) => void;
   setStepLayerHighlight: (index: number | null) => void;
   setWeight: (layerIndex: number, fromIndex: number, toIndex: number, newValue: number) => Promise<void>;
+  predictDigit: (pixels: number[]) => Promise<void>;
+  clearDigitPrediction: () => void;
 }
 
 const URL = process.env.NEXT_PUBLIC_API_URL;
@@ -90,6 +98,7 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
   stepLayerHighlight: null,
   yMean: null,
   yStd: null,
+  drawnDigitPrediction: null,
 
   setEpoch: (epoch) => set({ epoch }),
   setSampleIndex: (sampleIndex) => set({ sampleIndex }),
@@ -185,14 +194,17 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
     } else if (dataset === "xor") {
       inputSize = 2;
       outputSize = 1;
+    } else if (dataset === "mnist") {
+      inputSize = 784;
+      outputSize = 10;
     }
 
     const layerSizes = [inputSize, ...hiddenLayers, outputSize];
     const totalLayers = layerSizes.length;
-    const outputActivation = dataset === "iris" ? "softmax" : dataset === "xor" ? "sigmoid" : "linear";
+    const outputActivation = dataset === "iris" || dataset === "mnist" ? "softmax" : dataset === "xor" ? "sigmoid" : "linear";
     const layers = layerSizes.map((size, index) => {
       const activation = index === totalLayers - 1 ? outputActivation : activations[index] || "relu";
-      
+
       const layer = new NeuronLayer(size, activation, index, totalLayers);
       layer.initWeightsAndBiases(size, index + 1 == layerSizes.length ? 0 : layerSizes[index + 1]);
       return layer;
@@ -385,12 +397,17 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
 
   handleDatasetChange: (newDataset: string) => {
     // XOR: tanh avoids sigmoid's vanishing gradients (max derivative 0.25) without dying ReLU risk on 4 samples
-    const datasetDefaults = newDataset === "xor"
-      ? { activations: ["tanh", "tanh"], hiddenLayers: [4, 4], learningRate: 0.3 }
-      : { activations: ["relu", "relu"], hiddenLayers: [4, 4], learningRate: 0.1 };
+    // MNIST: larger hidden layers to handle 784 inputs; smaller LR for stability
+    const datasetDefaults =
+      newDataset === "xor"
+        ? { activations: ["tanh", "tanh"], hiddenLayers: [4, 4], learningRate: 0.3 }
+        : newDataset === "mnist"
+        ? { activations: ["relu", "relu"], hiddenLayers: [64, 32], learningRate: 0.01 }
+        : { activations: ["relu", "relu"], hiddenLayers: [4, 4], learningRate: 0.1 };
     set({
       dataset: newDataset,
       datasetInfo: DATASET_INFO[newDataset],
+      drawnDigitPrediction: null,
       ...datasetDefaults,
     });
     get().initModelFrontend();
@@ -437,6 +454,32 @@ const useStore = create<TrainingState & TrainingActions>((set, get) => ({
       toast.error("Weight update failed", { description: "Could not apply the new weight value." });
     }
   },
+
+  predictDigit: async (pixels: number[]) => {
+    const { sessionId } = get();
+    if (!sessionId) {
+      toast.error("No model initialized", { description: "Initialize the model before predicting." });
+      return;
+    }
+    try {
+      const response = await fetch(`${URL}/predict`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, pixels }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        set({ drawnDigitPrediction: { predictedClass: data.predicted_class, confidences: data.confidences } });
+      } else {
+        throw new Error(data.error || "Prediction failed");
+      }
+    } catch (error) {
+      console.error("Prediction error:", error);
+      toast.error("Prediction failed", { description: "Could not run prediction." });
+    }
+  },
+
+  clearDigitPrediction: () => set({ drawnDigitPrediction: null }),
 
 }));
 

@@ -174,5 +174,10 @@ export const DATASET_INFO: { [key: string]: string } = {
   xor: `The **XOR dataset** is the simplest non-linear problem in ML.
 - **Inputs:** Two binary values (A and B)
 - **Output:** 1 if exactly one input is 1, else 0
-- **Why it matters:** A single-layer network *cannot* solve it — it requires at least one hidden layer.`
+- **Why it matters:** A single-layer network *cannot* solve it — it requires at least one hidden layer.`,
+
+  mnist: `The [**MNIST dataset**](http://yann.lecun.com/exdb/mnist/) is the classic handwritten digit benchmark.
+- **Inputs:** 784 pixel values (28×28 grayscale image, normalized 0–1)
+- **Output:** Digit class (0–9) via softmax
+- **Train on the data, then draw your own digit to see what the network predicts.**`
 };

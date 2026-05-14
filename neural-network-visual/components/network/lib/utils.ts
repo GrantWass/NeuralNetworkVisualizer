@@ -69,6 +69,7 @@ export const outputMap: { [key: string]: string[] } = {
   auto_mpg: ["MPG"],
   iris: ["Setosa", "Versicolor", "Virginica"],
   xor: ["XOR output"],
+  mnist: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
 };
 
 export const formatActual = (original: number[], dataset: string) => {

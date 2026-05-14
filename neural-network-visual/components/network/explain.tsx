@@ -20,6 +20,7 @@ import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import { useMemo } from "react";
 import Glossary from "@/components/network/glossary";
+import DigitCanvas from "@/components/network/digit-canvas";
 
 // Register ChartJS components
 ChartJS.register(
@@ -773,8 +774,13 @@ const Explain = () => {
                     )}
                 </div>
 
-                {/* Right: prediction */}
-                {hasTrained && (
+                {/* Right: digit canvas for MNIST, prediction summary for other datasets */}
+                {dataset === "mnist" ? (
+                    <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col items-center gap-2">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide self-start">Draw a Digit</p>
+                        <DigitCanvas />
+                    </div>
+                ) : hasTrained && (
                     <div className="flex-1 min-w-0">
                         <PredictionSummary
                             dataset={dataset}
@@ -789,7 +795,7 @@ const Explain = () => {
             </div>
         <div className="mt-2 p-4 bg-gray-100 rounded-lg mx-2 shadow-md">
 
-            {hasTrained && (
+            {hasTrained && dataset !== "mnist" && (
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
                 <div className="flex flex-col sm:flex-row rounded-md shadow-sm" role="group">
                     {(['forward', 'calculation', 'backward'] as PropagationView[]).map((v, vi) => {
@@ -822,7 +828,7 @@ const Explain = () => {
                 <Glossary />
             </div>)}
 
-            {hasTrained && (
+            {hasTrained && dataset !== "mnist" && (
                 <>
                 {/* ── Main view content ── */}
                 <div className="text-center" ref={viewSectionRef}>

@@ -11,8 +11,11 @@ def load_dataset(dataset_name):
     elif dataset_name == "xor":
         X_train, X_test, Y_train, Y_test, inp, out, act, data = load_xor_dataset()
         return X_train, X_test, Y_train, Y_test, inp, out, act, data, None, None
+    elif dataset_name == "mnist":
+        X_train, X_test, Y_train, Y_test, inp, out, act, data = load_mnist_dataset()
+        return X_train, X_test, Y_train, Y_test, inp, out, act, data, None, None
     else:
-        raise ValueError("Unsupported dataset. Choose 'iris', 'auto_mpg', or 'xor'.")
+        raise ValueError("Unsupported dataset. Choose 'iris', 'auto_mpg', 'xor', or 'mnist'.")
 
 def load_xor_dataset():
     X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=np.float32)
@@ -47,6 +50,21 @@ def load_auto_mpg_dataset():
     y_test = y_scaler.transform(y_test)
 
     return X_train, X_test, y_train, y_test, X_train.shape[1], y_train.shape[1], "linear", original_train_data, float(y_scaler.mean_[0]), float(y_scaler.scale_[0])
+
+def load_mnist_dataset():
+    data_path = os.path.join(os.path.dirname(__file__), "data", "mnist.csv")
+    if not os.path.exists(data_path):
+        raise FileNotFoundError("mnist.csv not found. Run scripts/fetch_mnist.py to download.")
+
+    raw = np.genfromtxt(data_path, delimiter=",", skip_header=1)
+    X = raw[:, :784].astype(np.float32) / 255.0  # normalize to [0, 1]
+    y = raw[:, 784].astype(int)
+    Y = one_hot_encode(y, num_classes=10)
+
+    X_train, X_test, Y_train, Y_test = train_test_split_np(X, Y, test_size=0.1, random_state=42)  # type: ignore
+    original_train_data = np.hstack((X_train[:30], Y_train[:30])).tolist()
+    return X_train, X_test, Y_train, Y_test, 784, 10, "softmax", original_train_data
+
 
 def load_iris_dataset():
     data_path = os.path.join(os.path.dirname(__file__), "data", "iris.csv")

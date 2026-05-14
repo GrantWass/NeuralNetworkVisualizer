@@ -28,6 +28,7 @@ interface NetworkSVGProps {
   stepLayerHighlight?: number | null;
   yMean?: number | null;
   yStd?: number | null;
+  drawnPixels?: number[] | null;
 }
 
 // --------------------
@@ -58,6 +59,86 @@ const nodeColors = (isInput: boolean, isOutput: boolean, val: number) => ({
 });
 
 // --------------------
+// MNIST: pixel grid + single representative connections
+// --------------------
+const MnistInputGrid: React.FC<{
+  pixels: number[];  // 784 values 0-1
+  cx: number;        // center x of the input column
+  SVGHEIGHT: number;
+}> = ({ pixels, cx, SVGHEIGHT }) => {
+  const CELL = 2;
+  const GRID = 28;
+  const SIZE = GRID * CELL; // 56px
+  const x0 = cx - SIZE / 2;
+  const y0 = SVGHEIGHT / 2 - SIZE / 2;
+
+  return (
+    <g>
+      {pixels.map((v, i) => {
+        const row = Math.floor(i / GRID);
+        const col = i % GRID;
+        const gray = Math.round((1 - v) * 255);
+        return (
+          <rect
+            key={i}
+            x={x0 + col * CELL}
+            y={y0 + row * CELL}
+            width={CELL}
+            height={CELL}
+            fill={`rgb(${gray},${gray},${gray})`}
+          />
+        );
+      })}
+      <rect x={x0} y={y0} width={SIZE} height={SIZE} fill="none" stroke="#475569" strokeWidth={1} rx={1} />
+    </g>
+  );
+};
+
+const MnistConnections: React.FC<{
+  inputWeights: number[][];  // shape [784, hidden_size] — layer 0 weights
+  inputCx: number;
+  inputCy: number; // center y of the grid
+  SVGWIDTH: number;
+  SVGHEIGHT: number;
+  layerSpacing: number;
+  SHIFT: number;
+  hiddenSize: number;
+  stepLayerHighlight?: number | null;
+}> = ({ inputWeights, inputCx, SVGWIDTH, SVGHEIGHT, layerSpacing, SHIFT, hiddenSize, stepLayerHighlight }) => {
+  const GRID = 28;
+  const SIZE = GRID * 2;
+  const gridRight = inputCx + SIZE / 2;
+  const inStepMode = stepLayerHighlight !== null && stepLayerHighlight !== undefined;
+  const isActive = !inStepMode || stepLayerHighlight === 0 || stepLayerHighlight === 1;
+
+  return (
+    <>
+      {Array.from({ length: hiddenSize }, (_, ti) => {
+        // mean absolute weight for this hidden node across all 784 inputs
+        const col = inputWeights.map((row) => Math.abs(row[ti] ?? 0));
+        const meanW = col.length > 0 ? col.reduce((a, b) => a + b, 0) / col.length : 0;
+        const toX = 2 * layerSpacing + SHIFT;
+        const toY = ((ti + 1) * SVGHEIGHT) / (hiddenSize + 1);
+        const fromY = SVGHEIGHT / 2;
+        const color = `rgba(99,102,241,${(0.15 + Math.min(meanW * 10, 1) * 0.7).toFixed(2)})`;
+        return (
+          <line
+            key={`mnist-conn-${ti}`}
+            x1={gridRight}
+            y1={fromY}
+            x2={toX}
+            y2={toY}
+            stroke={color}
+            strokeWidth={Math.min(meanW * 20, 1) * (SVGWIDTH > 600 ? 2.5 : 1.8) + 1}
+            opacity={inStepMode ? (isActive ? 1 : 0.08) : 0.7}
+          />
+        );
+      })}
+    </>
+  );
+};
+
+// --------------------
 // Subcomponents
 // --------------------
 const ConnectionLines: React.FC<{
@@ -68,14 +149,17 @@ const ConnectionLines: React.FC<{
   flashConnections?: FlashConnection[];
   flashKey?: number;
   stepLayerHighlight?: number | null;
-}> = ({ network, SVGWIDTH, SVGHEIGHT, onClick, flashConnections = [], flashKey = 0, stepLayerHighlight }) => {
+  dataset?: string;
+}> = ({ network, SVGWIDTH, SVGHEIGHT, onClick, flashConnections = [], flashKey = 0, stepLayerHighlight, dataset }) => {
   const { layerSpacing, SHIFT } = computeLayout(SVGWIDTH, network.layers.length);
   const inStepMode = stepLayerHighlight !== null && stepLayerHighlight !== undefined;
 
   return (
     <>
-      {network.layers.flatMap((layer, li) =>
-        layer.weights.flatMap((weights: number[], fi: number) =>
+      {network.layers.flatMap((layer, li) => {
+        // MNIST: skip drawing the 784×hidden connections from layer 0 — MnistConnections handles it
+        if (dataset === "mnist" && li === 0) return [];
+        return layer.weights.flatMap((weights: number[], fi: number) =>
           weights.map((w: number, ti: number) => {
             const next = network.layers[li + 1];
             const fromX = (li + 1) * layerSpacing + SHIFT;
@@ -136,8 +220,8 @@ const ConnectionLines: React.FC<{
               </g>
             );
           })
-        )
-      )}
+        );
+      })}
     </>
   );
 };
@@ -170,6 +254,9 @@ const NodeCircles: React.FC<{
         const isOutput = li === network.layers.length - 1;
         const isActiveLayer = !inStepMode || li === stepLayerHighlight || li === stepLayerHighlight + 1;
         const layerOpacity = inStepMode ? (isActiveLayer ? 1 : 0.15) : 1;
+
+        // For MNIST, skip rendering the 784 input nodes — shown as pixel grid instead
+        if (isInput && dataset === "mnist") return [];
 
         return Array.from({ length: total }, (_, ni) => {
           const cx = (li + 1) * layerSpacing + SHIFT;
@@ -222,10 +309,11 @@ const NodeCircles: React.FC<{
   );
 };
 
-const LayerLabels: React.FC<{ network: NetworkState; SVGWIDTH: number; SVGHEIGHT: number }> = ({
+const LayerLabels: React.FC<{ network: NetworkState; SVGWIDTH: number; SVGHEIGHT: number; dataset?: string }> = ({
   network,
   SVGWIDTH,
   SVGHEIGHT,
+  dataset,
 }) => {
   const { layerSpacing, SHIFT } = computeLayout(SVGWIDTH, network.layers.length);
   const fontSize = fontSizeForWidth(SVGWIDTH);
@@ -244,25 +332,29 @@ const LayerLabels: React.FC<{ network: NetworkState; SVGWIDTH: number; SVGHEIGHT
           {layer.name}
         </text>
       ))}
-      <text
-        key={`inputlabel-og`}
-        x={(SVGWIDTH * 0.065 + 10)}
-        y={SVGHEIGHT * 0.04}
-        textAnchor="middle"
-        fontSize={fontSize}
-        fontWeight="bold"
-      >
-        {`Input Values`}
-      </text>
-      <text
-        key={`inputlabel-normal`}
-        x={(SVGWIDTH * 0.065 + 10) + (SVGWIDTH > 600 ? 90 : SVGWIDTH * 0.135)}
-        y={SVGHEIGHT * 0.04}
-        textAnchor="middle"
-        fontSize={fontSize}
-      >
-        {`(Normalized)`}
-      </text>
+      {dataset !== "mnist" && (
+        <>
+          <text
+            key={`inputlabel-og`}
+            x={(SVGWIDTH * 0.065 + 10)}
+            y={SVGHEIGHT * 0.04}
+            textAnchor="middle"
+            fontSize={fontSize}
+            fontWeight="bold"
+          >
+            {`Input Values`}
+          </text>
+          <text
+            key={`inputlabel-normal`}
+            x={(SVGWIDTH * 0.065 + 10) + (SVGWIDTH > 600 ? 90 : SVGWIDTH * 0.135)}
+            y={SVGHEIGHT * 0.04}
+            textAnchor="middle"
+            fontSize={fontSize}
+          >
+            {`(Normalized)`}
+          </text>
+        </>
+      )}
     </>
   );
 };
@@ -284,8 +376,23 @@ export const Network: React.FC<NetworkSVGProps> = ({
   stepLayerHighlight,
   yMean,
   yStd,
+  drawnPixels,
 }) => {
   if (!network) return null;
+
+  const isMnist = dataset === "mnist";
+  const { layerSpacing, SHIFT } = computeLayout(SVGWIDTH, network.layers.length);
+  const inputCx = layerSpacing + SHIFT;
+
+  // Pixel data to display: prefer drawn pixels, fall back to training sample
+  const inputSample = network.input?.[sampleIndex ?? 0];
+  const displayPixels: number[] =
+    drawnPixels && drawnPixels.length === 784
+      ? drawnPixels
+      : inputSample?.length === 784
+      ? Array.from(inputSample)
+      : new Array(784).fill(0);
+
   return (
     <>
       <ConnectionLines
@@ -296,7 +403,26 @@ export const Network: React.FC<NetworkSVGProps> = ({
         flashConnections={flashConnections}
         flashKey={flashKey}
         stepLayerHighlight={stepLayerHighlight}
+        dataset={dataset}
       />
+      {isMnist && (
+        <>
+          <MnistInputGrid pixels={displayPixels} cx={inputCx} SVGHEIGHT={SVGHEIGHT} />
+          {network.layers[0]?.weights?.length > 0 && network.layers[1] && (
+            <MnistConnections
+              inputWeights={network.layers[0].weights}
+              inputCx={inputCx}
+              inputCy={SVGHEIGHT / 2}
+              SVGWIDTH={SVGWIDTH}
+              SVGHEIGHT={SVGHEIGHT}
+              layerSpacing={layerSpacing}
+              SHIFT={SHIFT}
+              hiddenSize={network.layers[1].size}
+              stepLayerHighlight={stepLayerHighlight}
+            />
+          )}
+        </>
+      )}
       <NodeCircles
         SVGWIDTH={SVGWIDTH}
         SVGHEIGHT={SVGHEIGHT}
@@ -309,7 +435,7 @@ export const Network: React.FC<NetworkSVGProps> = ({
         yMean={yMean}
         yStd={yStd}
       />
-      <LayerLabels SVGWIDTH={SVGWIDTH} SVGHEIGHT={SVGHEIGHT} network={network} />
+      <LayerLabels SVGWIDTH={SVGWIDTH} SVGHEIGHT={SVGHEIGHT} network={network} dataset={dataset} />
     </>
   );
 };
