@@ -243,7 +243,8 @@ const NodeCircles: React.FC<{
   stepLayerHighlight?: number | null;
   yMean?: number | null;
   yStd?: number | null;
-}> = ({ network, SVGWIDTH, SVGHEIGHT, dataset, sampleIndex, original, onNodeClick, stepLayerHighlight, yMean, yStd }) => {
+  drawnDigitPresent?: boolean;
+}> = ({ network, SVGWIDTH, SVGHEIGHT, dataset, sampleIndex, original, onNodeClick, stepLayerHighlight, yMean, yStd, drawnDigitPresent }) => {
   const { layerSpacing, SHIFT } = computeLayout(SVGWIDTH, network.layers.length);
   const fontSize = fontSizeForWidth(SVGWIDTH);
   const features = featureList(dataset, SVGWIDTH);
@@ -502,6 +503,7 @@ export const Network: React.FC<NetworkSVGProps> = ({
         stepLayerHighlight={stepLayerHighlight}
         yMean={yMean}
         yStd={yStd}
+        drawnDigitPresent={drawnPixels && drawnPixels.length === 784 ? true : false} // TODO
       />
       <LayerLabels SVGWIDTH={SVGWIDTH} SVGHEIGHT={SVGHEIGHT} network={network} dataset={dataset} />
     </>

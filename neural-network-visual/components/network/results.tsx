@@ -14,6 +14,7 @@ type RenderResultsParams = {
     yMean?: number | null;
     yStd?: number | null;
     isPredicted?: boolean;
+    drawnDigitPresent?: boolean;
 };
 
 export const renderResults = ({
@@ -29,6 +30,7 @@ export const renderResults = ({
     yMean,
     yStd,
     isPredicted,
+    drawnDigitPresent = false
 }: RenderResultsParams) => {
     if (!dataset) return null;
 
@@ -85,7 +87,7 @@ export const renderResults = ({
                 <text x={x} y={labelY} fontSize={fontSize} textAnchor="middle">
                     <tspan fontWeight={labelWeight} fill={labelFill}>{label}</tspan>
                     {isPredicted && <tspan fill={isCorrect ? "#16a34a" : "#dc2626"} fontWeight="bold">{isCorrect ? " ▶ ✓" : " ▶"}</tspan>}
-                    {!isPredicted && isActual && <tspan fill="#16a34a" fontWeight="bold"> ✓</tspan>}
+                    {!drawnDigitPresent && !isPredicted && isActual && <tspan fill="#16a34a" fontWeight="bold"> ✓</tspan>}
                     {isWrongPred && <tspan fill="#9ca3af" fontSize={fontSize - 1}> </tspan>}
                 </text>
                 <text x={x} y={valueY} fontSize={fontSize} fontWeight={isPredicted ? "bold" : "normal"} textAnchor="middle" fill={valueFill}>

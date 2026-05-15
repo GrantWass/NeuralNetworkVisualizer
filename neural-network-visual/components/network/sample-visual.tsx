@@ -504,106 +504,6 @@ const AutoMpgCar = ({
   );
 };
 
-// ─── MNIST Digit ──────────────────────────────────────────────────────────────
-const MnistDigit = ({
-  original,
-  outputActivations,
-  isDrawn,
-  onDrawOwn,
-}: {
-  original: number[];
-  outputActivations: number[];
-  isDrawn?: boolean;
-  onDrawOwn?: () => void;
-}) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const pixels = useMemo(() => original.slice(0, 784), [original]);
-  const actualLabels = original.slice(784);
-  const actual = actualLabels.length >= 10
-    ? actualLabels.indexOf(Math.max(...actualLabels))
-    : Math.round(original[original.length - 1]);
-
-  const predIdx =
-    outputActivations.length > 0
-      ? outputActivations.indexOf(Math.max(...outputActivations))
-      : -1;
-  const predConf = predIdx >= 0 ? (outputActivations[predIdx] ?? 0) : 0;
-  const isCorrect = predIdx >= 0 && predIdx === actual;
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || pixels.length === 0) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const imageData = ctx.createImageData(28, 28);
-    for (let i = 0; i < 784; i++) {
-      const v = Math.round((pixels[i] ?? 0) * 255);
-      imageData.data[i * 4 + 0] = v;
-      imageData.data[i * 4 + 1] = v;
-      imageData.data[i * 4 + 2] = v;
-      imageData.data[i * 4 + 3] = 255;
-    }
-    ctx.putImageData(imageData, 0, 0);
-  }, [pixels]);
-
-  return (
-    <div className="flex gap-3 items-center">
-      <canvas
-        ref={canvasRef}
-        width={28}
-        height={28}
-        className="w-[84px] h-[84px] rounded border border-gray-200 flex-shrink-0"
-        style={{ imageRendering: "pixelated", background: "#000" }}
-      />
-
-      <div className="flex flex-col gap-2 flex-1">
-        {predIdx >= 0 ? (
-          <div className="flex items-center gap-2">
-            <div className="flex flex-col gap-0.5">
-              <div className="flex items-end gap-1">
-                <span
-                  className={`text-3xl font-bold leading-none ${
-                    isCorrect ? "text-green-600" : "text-red-500"
-                  }`}
-                >
-                  {predIdx}
-                </span>
-                <span className="text-[10px] text-gray-400 pb-0.5">
-                  predicted
-                </span>
-              </div>
-              <div className="text-[10px] text-gray-500">
-                {(predConf * 100).toFixed(1)}% confidence
-              </div>
-            </div>
-            {!isDrawn && (
-              <div
-                className={`text-[10px] font-medium flex-shrink-0 ${
-                  isCorrect ? "text-green-600" : "text-red-500"
-                }`}
-              >
-                {isCorrect ? "✓" : "✗"} actual: {actual}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-[10px] text-gray-400">
-            {isDrawn ? "Draw a digit and click Predict" : `Not trained — actual: ${actual}`}
-          </div>
-        )}
-        {onDrawOwn && (
-          <button
-            onClick={onDrawOwn}
-            className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-colors text-gray-700 font-medium flex items-center gap-1.5 w-fit"
-          >
-            ✏ Draw your own
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
-
 // ─── Root export ──────────────────────────────────────────────────────────────
 interface SampleVisualProps {
   dataset: string;
@@ -653,14 +553,6 @@ export const SampleVisual: React.FC<SampleVisualProps> = ({
           outputActivations={outputActivations}
           yMean={yMean}
           yStd={yStd}
-        />
-      )}
-      {dataset === "mnist" && (
-        <MnistDigit
-          original={original}
-          outputActivations={outputActivations}
-          isDrawn={isDrawn}
-          onDrawOwn={onDrawOwn}
         />
       )}
     </div>

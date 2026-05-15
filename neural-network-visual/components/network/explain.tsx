@@ -22,6 +22,7 @@ import { useMemo } from "react";
 import Glossary from "@/components/network/glossary";
 import DigitCanvas from "@/components/network/digit-canvas";
 import { DecisionBoundary } from "@/components/network/decision-boundary";
+import { RegressionChart } from "@/components/network/regression-chart";
 import { SampleVisual } from "@/components/network/sample-visual";
 
 // Register ChartJS components
@@ -807,13 +808,23 @@ const Explain = () => {
                     )}
                 </div>
 
-                {/* Middle: decision boundary for XOR and Iris */}
+                {/* Middle: decision boundary for XOR/Iris, prediction scatter for auto_mpg */}
                 {(dataset === "xor" || dataset === "iris") && network && (
                     <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                         <DecisionBoundary
                             layers={network.layers}
                             dataset={dataset}
                             originalData={originalData}
+                        />
+                    </div>
+                )}
+                {dataset === "auto_mpg" && network && (
+                    <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                        <RegressionChart
+                            network={network}
+                            originalData={originalData}
+                            yMean={yMean}
+                            yStd={yStd}
                         />
                     </div>
                 )}
