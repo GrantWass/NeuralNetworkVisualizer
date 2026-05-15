@@ -126,17 +126,28 @@ function computeStratifiedIndices(data: number[][], dataset: string): number[] {
       const cls = scores.indexOf(Math.max(...scores));
       if (cls >= 0) buckets[cls].push(i);
     });
+    // Pick evenly-spaced indices from each class bucket
+    const perBucket = buckets.map(b => {
+      const want = Math.ceil(DISPLAY_COUNT / 3);
+      return Array.from({ length: Math.min(want, b.length) }, (_, j) =>
+        b[Math.round((j / (Math.min(want, b.length) - 1 || 1)) * (b.length - 1))]
+      ).filter((v): v is number => v !== undefined);
+    });
+    // Interleave: Setosa, Versicolor, Virginica, Setosa, ...
     const result: number[] = [];
-    const counts = [9, 9, 8];
-    for (let c = 0; c < 3; c++) {
-      const bucket = buckets[c] ?? [];
-      const want = counts[c];
-      for (let j = 0; j < want && bucket.length > 0; j++) {
-        const idx = bucket[Math.round((j / (want - 1)) * (bucket.length - 1))];
-        if (idx !== undefined) result.push(idx);
+    const ptrs = [0, 0, 0];
+    while (result.length < DISPLAY_COUNT) {
+      let added = false;
+      for (let c = 0; c < 3; c++) {
+        if (ptrs[c] < (perBucket[c]?.length ?? 0)) {
+          result.push(perBucket[c][ptrs[c]++]!);
+          added = true;
+          if (result.length >= DISPLAY_COUNT) break;
+        }
       }
+      if (!added) break;
     }
-    return result.slice(0, DISPLAY_COUNT);
+    return result;
   }
 
   if (dataset === 'mnist') {
@@ -147,16 +158,26 @@ function computeStratifiedIndices(data: number[][], dataset: string): number[] {
       const cls = oneHot.indexOf(Math.max(...oneHot));
       if (cls >= 0) buckets[cls].push(i);
     });
+    // Pick evenly-spaced indices from each digit bucket
+    const perClass = Math.ceil(DISPLAY_COUNT / 10);
+    const perBucket = buckets.map(b =>
+      Array.from({ length: Math.min(perClass, b.length) }, (_, j) =>
+        b[Math.round((j / (Math.min(perClass, b.length) - 1 || 1)) * (b.length - 1))]
+      ).filter((v): v is number => v !== undefined)
+    );
+    // Interleave: 0, 1, 2, ..., 9, 0, 1, ...
     const result: number[] = [];
-    const perClass = Math.floor(DISPLAY_COUNT / 10);
-    const extra = DISPLAY_COUNT % 10;
-    for (let c = 0; c < 10; c++) {
-      const bucket = buckets[c] ?? [];
-      const want = perClass + (c < extra ? 1 : 0);
-      for (let j = 0; j < want && bucket.length > 0; j++) {
-        const idx = bucket[Math.round((j / Math.max(1, want - 1)) * (bucket.length - 1))];
-        if (idx !== undefined) result.push(idx);
+    const ptrs = new Array(10).fill(0);
+    while (result.length < DISPLAY_COUNT) {
+      let added = false;
+      for (let c = 0; c < 10; c++) {
+        if (ptrs[c] < (perBucket[c]?.length ?? 0)) {
+          result.push(perBucket[c][ptrs[c]++]!);
+          added = true;
+          if (result.length >= DISPLAY_COUNT) break;
+        }
       }
+      if (!added) break;
     }
     return result.slice(0, DISPLAY_COUNT);
   }

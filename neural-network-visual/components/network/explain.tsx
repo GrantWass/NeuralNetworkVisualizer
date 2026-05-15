@@ -415,6 +415,14 @@ const Explain = () => {
     const [stepMode, setStepMode] = useState(false);
     const [stepIndex, setStepIndex] = useState(0);
 
+    // Step-by-step compute gradients mode
+    const [calcStepMode, setCalcStepMode] = useState(false);
+    const [calcStepIndex, setCalcStepIndex] = useState(0);
+
+    // Step-by-step update weights mode
+    const [backStepMode, setBackStepMode] = useState(false);
+    const [backStepIndex, setBackStepIndex] = useState(0);
+
     // Weight editing state (for connection panel)
     const [editingWeight, setEditingWeight] = useState(false);
     const [weightInput, setWeightInput] = useState("");
@@ -440,6 +448,10 @@ const Explain = () => {
     const layerComputationCount = network
       ? network.layers.filter((_, i) => i < network.layers.length - 1).length
       : 0;
+    // Compute gradients: one step per reversed layer (output error + each backprop step)
+    const calcStepCount = network?.layers.length ?? 0;
+    // Update weights: one step per layer that has weights (skip the last reversed = first original)
+    const backStepCount = network ? network.layers.length - 1 : 0;
 
     useEffect(() => {
       setFontSize(window.innerWidth < 1000 ? "sm" : "md");
@@ -454,22 +466,21 @@ const Explain = () => {
       }
     }, [stepMode, stepIndex, network, setStepLayerHighlight]);
 
-    // Exit step mode when switching views
+    // Exit step modes when switching views
     useEffect(() => {
-      if (view !== 'forward') {
-        setStepMode(false);
-      }
+      if (view !== 'forward') setStepMode(false);
+      if (view !== 'calculation') { setCalcStepMode(false); setCalcStepIndex(0); }
+      if (view !== 'backward') { setBackStepMode(false); setBackStepIndex(0); }
     }, [view]);
 
-    const enterStepMode = () => {
-      setStepMode(true);
-      setStepIndex(0);
-    };
+    const enterStepMode = () => { setStepMode(true); setStepIndex(0); };
+    const exitStepMode = () => { setStepMode(false); setStepLayerHighlight(null); };
 
-    const exitStepMode = () => {
-      setStepMode(false);
-      setStepLayerHighlight(null);
-    };
+    const enterCalcStepMode = () => { setCalcStepMode(true); setCalcStepIndex(0); };
+    const exitCalcStepMode = () => setCalcStepMode(false);
+
+    const enterBackStepMode = () => { setBackStepMode(true); setBackStepIndex(0); };
+    const exitBackStepMode = () => setBackStepMode(false);
 
     const pointSettings = { pointRadius: 0, pointHoverRadius: 4, pointHitRadius: 12 };
 
@@ -1059,8 +1070,24 @@ const Explain = () => {
                         </>
                     ) : view === 'backward' ? (
                         <>
-                            <p className="mt-4 sm:mt-6 mb-1 text-base sm:text-lg font-bold">Updating weight and bias values</p>
-                            <p className="text-xs sm:text-sm text-gray-600 mb-1">Adjusting parameters to minimize loss</p>
+                            <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                                <div className="flex-1 text-center">
+                                    <p className="text-base sm:text-lg font-bold">Updating weight and bias values</p>
+                                    <p className="text-xs sm:text-sm text-gray-600">Adjusting parameters to minimize loss</p>
+                                </div>
+                                {!backStepMode ? (
+                                    <button onClick={enterBackStepMode} className="text-xs border border-gray-300 rounded-md px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700">
+                                        Step Through ▶
+                                    </button>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => setBackStepIndex(Math.max(0, backStepIndex - 1))} disabled={backStepIndex === 0} className="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white hover:bg-gray-50 disabled:opacity-40">← Prev</button>
+                                        <span className="text-xs font-medium text-gray-600">Layer {backStepIndex + 1} of {backStepCount}</span>
+                                        <button onClick={() => setBackStepIndex(Math.min(backStepCount - 1, backStepIndex + 1))} disabled={backStepIndex === backStepCount - 1} className="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white hover:bg-gray-50 disabled:opacity-40">Next →</button>
+                                        <button onClick={exitBackStepMode} className="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white hover:bg-gray-50 text-gray-500">Show All</button>
+                                    </div>
+                                )}
+                            </div>
                             <p className="text-xs text-gray-500 italic mb-3">
                                 Each weight moves a small step opposite to its gradient. The step size is controlled by the learning rate η = {learningRate}.
                             </p>
@@ -1074,6 +1101,7 @@ const Explain = () => {
                             {network?.layers.slice().reverse().map((layer: NeuronLayer, reversedIndex: number) => {
                                 const layerIndex = network.layers.length - reversedIndex;
                                 if (reversedIndex === 0) return null;
+                                if (backStepMode && reversedIndex !== backStepIndex + 1) return null;
 
                                 // value-tracer ids for this layer
                                 const li = network.layers.length - 1 - reversedIndex;
@@ -1195,14 +1223,31 @@ const Explain = () => {
                         </>
                     ) : (
                         <div className="flex flex-col justify-center items-center flex-wrap">
-                            <p className="mt-4 sm:mt-6 mb-1 text-base sm:text-lg font-bold">Propagating error backwards through model</p>
-                            <p className="text-xs sm:text-sm text-gray-600 mb-1">Calculating how each neuron contributed to the error</p>
+                            <div className="flex items-center justify-between mt-4 sm:mt-6 mb-2 flex-wrap gap-2 w-full">
+                                <div className="flex-1 text-center">
+                                    <p className="text-base sm:text-lg font-bold">Propagating error backwards through model</p>
+                                    <p className="text-xs sm:text-sm text-gray-600">Calculating how each neuron contributed to the error</p>
+                                </div>
+                                {!calcStepMode ? (
+                                    <button onClick={enterCalcStepMode} className="text-xs border border-gray-300 rounded-md px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700">
+                                        Step Through ▶
+                                    </button>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => setCalcStepIndex(Math.max(0, calcStepIndex - 1))} disabled={calcStepIndex === 0} className="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white hover:bg-gray-50 disabled:opacity-40">← Prev</button>
+                                        <span className="text-xs font-medium text-gray-600">Step {calcStepIndex + 1} of {calcStepCount}</span>
+                                        <button onClick={() => setCalcStepIndex(Math.min(calcStepCount - 1, calcStepIndex + 1))} disabled={calcStepIndex === calcStepCount - 1} className="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white hover:bg-gray-50 disabled:opacity-40">Next →</button>
+                                        <button onClick={exitCalcStepMode} className="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white hover:bg-gray-50 text-gray-500">Show All</button>
+                                    </div>
+                                )}
+                            </div>
                             <p className="text-xs text-gray-500 italic mb-3">
                                 The gradient tells us: if we nudge this weight slightly, how much does the loss change? We use the chain rule to compute this efficiently layer by layer.
                             </p>
                             <div className="flex flex-col justify-center items-center flex-wrap gap-2 sm:gap-4">
                             {network?.layers.slice().reverse().map((layer: NeuronLayer, index: number) => {
                                 const initialContent = index === 0;
+                                if (calcStepMode && index !== calcStepIndex) return null;
                                 const outputLayerIndex = network.layers.length - 2;
                                 const actualRaw = originalData[di].slice(dataset === "iris" ? -3 : -1);
                                 const actual = dataset === "auto_mpg" && yMean !== null && yStd !== null

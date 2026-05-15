@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import encDecTrace from "./enc_dec_trace.json";
 import Link from "next/link";
 import ContactInfo from "../contact";
 import { HeatmapSVG } from "@/components/transformer/HeatmapSVG";
@@ -694,6 +695,388 @@ function Section5() {
   );
 }
 
+// ─── Inference Trace: shared heatmap ─────────────────────────────────────────
+
+function traceColor(v: number): string {
+  const c = Math.max(0, Math.min(1, v));
+  return `rgb(${Math.round(255 - c * 156)},${Math.round(255 - c * 153)},${Math.round(255 - c * 14)})`;
+}
+
+// Derive encoder data from real BERT weights — strip [CLS] / [SEP]
+const _encRaw = encDecTrace.encoder;
+const _encKeep = _encRaw.tokens
+  .map((t, i) => (!/^\[.*\]$/.test(t) ? i : -1))
+  .filter((i) => i >= 0);
+const ENCODER_TOKENS = _encKeep.map((i) => _encRaw.tokens[i]);
+const ENCODER_MATRIX = _encKeep.map((i) =>
+  _encKeep.map((j) => _encRaw.attentionMatrix[i][j])
+);
+
+// Decoder data from real GPT-2 weights — already clean, upper triangle is 0
+const DECODER_TOKENS = encDecTrace.decoder.tokens as string[];
+const DECODER_MATRIX = encDecTrace.decoder.attentionMatrix as number[][];
+
+// Generation step distributions from real GPT-2 forward passes
+const GENERATION_PROMPT = encDecTrace.generationPrompt;
+
+function InferenceHeatmap({
+  tokens,
+  matrix,
+  hoveredRow,
+  onHoverRow,
+  maskUpperTriangle = false,
+  normalizeRows = false,
+  cellSize = 28,
+}: {
+  tokens: string[];
+  matrix: number[][];
+  hoveredRow: number | null;
+  onHoverRow: (i: number | null) => void;
+  maskUpperTriangle?: boolean;
+  normalizeRows?: boolean;
+  cellSize?: number;
+}) {
+  const n = tokens.length;
+  const lp = 44, tp = 48;
+  const w = lp + n * cellSize, h = tp + n * cellSize;
+
+  // Per-row normalization: scale each row by its own max over the visible cells.
+  // Needed for the decoder where the attention-sink token absorbs ~80% of every
+  // row's budget, washing out the linguistically interesting pairs.
+  const displayMatrix = normalizeRows
+    ? matrix.map((row, i) => {
+        const visibleMax = Math.max(
+          ...row.filter((_, j) => !(maskUpperTriangle && j > i)),
+          1e-9
+        );
+        return row.map((v) => v / visibleMax);
+      })
+    : matrix;
+
+  const globalMax = normalizeRows
+    ? 1
+    : Math.max(...matrix.flatMap((row, i) => row.filter((_, j) => !(maskUpperTriangle && j > i))), 1e-9);
+
+  const d = (t: string) => (t.length > 6 ? t.slice(0, 5) + "…" : t);
+
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      width={w}
+      height={h}
+      style={{ fontFamily: "var(--font-geist-mono,monospace)", display: "block" }}
+      onMouseLeave={() => onHoverRow(null)}
+    >
+      {tokens.map((t, j) => (
+        <text
+          key={j}
+          x={lp + j * cellSize + cellSize / 2}
+          y={tp - 6}
+          fontSize={9}
+          textAnchor="start"
+          fill="currentColor"
+          transform={`rotate(-45,${lp + j * cellSize + cellSize / 2},${tp - 6})`}
+        >
+          {d(t)}
+        </text>
+      ))}
+      {hoveredRow !== null && (
+        <rect
+          x={0}
+          y={tp + hoveredRow * cellSize}
+          width={w}
+          height={cellSize}
+          fill="rgba(99,102,241,0.10)"
+          style={{ pointerEvents: "none" }}
+        />
+      )}
+      {tokens.map((t, i) => (
+        <g key={i} onMouseEnter={() => onHoverRow(i)}>
+          <rect x={0} y={tp + i * cellSize} width={lp} height={cellSize} fill="transparent" />
+          <text
+            x={lp - 4}
+            y={tp + i * cellSize + cellSize / 2 + 3}
+            fontSize={9}
+            textAnchor="end"
+            fontWeight={hoveredRow === i ? "bold" : "normal"}
+            fill="currentColor"
+          >
+            {d(t)}
+          </text>
+        </g>
+      ))}
+      {matrix.map((row, i) =>
+        row.map((_, j) => {
+          const muted = maskUpperTriangle && j > i;
+          return (
+            <rect
+              key={`${i}-${j}`}
+              x={lp + j * cellSize}
+              y={tp + i * cellSize}
+              width={cellSize}
+              height={cellSize}
+              fill={muted ? "hsl(var(--muted))" : traceColor(displayMatrix[i][j] / globalMax)}
+              stroke={hoveredRow === i ? "rgba(99,102,241,0.35)" : "rgba(0,0,0,0.06)"}
+              strokeWidth={hoveredRow === i ? 1 : 0.5}
+              onMouseEnter={() => onHoverRow(i)}
+            />
+          );
+        })
+      )}
+    </svg>
+  );
+}
+
+// ─── Section 6: Interactive Enc/Dec Trace ─────────────────────────────────────
+
+function Section6() {
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  return (
+    <section className="space-y-4">
+      <h2 className="text-xl font-semibold">Encoder vs. Decoder: Side-by-Side</h2>
+      <p className="text-muted-foreground leading-relaxed max-w-2xl">
+        Both architectures run the same sentence through attention — but the matrices look
+        fundamentally different. The encoder (BERT) sees the full sequence bidirectionally;
+        the decoder (GPT-2) is lower-triangular because future tokens don't exist yet. Hover
+        any token row to see the same row highlighted in both panels simultaneously.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-8 items-start flex-wrap">
+        <div className="space-y-1.5">
+          <p className="text-sm font-medium">
+            Encoder · BERT
+            <span className="ml-2 text-xs font-normal text-indigo-500">
+              bidirectional · all tokens visible
+            </span>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Row token can attend anywhere — left <em>or</em> right
+          </p>
+          <InferenceHeatmap
+            tokens={ENCODER_TOKENS}
+            matrix={ENCODER_MATRIX}
+            hoveredRow={hoveredRow}
+            onHoverRow={setHoveredRow}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-sm font-medium">
+            Decoder · GPT-2
+            <span className="ml-2 text-xs font-normal text-indigo-500">
+              causal mask · left context only
+            </span>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Single head (layer 11, head 8) · muted cells masked to −∞
+          </p>
+          <InferenceHeatmap
+            tokens={DECODER_TOKENS}
+            matrix={DECODER_MATRIX}
+            hoveredRow={hoveredRow}
+            onHoverRow={setHoveredRow}
+            maskUpperTriangle
+          />
+        </div>
+      </div>
+      <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">
+        Consider "sat" (row 2). In BERT its attention reaches forward to "on" and "mat." In
+        GPT-2, "sat" is blind to its right — it only knows "the" and "cat," and attends
+        mostly to "cat" (its subject). The GPT-2 panel shows a single head (layer 11,
+        head 8) chosen because it encodes clear syntactic links; the 12-head average is
+        swamped by an <em>attention sink</em> where every token dumps most of its budget
+        onto position 0 — a known GPT-2 artifact, not a linguistic feature.
+      </p>
+    </section>
+  );
+}
+
+// ─── Section 7: Token-by-Token Generation ────────────────────────────────────
+
+type VocabEntry = { token: string; prob: number };
+type SamplerStatus = "idle" | "loading" | "ready" | "running";
+
+function TokenSampler() {
+  const [selected, setSelected] = useState<string[]>([]);
+  const [dist, setDist] = useState<VocabEntry[] | null>(null);
+  const [status, setStatus] = useState<SamplerStatus>("idle");
+  const [loadProgress, setLoadProgress] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tokenizerRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const modelRef = useRef<any>(null);
+
+  const promptTokens = GENERATION_PROMPT.split(" ");
+  const done = selected.length >= 5;
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { init(); }, []);
+  const maxProb = dist ? Math.max(...dist.map((e) => e.prob)) : 1;
+  const totalShown = dist ? dist.reduce((s, e) => s + e.prob, 0) : 0;
+
+  async function infer(tokens: string[]) {
+    setStatus("running");
+    const ctx = [...promptTokens, ...tokens].join(" ");
+    const { input_ids } = tokenizerRef.current(ctx);
+    const { logits } = await modelRef.current({ input_ids });
+    const [, seqLen, vocabSize]: number[] = logits.dims;
+    const data: Float32Array = logits.data;
+    const off = (seqLen - 1) * vocabSize;
+
+    // Numerically stable softmax over last-position logits
+    let mx = -Infinity;
+    for (let i = off; i < off + vocabSize; i++) if (data[i] > mx) mx = data[i];
+    const exps = new Float32Array(vocabSize);
+    let sum = 0;
+    for (let i = 0; i < vocabSize; i++) { exps[i] = Math.exp(data[off + i] - mx); sum += exps[i]; }
+
+    const ids = Array.from({ length: vocabSize }, (_, i) => i);
+    ids.sort((a, b) => exps[b] - exps[a]);
+
+    setDist(ids.slice(0, 12).map((id) => ({
+      token: tokenizerRef.current.decode([id]).trim() || `[${id}]`,
+      prob: exps[id] / sum,
+    })));
+    setStatus("ready");
+  }
+
+  async function init() {
+    setStatus("loading");
+    try {
+      const { AutoTokenizer, AutoModelForCausalLM, env } =
+        await import("@xenova/transformers");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (env as any).allowLocalModels = false;
+      tokenizerRef.current = await AutoTokenizer.from_pretrained("Xenova/gpt2");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      modelRef.current = await (AutoModelForCausalLM as any).from_pretrained("Xenova/gpt2", {
+        dtype: "q4",
+        progress_callback: (d: any) => {
+          if (typeof d.progress === "number") setLoadProgress(Math.round(d.progress));
+        },
+      });
+      await infer([]);
+    } catch (e) {
+      console.error(e);
+      setStatus("idle");
+    }
+  }
+
+  async function pick(token: string) {
+    const next = [...selected, token];
+    setSelected(next);
+    if (next.length < 5) await infer(next);
+    else setDist(null);
+  }
+
+  return (
+    <div className="space-y-4 max-w-xl">
+      {/* Sequence display */}
+      <div className="flex flex-wrap items-center gap-1.5 p-3 rounded-lg border border-border bg-card font-mono text-sm min-h-[46px]">
+        {promptTokens.map((t, i) => (
+          <span key={i} className="px-2 py-0.5 rounded bg-secondary border border-border text-secondary-foreground">
+            {t}
+          </span>
+        ))}
+        {selected.map((t, i) => (
+          <span key={i} className="px-2 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-800 dark:bg-indigo-950 dark:border-indigo-800 dark:text-indigo-200">
+            {t}
+          </span>
+        ))}
+        {status === "ready" && !done && (
+          <span className="inline-block w-0.5 h-4 bg-foreground/60 animate-pulse" />
+        )}
+      </div>
+
+      {/* Download progress */}
+      {status === "loading" && (
+        <div className="space-y-1.5">
+          <p className="text-xs text-muted-foreground">
+            Downloading GPT-2 (~40 MB, cached after first load)…
+          </p>
+          <div className="h-1.5 w-64 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-indigo-500 transition-all duration-300 rounded-full"
+              style={{ width: `${loadProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Inference spinner */}
+      {status === "running" && (
+        <p className="text-xs text-muted-foreground animate-pulse">Running forward pass…</p>
+      )}
+
+      {/* Distribution */}
+      {status === "ready" && dist && !done && (
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground mb-2">
+            Step {selected.length + 1} of 5 — click any bar to sample
+          </p>
+          {dist.map(({ token, prob }) => (
+            <button
+              key={token}
+              className="flex items-center gap-2 w-full group"
+              onClick={() => pick(token)}
+            >
+              <span className="w-16 text-xs font-mono text-right text-muted-foreground group-hover:text-foreground transition-colors">
+                {token}
+              </span>
+              <div className="flex-1 h-4 bg-muted/50 rounded-sm overflow-hidden">
+                <div
+                  className="h-full bg-indigo-400/80 group-hover:bg-indigo-500 transition-colors duration-100 rounded-sm"
+                  style={{ width: `${((prob / maxProb) * 100).toFixed(1)}%` }}
+                />
+              </div>
+              <span className="w-10 text-xs text-muted-foreground text-right">
+                {(prob * 100).toFixed(1)}%
+              </span>
+            </button>
+          ))}
+          <p className="text-xs text-muted-foreground pt-1.5 border-t border-border mt-2">
+            Top 12 of ~50,000 tokens · {(totalShown * 100).toFixed(0)}% of probability mass shown
+          </p>
+        </div>
+      )}
+
+      {done && (
+        <p className="text-sm text-muted-foreground italic">
+          Generation complete — restart and make different choices to see how sequences diverge.
+        </p>
+      )}
+
+      {(status === "ready" || done) && (
+        <button
+          className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
+          onClick={() => { setSelected([]); infer([]); }}
+        >
+          ↺ Restart
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Section7() {
+  return (
+    <section className="space-y-4">
+      <h2 className="text-xl font-semibold">Generating One Token at a Time</h2>
+      <p className="text-muted-foreground leading-relaxed max-w-2xl">
+        A decoder doesn't output a whole sentence at once. At every step it runs a real{" "}
+        <strong>forward pass over the full context</strong> and produces a probability
+        distribution over the entire vocabulary. Click any bar to sample that token — the
+        next distribution is computed live from GPT-2 running in your browser.
+      </p>
+      <TokenSampler />
+      <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl">
+        Pick different tokens at each step and watch the distributions shift. This is why{" "}
+        <strong>temperature</strong> matters: lowering it concentrates probability on the
+        tallest bars, making output more deterministic; raising it spreads mass across the
+        distribution, introducing more variety.
+      </p>
+    </section>
+  );
+}
+
 // ─── Further Reading ──────────────────────────────────────────────────────────
 
 function FurtherReading() {
@@ -857,6 +1240,8 @@ export default function TransformerVizClient() {
         setLiveResult={() => {}}
       />
       <Section5 />
+      <Section6 />
+      <Section7 />
       <FurtherReading />
 
       <section className="border-t border-border pt-6">
