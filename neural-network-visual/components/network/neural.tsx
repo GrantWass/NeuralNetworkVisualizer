@@ -35,20 +35,6 @@ const Legend = () => (
       <span>Weight decreased</span>
     </div>
     <span className="text-gray-400">| Node brightness = activation strength</span>
-    <span className="text-gray-400 hidden sm:inline">|</span>
-    <span className="text-xs text-gray-500 hidden sm:inline font-medium">After each step:</span>
-    <div className="hidden sm:flex items-center gap-1.5">
-      <div className="w-5 h-1 rounded" style={{ background: "#22d3ee" }} />
-      <span>Healthy gradient</span>
-    </div>
-    <div className="hidden sm:flex items-center gap-1.5">
-      <div className="w-5 h-1 rounded" style={{ background: "#ef4444" }} />
-      <span>Vanishing</span>
-    </div>
-    <div className="hidden sm:flex items-center gap-1.5">
-      <div className="w-5 h-1 rounded" style={{ background: "#f97316" }} />
-      <span>Exploding</span>
-    </div>
   </div>
 );
 

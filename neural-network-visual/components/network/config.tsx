@@ -53,23 +53,6 @@ const DATASET_DETAILS: Record<string, {
   },
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const getLRFeedback = (lr: number, dataset: string): { text: string; color: string } => {
-  if (dataset === "xor") {
-    // XOR uses sigmoid activations and only 4 samples — higher LRs are normal and expected
-    if (lr < 0.05) return { text: "Very slow — XOR will take many cycles to converge.", color: "text-blue-600" };
-    if (lr < 0.15) return { text: "Conservative — reliable but slow for XOR.", color: "text-green-600" };
-    if (lr < 0.55) return { text: "Good range for XOR — should converge in 50–200 cycles.", color: "text-green-600" };
-    if (lr < 0.8)  return { text: "Aggressive for XOR — may oscillate on some initializations.", color: "text-yellow-600" };
-    return { text: "Very high — likely to overshoot for XOR.", color: "text-red-600" };
-  }
-  if (lr < 0.01) return { text: "Very slow — may take many epochs to converge.", color: "text-blue-600" };
-  if (lr < 0.05) return { text: "Conservative — stable, reliable learning.", color: "text-green-600" };
-  if (lr < 0.2)  return { text: "Moderate — good default starting point.", color: "text-green-600" };
-  if (lr < 0.5)  return { text: "Aggressive — updates are large; watch for overshooting.", color: "text-yellow-600" };
-  return { text: "Very high — high risk of divergence. Loss may increase.", color: "text-red-600" };
-};
-
 const getInputSize = (dataset: string) =>
   dataset === "xor" ? 2 : dataset === "mnist" ? 784 : 4;
 
@@ -527,30 +510,26 @@ const Config = () => {
 
       {/* Floating training widget — visible from step 4 onward */}
       {wizardStep === 4 && sessionId && (
-        <div className="fixed top-16 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg p-3 flex flex-col gap-2 min-w-[260px]">
-          {/* Stats + sample + train row */}
+        <div className="fixed top-16 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg p-3 flex flex-col gap-2 min-w-[280px]">
+          {/* Stats + sample row — always rendered so widget stays the same size */}
           <div className="flex items-center gap-3 text-center">
-            {epoch > 0 && (
-              <>
-                <div>
-                  <p className="text-lg font-bold text-gray-900 leading-none">{epoch}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">epochs</p>
-                </div>
-                <div className="w-px h-7 bg-gray-200" />
-                <div>
-                  <p className="text-lg font-bold text-gray-900 leading-none">{loss.toFixed(3)}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">loss</p>
-                </div>
-                <div className="w-px h-7 bg-gray-200" />
-                <div>
-                  <p className="text-lg font-bold text-gray-900 leading-none">
-                    {name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)}
-                  </p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{name === "accuracy" ? "accuracy" : "MAE"}</p>
-                </div>
-                <div className="w-px h-7 bg-gray-200" />
-              </>
-            )}
+            <div>
+              <p className="text-lg font-bold text-gray-900 leading-none">{epoch > 0 ? epoch : 0}</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">epochs</p>
+            </div>
+            <div className="w-px h-7 bg-gray-200" />
+            <div>
+              <p className="text-lg font-bold text-gray-900 leading-none">{epoch > 0 ? loss.toFixed(3) : "—"}</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">loss</p>
+            </div>
+            <div className="w-px h-7 bg-gray-200" />
+            <div>
+              <p className="text-lg font-bold text-gray-900 leading-none">
+                {epoch > 0 ? (name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)) : "—"}
+              </p>
+              <p className="text-[10px] text-gray-400 mt-0.5">{name === "accuracy" ? "accuracy" : "MAE"}</p>
+            </div>
+            <div className="w-px h-7 bg-gray-200" />
             <div className="flex flex-col items-center gap-0.5">
               <div className="flex items-center gap-0.5">
                 <button
@@ -567,25 +546,20 @@ const Config = () => {
               </div>
               <p className="text-[10px] text-gray-400">sample</p>
             </div>
-            <div className="w-px h-7 bg-gray-200" />
-            <button
-              onClick={runTrainingCycle}
-              disabled={runModel}
-              className="w-20 flex items-center justify-center gap-1.5 bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
-            >
-              {runModel ? "…" : "▶ Train"}
-            </button>
           </div>
 
-          {/* Learning rate row */}
+          {/* Learning rate + Train button row */}
           <div className="flex items-center gap-2 border-t border-gray-100 pt-2">
             <div className="relative group flex items-center gap-1 whitespace-nowrap">
               <span className="text-xs text-gray-500 font-semibold">Learning Rate <span className="text-gray-400 font-normal">(η)</span></span>
-              <span className="cursor-default text-gray-300 text-xs">ⓘ</span>
-              <div className="absolute bottom-full left-0 mb-1.5 z-50 hidden group-hover:block w-56 bg-gray-900 text-white text-[11px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none leading-snug">
-                <span className={getLRFeedback(learningRate, dataset).color.replace('text-', 'text-').replace('-600', '-300').replace('-800', '-200')}>
-                  {getLRFeedback(learningRate, dataset).text}
-                </span>
+              <button className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-100 hover:bg-gray-200">
+                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" aria-hidden>
+                  <circle cx="10" cy="10" r="9" stroke="#6b7280" strokeWidth="1.5" fill="#fff" />
+                  <path d="M10 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm1 2.5h-2v5h2v-5z" fill="#6b7280" />
+                </svg>
+              </button>
+              <div className="absolute bottom-full left-0 mb-1.5 z-50 hidden group-hover:block w-60 bg-gray-900 text-white text-[11px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none leading-snug">
+                Controls how large each weight update is. A higher rate learns faster but risks overshooting; a lower rate is more stable but takes longer to converge. Start around 0.05–0.1 and adjust based on the loss curve.
               </div>
             </div>
             <Slider
@@ -596,6 +570,13 @@ const Config = () => {
               className="flex-1"
             />
             <span className="text-xs font-mono text-gray-700 w-8 text-right">{learningRate.toFixed(2)}</span>
+            <button
+              onClick={runTrainingCycle}
+              disabled={runModel}
+              className="w-20 flex items-center justify-center bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            >
+              {runModel ? "…" : "▶ Train"}
+            </button>
           </div>
         </div>
       )}

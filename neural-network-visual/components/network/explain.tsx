@@ -628,8 +628,8 @@ const Explain = () => {
         <>
             {/* Connection panel + Decision Boundary (XOR/Iris) + Prediction side by side */}
             <div className="flex flex-wrap gap-3 mx-2 mt-4 mb-2">
-                {/* Left: connection / node details — full width on mobile, 1/3 on sm+ */}
-                <div className={`w-full ${dataset === "mnist" || dataset === "xor" || dataset === "iris" ? "sm:w-1/3 sm:flex-shrink-0" : "sm:flex-1"} min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm`}>
+                {/* Left: connection / node details — full width on mobile, flex-1 on sm+ */}
+                <div className="w-full sm:flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                     {hoveredConnection ? (
                         <>
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Connection</p>
@@ -715,7 +715,7 @@ const Explain = () => {
 
                 {/* Middle: decision boundary for XOR and Iris */}
                 {(dataset === "xor" || dataset === "iris") && network && (
-                    <div className="flex-1 sm:flex-none sm:w-1/3 sm:flex-shrink-0 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                    <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                         <DecisionBoundary
                             layers={network.layers}
                             dataset={dataset}
@@ -764,7 +764,7 @@ const Explain = () => {
                         </div>
                     </>
                 ) : hasTrained && originalData[sampleIndex] && (
-                    <div className={`flex-1 ${dataset === "xor" || dataset === "iris" ? "sm:flex-none sm:w-1/3 sm:flex-shrink-0" : ""} min-w-0 flex flex-col gap-2 bg-white border border-gray-200 rounded-lg p-3 shadow-sm`}>
+                    <div className="flex-1 min-w-0 flex flex-col gap-2 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                         <SampleVisual
                             dataset={dataset}
                             original={originalData[sampleIndex]}
