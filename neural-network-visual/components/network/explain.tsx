@@ -295,7 +295,11 @@ const Explain = () => {
       yStd,
       drawnDigitPrediction,
       setSampleIndex,
+      getDisplayIndex,
     } = useStore();
+
+    // Actual index into the training data arrays (stratified, not just 0–25)
+    const di = getDisplayIndex(sampleIndex);
 
     const [view, setView] = useState<PropagationView>('forward');
     const [fontSize, setFontSize] = useState("md");
@@ -664,6 +668,49 @@ const Explain = () => {
                                 )}
                             </div>
                             {!sessionId && <p className="text-xs text-gray-400 italic mt-1">Initialize the model to edit weights.</p>}
+                            {/* Activation flow for current sample */}
+                            {hasTrained && network && (() => {
+                                const li = hoveredConnection.layerIndex;
+                                const fromAct = li === 0
+                                    ? network.input[di]?.[hoveredConnection.fromIndex]
+                                    : network.layers[li - 1]?.A?.[di]?.[hoveredConnection.fromIndex];
+                                const toAct = network.layers[li]?.A?.[di]?.[hoveredConnection.toIndex];
+                                const gradient = network.layers[li]?.dW?.[hoveredConnection.fromIndex]?.[hoveredConnection.toIndex];
+                                const contribution = fromAct !== undefined ? fromAct * hoveredConnection.weight : undefined;
+                                return (
+                                    <div className="mt-3 pt-3 border-t border-gray-100">
+                                        <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Signal this step</p>
+                                        <div className="flex items-center gap-2 text-center">
+                                            <div className="flex-1">
+                                                <p className="text-[9px] text-gray-400">From (A)</p>
+                                                <p className="font-mono text-sm font-semibold text-gray-800">{fromAct?.toFixed(3) ?? "—"}</p>
+                                            </div>
+                                            <span className="text-gray-300 text-xs">×</span>
+                                            <div className="flex-1">
+                                                <p className="text-[9px] text-gray-400">Weight</p>
+                                                <p className="font-mono text-sm font-semibold text-gray-800">{hoveredConnection.weight.toFixed(3)}</p>
+                                            </div>
+                                            <span className="text-gray-300 text-xs">=</span>
+                                            <div className="flex-1">
+                                                <p className="text-[9px] text-gray-400">Contribution</p>
+                                                <p className={`font-mono text-sm font-semibold ${contribution !== undefined && contribution > 0 ? "text-indigo-600" : "text-orange-500"}`}>{contribution?.toFixed(3) ?? "—"}</p>
+                                            </div>
+                                            <span className="text-gray-300 text-xs">→</span>
+                                            <div className="flex-1">
+                                                <p className="text-[9px] text-gray-400">To (A)</p>
+                                                <p className="font-mono text-sm font-semibold text-gray-800">{toAct?.toFixed(3) ?? "—"}</p>
+                                            </div>
+                                        </div>
+                                        {gradient !== undefined && (
+                                            <div className="mt-2 flex items-center gap-2">
+                                                <p className="text-[9px] text-gray-400 uppercase tracking-wide">Last dW</p>
+                                                <p className={`font-mono text-xs font-semibold ${Math.abs(gradient) < 1e-4 ? "text-red-400" : Math.abs(gradient) > 0.3 ? "text-orange-500" : "text-teal-600"}`}>{gradient.toFixed(5)}</p>
+                                                <p className="text-[9px] text-gray-300">{Math.abs(gradient) < 1e-4 ? "vanishing" : Math.abs(gradient) > 0.3 ? "large" : "healthy"}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </>
                     ) : hoveredNode && network ? (
                         <>
@@ -679,8 +726,8 @@ const Explain = () => {
                                 const layerObj = network.layers[hoveredNode.layerIndex - 1];
                                 const ni = hoveredNode.nodeIndex;
                                 const bias = layerObj?.biases?.[ni];
-                                const zVal = layerObj?.Z?.[sampleIndex]?.[ni];
-                                const aRaw = layerObj?.A?.[sampleIndex]?.[ni];
+                                const zVal = layerObj?.Z?.[di]?.[ni];
+                                const aRaw = layerObj?.A?.[di]?.[ni];
                                 const inputVal = zVal !== undefined && bias !== undefined ? zVal - bias : undefined;
                                 const isOutputLayer = hoveredNode.layerIndex === network.layers.length - 1;
                                 const aDisplay = isOutputLayer && dataset === "auto_mpg" && yMean !== null && yStd !== null && aRaw !== undefined
@@ -734,7 +781,14 @@ const Explain = () => {
                         <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Prediction</p>
                             {drawnDigitPrediction ? (
-                                <div className="space-y-1">
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
+                                        <span className="text-5xl font-bold text-indigo-600 leading-none tabular-nums">{drawnDigitPrediction.predictedClass}</span>
+                                        <div>
+                                            <p className="text-[10px] text-gray-400">predicted</p>
+                                            <p className="text-sm font-semibold text-gray-800">{((drawnDigitPrediction.confidences[drawnDigitPrediction.predictedClass] ?? 0) * 100).toFixed(1)}% confident</p>
+                                        </div>
+                                    </div>
                                     {drawnDigitPrediction.confidences.map((conf, digit) => {
                                         const isPredicted = digit === drawnDigitPrediction.predictedClass;
                                         const pct = (conf * 100).toFixed(1);
@@ -763,13 +817,13 @@ const Explain = () => {
                             )}
                         </div>
                     </>
-                ) : hasTrained && originalData[sampleIndex] && (
+                ) : hasTrained && originalData[di] && (
                     <div className="flex-1 min-w-0 flex flex-col gap-2 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                         <SampleVisual
                             dataset={dataset}
-                            original={originalData[sampleIndex]}
+                            original={originalData[di]}
                             network={network}
-                            sampleIndex={sampleIndex}
+                            sampleIndex={di}
                             yMean={yMean}
                             yStd={yStd}
                         />
@@ -909,12 +963,12 @@ const Explain = () => {
                                                 <div className="flex flex-col items-center">
                                                     {renderVector(
                                                         layerIndex === 0
-                                                            ? network?.input[sampleIndex]
-                                                            : network?.layers[layerIndex - 1].A[sampleIndex],
+                                                            ? network?.input[di]
+                                                            : network?.layers[layerIndex - 1].A[di],
                                                         (layerIndex === 0 ? "Input Features" : `Layer ${layerIndex} Activations`),
                                                         layerIndex === 0 ? "Original input data" : "Output from previous layer",
                                                         layerIndex === 0
-                                                            ? <InputInfo dataset={dataset} input={network?.input[sampleIndex]} originalInput={originalData[sampleIndex]} />
+                                                            ? <InputInfo dataset={dataset} input={network?.input[di]} originalInput={originalData[di]} />
                                                             : null,
                                                         layerIndex === 0 ? "input" : `A:${layerIndex - 1}`
                                                     )}
@@ -938,7 +992,7 @@ const Explain = () => {
                                                     <div className="flex flex-col items-center">
                                                         {layer.activation !== "linear" && (<>
                                                             {renderVector(
-                                                                layer.Z[sampleIndex],
+                                                                layer.Z[di],
                                                                 isOutputComputation ? "Raw Output" : `Pre-activations`,
                                                                 undefined, undefined,
                                                                 `Z:${layerIndex}`
@@ -951,11 +1005,11 @@ const Explain = () => {
                                                             </div>
                                                         </>)}
                                                         {renderVector(
-                                                            layer.A[sampleIndex],
+                                                            layer.A[di],
                                                             isOutputComputation ? "Final Output" : `Activations`,
                                                             "",
                                                             isOutputComputation
-                                                                ? <OutputInfo dataset={dataset} output={layer.A[sampleIndex]} actual={originalData[sampleIndex]} />
+                                                                ? <OutputInfo dataset={dataset} output={layer.A[di]} actual={originalData[di]} />
                                                                 : null,
                                                             `A:${layerIndex}`
                                                         )}
@@ -1114,11 +1168,11 @@ const Explain = () => {
                             {network?.layers.slice().reverse().map((layer: NeuronLayer, index: number) => {
                                 const initialContent = index === 0;
                                 const outputLayerIndex = network.layers.length - 2;
-                                const actualRaw = originalData[sampleIndex].slice(dataset === "iris" ? -3 : -1);
+                                const actualRaw = originalData[di].slice(dataset === "iris" ? -3 : -1);
                                 const actual = dataset === "auto_mpg" && yMean !== null && yStd !== null
                                     ? actualRaw.map(v => (v - yMean) / yStd)
                                     : actualRaw;
-                                const dA = multiplyMatrices([layer.dZ[sampleIndex]], transpose(network.layers[outputLayerIndex - index + 1]?.weights));
+                                const dA = multiplyMatrices([layer.dZ[di]], transpose(network.layers[outputLayerIndex - index + 1]?.weights));
 
                                 return (
                                     <div key={`layer-${index}-update`} className="flex flex-col gap-2 items-center border-t border-gray-300 pt-6">
@@ -1141,12 +1195,12 @@ const Explain = () => {
                                                         <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
                                                             <span className="text-sm sm:text-base mt-2 sm:mt-6 text-gray-600">2 ×</span>
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">(</span>
-                                                            {renderVector(network.layers[outputLayerIndex].A[sampleIndex], `Prediction`, "(normalized)", undefined, `A:${outputLayerIndex}`)}
+                                                            {renderVector(network.layers[outputLayerIndex].A[di], `Prediction`, "(normalized)", undefined, `A:${outputLayerIndex}`)}
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">-</span>
                                                             {renderVector(actual, `Actual`, "(normalized)")}
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">)</span>
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
-                                                            {renderVector(network.layers[outputLayerIndex].dZ[sampleIndex], `dZ`, "", undefined, `dZ:${outputLayerIndex}`)}
+                                                            {renderVector(network.layers[outputLayerIndex].dZ[di], `dZ`, "", undefined, `dZ:${outputLayerIndex}`)}
                                                         </div>
                                                     </>
                                                 ) : (
@@ -1154,11 +1208,11 @@ const Explain = () => {
                                                         <p className="text-sm text-gray-600">Calculate initial error (dZ) at the output:</p>
                                                         <p className="text-xs text-gray-600 italic">*Note: this is done with all samples at once, unlike the single sample shown here*</p>
                                                         <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
-                                                            {renderVector(network.layers[outputLayerIndex].A[sampleIndex], `Prediction`, "", undefined, `A:${outputLayerIndex}`)}
+                                                            {renderVector(network.layers[outputLayerIndex].A[di], `Prediction`, "", undefined, `A:${outputLayerIndex}`)}
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">-</span>
                                                             {renderVector(actual, `Actual`, "")}
                                                             <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
-                                                            {renderVector(network.layers[outputLayerIndex].dZ[sampleIndex], `Error`, "", undefined, `dZ:${outputLayerIndex}`)}
+                                                            {renderVector(network.layers[outputLayerIndex].dZ[di], `Error`, "", undefined, `dZ:${outputLayerIndex}`)}
                                                         </div>
                                                     </>
                                                 )}
@@ -1180,7 +1234,7 @@ const Explain = () => {
                                                     )}
                                                     <div className="flex flex-col items-center gap-2 flex-wrap justify-center">
                                                         <div className="flex flex-row items-center gap-1 sm:gap-2 flex-wrap justify-center">
-                                                            {renderVector(layer.dZ[sampleIndex], `dZ`, "Calculated above", undefined, `dZ:${li}`)}
+                                                            {renderVector(layer.dZ[di], `dZ`, "Calculated above", undefined, `dZ:${li}`)}
                                                             {(outputLayerIndex - index + 1) !== 0 ? <>
                                                                 <span className="text-lg sm:text-2xl mt-2 sm:mt-6">×</span>
                                                                 {renderMatrix(transpose(network.layers[outputLayerIndex - index + 1]?.prevWeights), `Wᵀ`, "Transposed weights from backwards layer", `W:${li}`)}
@@ -1201,7 +1255,7 @@ const Explain = () => {
                                                                     </div>
                                                                 </div>
                                                                 <span className="text-lg sm:text-2xl mt-2 sm:mt-6">=</span>
-                                                                {renderVector(network.layers[outputLayerIndex - index]?.dZ[sampleIndex], `dZ`, "Error to pass to backwards layer", undefined, li > 0 ? `dZ:${li - 1}` : undefined)}
+                                                                {renderVector(network.layers[outputLayerIndex - index]?.dZ[di], `dZ`, "Error to pass to backwards layer", undefined, li > 0 ? `dZ:${li - 1}` : undefined)}
                                                             </div>
                                                         ) : null}
                                                     </div>

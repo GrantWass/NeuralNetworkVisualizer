@@ -559,7 +559,7 @@ const Config = () => {
                     <path d="M10 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm1 2.5h-2v5h2v-5z" fill="#6b7280" />
                   </svg>
                 </button>
-                <div className="absolute bottom-full left-0 mb-1.5 z-50 hidden group-hover:block w-60 bg-gray-900 text-white text-[11px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none leading-snug">
+                <div className="absolute top-full left-0 mt-1.5 z-50 hidden group-hover:block w-60 bg-gray-900 text-white text-[11px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none leading-snug">
                   Controls how large each weight update is. A higher rate learns faster but risks overshooting; a lower rate is more stable but takes longer to converge. Start around 0.05–0.1 and adjust based on the loss curve.
                 </div>
               </div>

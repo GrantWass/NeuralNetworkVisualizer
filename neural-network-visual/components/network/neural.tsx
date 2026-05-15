@@ -51,6 +51,7 @@ const Graph = () => {
         yMean,
         yStd,
         epoch,
+        getDisplayIndex,
     } = useStore();
 
 
@@ -95,9 +96,9 @@ const Graph = () => {
                     network={network}
                     setHoveredConnection={setHoveredConnection}
                     setHoveredNode={setHoveredNode}
-                    sampleIndex={sampleIndex}
+                    sampleIndex={getDisplayIndex(sampleIndex)}
                     dataset={dataset}
-                    original={originalData[sampleIndex]}
+                    original={originalData[getDisplayIndex(sampleIndex)]}
                     flashConnections={flashConnections}
                     flashKey={flashKey}
                     stepLayerHighlight={stepLayerHighlight}
