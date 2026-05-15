@@ -100,10 +100,29 @@ export function RegressionChart({ network, originalData, yMean, yStd }: Regressi
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="relative flex flex-col gap-1">
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
         Prediction vs Actual
       </p>
+
+      {r2 !== null && (
+        <div className="absolute top-0 right-0 bg-white/90 backdrop-blur-sm rounded px-2 py-1 border border-gray-200 shadow-sm">
+          <p className="text-[8px] text-gray-400 uppercase tracking-wide leading-none">
+            R²
+          </p>
+          <p
+            className={`font-mono text-xs font-semibold leading-none mt-0.5 ${
+              r2 > 0.8
+                ? "text-green-600"
+                : r2 > 0.5
+                  ? "text-yellow-600"
+                  : "text-red-500"
+            }`}
+          >
+            {r2.toFixed(3)}
+          </p>
+        </div>
+      )}
 
       {!initialized ? (
         <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">
@@ -115,25 +134,6 @@ export function RegressionChart({ network, originalData, yMean, yStd }: Regressi
             <span className="absolute -left-5 top-1/2 -translate-y-1/2 -rotate-90 text-[9px] text-gray-400 whitespace-nowrap">
               Predicted MPG
             </span>
-
-            {r2 !== null && (
-              <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded px-2 py-1 border border-gray-200 shadow-sm">
-                <p className="text-[8px] text-gray-400 uppercase tracking-wide leading-none">
-                  R²
-                </p>
-                <p
-                  className={`font-mono text-xs font-semibold leading-none mt-0.5 ${
-                    r2 > 0.8
-                      ? "text-green-600"
-                      : r2 > 0.5
-                        ? "text-yellow-600"
-                        : "text-red-500"
-                  }`}
-                >
-                  {r2.toFixed(3)}
-                </p>
-              </div>
-            )}
             <canvas
               ref={canvasRef}
               width={CANVAS}

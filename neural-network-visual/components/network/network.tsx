@@ -503,7 +503,7 @@ export const Network: React.FC<NetworkSVGProps> = ({
         stepLayerHighlight={stepLayerHighlight}
         yMean={yMean}
         yStd={yStd}
-        drawnDigitPresent={drawnPixels && drawnPixels.length === 784 ? true : false} // TODO: fix
+        drawnDigitPresent={drawnPixels != null && drawnPixels.length === 784}
       />
       <LayerLabels SVGWIDTH={SVGWIDTH} SVGHEIGHT={SVGHEIGHT} network={network} dataset={dataset} />
     </>
