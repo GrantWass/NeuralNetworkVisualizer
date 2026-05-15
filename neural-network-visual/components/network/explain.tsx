@@ -668,6 +668,42 @@ const Explain = () => {
                                 )}
                             </div>
                             {!sessionId && <p className="text-xs text-gray-400 italic mt-1">Initialize the model to edit weights.</p>}
+
+                            {/* Weight strength bar + description — always shown */}
+                            {(() => {
+                                const w = hoveredConnection.weight;
+                                const MAX = 3.0;
+                                const pct = Math.min(1, Math.abs(w) / MAX);
+                                const isPos = w >= 0;
+                                const strength = Math.abs(w) < 0.1 ? "near-zero" : Math.abs(w) < 0.5 ? "weak" : Math.abs(w) < 1.5 ? "moderate" : "strong";
+                                const effect = isPos ? "amplifies" : "suppresses";
+                                return (
+                                    <div className="mt-3 pt-3 border-t border-gray-100">
+                                        <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Weight strength</p>
+                                        {/* Center-anchored bar */}
+                                        <div className="relative h-4 bg-gray-100 rounded-full overflow-hidden mb-1.5">
+                                            <div className="absolute top-0 bottom-0 left-1/2 w-px bg-gray-300 z-10" />
+                                            {isPos ? (
+                                                <div
+                                                    className="absolute top-0 bottom-0 bg-indigo-400 rounded-r-full"
+                                                    style={{ left: "50%", width: `${pct * 50}%` }}
+                                                />
+                                            ) : (
+                                                <div
+                                                    className="absolute top-0 bottom-0 bg-orange-400 rounded-l-full"
+                                                    style={{ right: "50%", width: `${pct * 50}%` }}
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="flex justify-between text-[9px] text-gray-400 mb-2">
+                                            <span>−{MAX}</span><span>0</span><span>+{MAX}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-500 leading-snug">
+                                            A <span className={`font-semibold ${isPos ? "text-indigo-600" : "text-orange-500"}`}>{strength} {isPos ? "positive" : "negative"}</span> weight — {effect} the signal from neuron {hoveredConnection.fromIndex + 1} as it flows to neuron {hoveredConnection.toIndex + 1}.
+                                        </p>
+                                    </div>
+                                );
+                            })()}
                             {/* Activation flow for current sample */}
                             {hasTrained && network && (() => {
                                 const li = hoveredConnection.layerIndex;
