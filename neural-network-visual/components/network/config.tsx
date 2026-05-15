@@ -549,31 +549,35 @@ const Config = () => {
           </div>
 
           {/* Learning rate + Train button row */}
-          <div className="flex items-center gap-2 border-t border-gray-100 pt-2">
-            <div className="relative group flex items-center gap-1 whitespace-nowrap">
-              <span className="text-xs text-gray-500 font-semibold">Learning Rate <span className="text-gray-400 font-normal">(η)</span></span>
-              <button className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-100 hover:bg-gray-200">
-                <svg width="10" height="10" viewBox="0 0 20 20" fill="none" aria-hidden>
-                  <circle cx="10" cy="10" r="9" stroke="#6b7280" strokeWidth="1.5" fill="#fff" />
-                  <path d="M10 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm1 2.5h-2v5h2v-5z" fill="#6b7280" />
-                </svg>
-              </button>
-              <div className="absolute bottom-full left-0 mb-1.5 z-50 hidden group-hover:block w-60 bg-gray-900 text-white text-[11px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none leading-snug">
-                Controls how large each weight update is. A higher rate learns faster but risks overshooting; a lower rate is more stable but takes longer to converge. Start around 0.05–0.1 and adjust based on the loss curve.
+          <div className="flex items-end gap-2 border-t border-gray-100 pt-2">
+            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+              <div className="relative group flex items-center gap-1">
+                <span className="text-xs text-gray-500 font-semibold whitespace-nowrap">Learning Rate <span className="text-gray-400 font-normal">(η)</span></span>
+                <button className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-100 hover:bg-gray-200 flex-shrink-0">
+                  <svg width="10" height="10" viewBox="0 0 20 20" fill="none" aria-hidden>
+                    <circle cx="10" cy="10" r="9" stroke="#6b7280" strokeWidth="1.5" fill="#fff" />
+                    <path d="M10 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm1 2.5h-2v5h2v-5z" fill="#6b7280" />
+                  </svg>
+                </button>
+                <div className="absolute bottom-full left-0 mb-1.5 z-50 hidden group-hover:block w-60 bg-gray-900 text-white text-[11px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none leading-snug">
+                  Controls how large each weight update is. A higher rate learns faster but risks overshooting; a lower rate is more stable but takes longer to converge. Start around 0.05–0.1 and adjust based on the loss curve.
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Slider
+                  value={[learningRate]}
+                  onValueChange={(v) => setLearningRate(v[0])}
+                  max={1}
+                  step={0.01}
+                  className="flex-1"
+                />
+                <span className="text-xs font-mono text-gray-700 w-8 text-right flex-shrink-0">{learningRate.toFixed(2)}</span>
               </div>
             </div>
-            <Slider
-              value={[learningRate]}
-              onValueChange={(v) => setLearningRate(v[0])}
-              max={1}
-              step={0.01}
-              className="flex-1"
-            />
-            <span className="text-xs font-mono text-gray-700 w-8 text-right">{learningRate.toFixed(2)}</span>
             <button
               onClick={runTrainingCycle}
               disabled={runModel}
-              className="w-20 flex items-center justify-center bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
+              className="w-20 flex-shrink-0 flex items-center justify-center bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
             >
               {runModel ? "…" : "▶ Train"}
             </button>
