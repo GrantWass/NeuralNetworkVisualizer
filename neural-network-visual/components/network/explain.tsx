@@ -252,7 +252,7 @@ function ActivationMiniChart({ activation, zVal }: { activation: string; zVal: n
   return (
     <div className="mt-2">
       {description && <p className="text-[11px] text-gray-500 mb-2 leading-relaxed">{description}</p>}
-      <div className="h-48 w-full">
+      <div className="h-32 w-full">
         <Line data={data} options={options} />
       </div>
     </div>
@@ -262,10 +262,9 @@ function ActivationMiniChart({ activation, zVal }: { activation: string; zVal: n
 function NodeStat({ label, sub, value, dim }: { label: string; sub?: string; value: number | undefined; dim?: boolean }) {
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <div className="flex flex-col items-center leading-tight">
-        <span className="text-[9px] uppercase tracking-wide text-gray-500 text-center">{label}</span>
-        {sub && <span className="text-[8px] text-gray-300 text-center">{sub}</span>}
-      </div>
+      <span className="text-[9px] uppercase tracking-wide text-gray-500 text-center leading-tight whitespace-nowrap">
+        {label}{sub && <span className="text-gray-300 normal-case tracking-normal"> {sub}</span>}
+      </span>
       <span className={`font-mono text-xs font-medium ${dim ? "text-gray-400" : "text-gray-900"}`}>
         {value !== undefined ? value.toFixed(3) : "—"}
       </span>
@@ -692,10 +691,10 @@ const Explain = () => {
                                 return (
                                     <>
                                         <div className="grid grid-cols-4 gap-1 mb-2 px-0.5">
-                                            <NodeStat label="Weighted sum" value={inputVal} />
+                                            <NodeStat label="Input" value={inputVal} />
                                             <NodeStat label="Bias" value={bias} />
-                                            <NodeStat label="Pre-activation" sub="(Z)" value={zVal} />
-                                            <NodeStat label={aLabel === "MPG" ? "MPG" : "Post-activation"} sub={aLabel === "MPG" ? undefined : "(A)"} value={aDisplay} />
+                                            <NodeStat label="Pre-act." sub="(Z)" value={zVal} />
+                                            <NodeStat label={aLabel === "MPG" ? "MPG" : "Post-act."} sub={aLabel === "MPG" ? undefined : "(A)"} value={aDisplay} />
                                         </div>
                                         {showChart && <ActivationMiniChart activation={activation} zVal={zVal!} aVal={aRaw!} />}
                                         {activation === "softmax" && zVal !== undefined && (
@@ -776,17 +775,17 @@ const Explain = () => {
                         />
                         <div className="flex items-center justify-between px-0.5 pt-1 border-t border-gray-100">
                             <span className="text-[10px] text-gray-400 uppercase tracking-wide">Sample</span>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-0.5">
                                 <button
                                     onClick={() => setSampleIndex(Math.max(0, sampleIndex - 1))}
                                     disabled={sampleIndex === 0}
-                                    className="w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 text-xs"
+                                    className="w-6 h-6 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-25 text-gray-700 text-base font-bold leading-none"
                                 >‹</button>
-                                <span className="font-mono text-sm font-semibold text-gray-900 w-5 text-center">{sampleIndex}</span>
+                                <span className="font-mono text-sm font-semibold text-gray-900 w-6 text-center">{sampleIndex}</span>
                                 <button
                                     onClick={() => setSampleIndex(Math.min(dataset === "xor" ? 3 : 25, sampleIndex + 1))}
                                     disabled={sampleIndex === (dataset === "xor" ? 3 : 25)}
-                                    className="w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 text-xs"
+                                    className="w-6 h-6 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-25 text-gray-700 text-base font-bold leading-none"
                                 >›</button>
                             </div>
                         </div>

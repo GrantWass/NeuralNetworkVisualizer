@@ -2,7 +2,6 @@
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import InfoPopup from "@/components/network/popup";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import useStore from "@/components/network/lib/store";
@@ -421,47 +420,7 @@ const StepInitialize = ({
   );
 };
 
-const StepTrain = ({
-  dataset,
-  learningRate,
-  onSetLR,
-  onChangeModel,
-}: {
-  dataset: string;
-  learningRate: number;
-  onSetLR: (v: number) => void;
-  onChangeModel: () => void;
-}) => {
-  const lrFeedback = getLRFeedback(learningRate, dataset);
 
-  return (
-    <div className="space-y-4">
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <Label className="text-sm font-semibold">Learning Rate (η)</Label>
-          <span className="text-sm font-mono font-bold">{learningRate.toFixed(2)}</span>
-        </div>
-        <Slider
-          value={[learningRate]}
-          onValueChange={(v) => onSetLR(v[0])}
-          max={1}
-          step={0.01}
-          className="w-full"
-        />
-        <p className={`text-xs mt-1.5 ${lrFeedback.color}`}>{lrFeedback.text}</p>
-      </div>
-
-      <div className="flex justify-center pt-1">
-        <button
-          onClick={onChangeModel}
-          className="text-xs text-gray-400 hover:text-gray-700 underline underline-offset-2"
-        >
-          ← Change model / dataset
-        </button>
-      </div>
-    </div>
-  );
-};
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 const STEP_LABELS = ["Pick Dataset", "Configure Network", "Initialize", "Train"];
@@ -568,99 +527,124 @@ const Config = () => {
 
       {/* Floating training widget — visible from step 4 onward */}
       {wizardStep === 4 && sessionId && (
-        <div className="fixed top-16 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg px-3 py-2 flex items-center gap-3 text-center">
-          {epoch > 0 && (
-            <>
-              <div>
-                <p className="text-lg font-bold text-gray-900 leading-none">{epoch}</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">epochs</p>
+        <div className="fixed top-16 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg p-3 flex flex-col gap-2 min-w-[260px]">
+          {/* Stats + sample + train row */}
+          <div className="flex items-center gap-3 text-center">
+            {epoch > 0 && (
+              <>
+                <div>
+                  <p className="text-lg font-bold text-gray-900 leading-none">{epoch}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">epochs</p>
+                </div>
+                <div className="w-px h-7 bg-gray-200" />
+                <div>
+                  <p className="text-lg font-bold text-gray-900 leading-none">{loss.toFixed(3)}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">loss</p>
+                </div>
+                <div className="w-px h-7 bg-gray-200" />
+                <div>
+                  <p className="text-lg font-bold text-gray-900 leading-none">
+                    {name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)}
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{name === "accuracy" ? "accuracy" : "MAE"}</p>
+                </div>
+                <div className="w-px h-7 bg-gray-200" />
+              </>
+            )}
+            <div className="flex flex-col items-center gap-0.5">
+              <div className="flex items-center gap-0.5">
+                <button
+                  onClick={() => setSampleIndex(Math.max(0, sampleIndex - 1))}
+                  disabled={sampleIndex === 0}
+                  className="w-6 h-6 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-25 text-gray-700 text-base font-bold leading-none"
+                >‹</button>
+                <span className="font-mono text-sm font-semibold text-gray-900 w-6 text-center">{sampleIndex}</span>
+                <button
+                  onClick={() => setSampleIndex(Math.min(dataset === "xor" ? 3 : 25, sampleIndex + 1))}
+                  disabled={sampleIndex === (dataset === "xor" ? 3 : 25)}
+                  className="w-6 h-6 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-25 text-gray-700 text-base font-bold leading-none"
+                >›</button>
               </div>
-              <div className="w-px h-7 bg-gray-200" />
-              <div>
-                <p className="text-lg font-bold text-gray-900 leading-none">{loss.toFixed(3)}</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">loss</p>
-              </div>
-              <div className="w-px h-7 bg-gray-200" />
-              <div>
-                <p className="text-lg font-bold text-gray-900 leading-none">
-                  {name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)}
-                </p>
-                <p className="text-[10px] text-gray-400 mt-0.5">{name === "accuracy" ? "accuracy" : "MAE"}</p>
-              </div>
-              <div className="w-px h-7 bg-gray-200" />
-            </>
-          )}
-          <div className="flex flex-col items-center gap-0.5">
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setSampleIndex(Math.max(0, sampleIndex - 1))}
-                disabled={sampleIndex === 0}
-                className="w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 text-xs"
-              >‹</button>
-              <span className="font-mono text-sm font-semibold text-gray-900 w-5 text-center">{sampleIndex}</span>
-              <button
-                onClick={() => setSampleIndex(Math.min(dataset === "xor" ? 3 : 25, sampleIndex + 1))}
-                disabled={sampleIndex === (dataset === "xor" ? 3 : 25)}
-                className="w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 text-xs"
-              >›</button>
+              <p className="text-[10px] text-gray-400">sample</p>
             </div>
-            <p className="text-[10px] text-gray-400">sample</p>
+            <div className="w-px h-7 bg-gray-200" />
+            <button
+              onClick={runTrainingCycle}
+              disabled={runModel}
+              className="w-20 flex items-center justify-center gap-1.5 bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            >
+              {runModel ? "…" : "▶ Train"}
+            </button>
           </div>
-          <div className="w-px h-7 bg-gray-200" />
-          <button
-            onClick={runTrainingCycle}
-            disabled={runModel}
-            className="w-20 flex items-center justify-center gap-1.5 bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
-          >
-            {runModel ? "…" : "▶ Train"}
-          </button>
+
+          {/* Learning rate row */}
+          <div className="flex flex-col gap-1 border-t border-gray-100 pt-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 font-semibold whitespace-nowrap">η</span>
+              <Slider
+                value={[learningRate]}
+                onValueChange={(v) => setLearningRate(v[0])}
+                max={1}
+                step={0.01}
+                className="flex-1"
+              />
+              <span className="text-xs font-mono text-gray-700 w-8 text-right">{learningRate.toFixed(2)}</span>
+            </div>
+            <p className={`text-[10px] ${getLRFeedback(learningRate, dataset).color}`}>
+              {getLRFeedback(learningRate, dataset).text}
+            </p>
+          </div>
         </div>
       )}
 
       {/* Step content */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 shadow-sm">
-        {wizardStep === 1 && (
-          <StepDataset
-            dataset={dataset}
-            onDatasetChange={handleDatasetChange}
-            onNext={() => setWizardStep(2)}
-          />
-        )}
+      {wizardStep < 4 && (
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 shadow-sm">
+          {wizardStep === 1 && (
+            <StepDataset
+              dataset={dataset}
+              onDatasetChange={handleDatasetChange}
+              onNext={() => setWizardStep(2)}
+            />
+          )}
 
-        {wizardStep === 2 && (
-          <StepConfigure
-            dataset={dataset}
-            hiddenLayers={hiddenLayers}
-            activations={activations}
-            onAddLayer={addHiddenLayer}
-            onRemoveLayer={removeHiddenLayer}
-            onUpdateLayer={updateHiddenLayer}
-            onUpdateActivation={updateActivation}
-            onBack={() => setWizardStep(1)}
-            onNext={() => setWizardStep(3)}
-          />
-        )}
+          {wizardStep === 2 && (
+            <StepConfigure
+              dataset={dataset}
+              hiddenLayers={hiddenLayers}
+              activations={activations}
+              onAddLayer={addHiddenLayer}
+              onRemoveLayer={removeHiddenLayer}
+              onUpdateLayer={updateHiddenLayer}
+              onUpdateActivation={updateActivation}
+              onBack={() => setWizardStep(1)}
+              onNext={() => setWizardStep(3)}
+            />
+          )}
 
-        {wizardStep === 3 && (
-          <StepInitialize
-            dataset={dataset}
-            hiddenLayers={hiddenLayers}
-            activations={activations}
-            isInitializing={isInitializing}
-            onBack={() => setWizardStep(2)}
-            onInitialize={handleInitialize}
-          />
-        )}
+          {wizardStep === 3 && (
+            <StepInitialize
+              dataset={dataset}
+              hiddenLayers={hiddenLayers}
+              activations={activations}
+              isInitializing={isInitializing}
+              onBack={() => setWizardStep(2)}
+              onInitialize={handleInitialize}
+            />
+          )}
+        </div>
+      )}
 
-        {wizardStep === 4 && (
-          <StepTrain
-            dataset={dataset}
-            learningRate={learningRate}
-            onSetLR={setLearningRate}
-            onChangeModel={handleChangeModel}
-          />
-        )}
-      </div>
+      {wizardStep === 4 && (
+        <div className="flex justify-center mt-1">
+          <button
+            onClick={handleChangeModel}
+            className="text-xs text-gray-400 hover:text-gray-700 underline underline-offset-2"
+          >
+            ← Change model / dataset
+          </button>
+        </div>
+      )}
     </div>
   );
 };

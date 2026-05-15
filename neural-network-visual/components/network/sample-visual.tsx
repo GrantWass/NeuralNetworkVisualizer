@@ -48,8 +48,8 @@ const IrisFlower = ({
   const sepalRY = 5 + norm(sepalLen, 4.3, 7.9) * 11;
   const sepalRX = 2.5 + norm(sepalWid, 2.0, 4.4) * 6;
 
-  const cx = 60;
-  const cy = 58;
+  const cx = 62;
+  const cy = 62;
   const ringR = Math.max(petalRY, sepalRY) + 9;
 
   return (
@@ -59,16 +59,23 @@ const IrisFlower = ({
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        <svg viewBox="0 0 120 116" className="w-[96px] h-[96px]">
+        <svg viewBox="0 0 124 168" className="w-[112px] h-[152px]">
+          {/* Stem */}
+          <line x1={cx} y1={cy + 6} x2={cx} y2={158} stroke="#16a34a" strokeWidth={3} strokeLinecap="round" />
+          {/* Left leaf */}
+          <ellipse cx={cx - 11} cy={118} rx={4.5} ry={12} fill="#16a34a" opacity={0.75}
+            transform={`rotate(-40, ${cx - 11}, 118)`} />
+          {/* Right leaf */}
+          <ellipse cx={cx + 11} cy={134} rx={4.5} ry={12} fill="#16a34a" opacity={0.75}
+            transform={`rotate(40, ${cx + 11}, 134)`} />
+
           {/* Correctness ring */}
           <circle
             cx={cx}
             cy={cy}
             r={ringR}
             fill="none"
-            stroke={
-              isCorrect ? "#22c55e" : predIdx >= 0 ? "#ef4444" : "#d1d5db"
-            }
+            stroke={isCorrect ? "#22c55e" : predIdx >= 0 ? "#ef4444" : "#d1d5db"}
             strokeWidth={1.5}
             strokeDasharray={isCorrect ? undefined : "4 3"}
             opacity={0.55}
@@ -100,14 +107,7 @@ const IrisFlower = ({
             />
           ))}
           {/* Stamen */}
-          <circle
-            cx={cx}
-            cy={cy}
-            r={5}
-            fill="#fef08a"
-            stroke="#ca8a04"
-            strokeWidth={1}
-          />
+          <circle cx={cx} cy={cy} r={5} fill="#fef08a" stroke="#ca8a04" strokeWidth={1} />
         </svg>
 
         {hovered && (
