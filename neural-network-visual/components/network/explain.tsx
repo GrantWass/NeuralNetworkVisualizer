@@ -252,7 +252,7 @@ function ActivationMiniChart({ activation, zVal }: { activation: string; zVal: n
   return (
     <div className="mt-2">
       {description && <p className="text-[11px] text-gray-500 mb-2 leading-relaxed">{description}</p>}
-      <div className="h-32 w-full">
+      <div className="h-40 w-full">
         <Line data={data} options={options} />
       </div>
     </div>
@@ -263,7 +263,7 @@ function NodeStat({ label, sub, value, dim }: { label: string; sub?: string; val
   return (
     <div className="flex flex-col items-center gap-0.5">
       <span className="text-[9px] uppercase tracking-wide text-gray-500 text-center leading-tight whitespace-nowrap">
-        {label}{sub && <span className="text-gray-300 normal-case tracking-normal"> {sub}</span>}
+        {label}{sub && <span className="normal-case tracking-normal"> {sub}</span>}
       </span>
       <span className={`font-mono text-xs font-medium ${dim ? "text-gray-400" : "text-gray-900"}`}>
         {value !== undefined ? value.toFixed(3) : "—"}
@@ -627,9 +627,9 @@ const Explain = () => {
     return (
         <>
             {/* Connection panel + Decision Boundary (XOR/Iris) + Prediction side by side */}
-            <div className="flex gap-3 mx-2 mt-4 mb-2">
-                {/* Left: connection / node details */}
-                <div className={`${dataset === "mnist" || dataset === "xor" || dataset === "iris" ? "w-1/3 flex-shrink-0" : "flex-1"} min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm`}>
+            <div className="flex flex-wrap gap-3 mx-2 mt-4 mb-2">
+                {/* Left: connection / node details — full width on mobile, 1/3 on sm+ */}
+                <div className={`w-full ${dataset === "mnist" || dataset === "xor" || dataset === "iris" ? "sm:w-1/3 sm:flex-shrink-0" : "sm:flex-1"} min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm`}>
                     {hoveredConnection ? (
                         <>
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Connection</p>
@@ -715,7 +715,7 @@ const Explain = () => {
 
                 {/* Middle: decision boundary for XOR and Iris */}
                 {(dataset === "xor" || dataset === "iris") && network && (
-                    <div className="w-1/3 flex-shrink-0 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                    <div className="flex-1 sm:flex-none sm:w-1/3 sm:flex-shrink-0 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                         <DecisionBoundary
                             layers={network.layers}
                             dataset={dataset}
@@ -764,7 +764,7 @@ const Explain = () => {
                         </div>
                     </>
                 ) : hasTrained && originalData[sampleIndex] && (
-                    <div className={`${dataset === "xor" || dataset === "iris" ? "w-1/3 flex-shrink-0" : "flex-1"} min-w-0 flex flex-col gap-2 bg-white border border-gray-200 rounded-lg p-3 shadow-sm`}>
+                    <div className={`flex-1 ${dataset === "xor" || dataset === "iris" ? "sm:flex-none sm:w-1/3 sm:flex-shrink-0" : ""} min-w-0 flex flex-col gap-2 bg-white border border-gray-200 rounded-lg p-3 shadow-sm`}>
                         <SampleVisual
                             dataset={dataset}
                             original={originalData[sampleIndex]}

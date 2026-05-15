@@ -59,7 +59,7 @@ const IrisFlower = ({
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        <svg viewBox="0 0 124 168" className="w-[112px] h-[152px]">
+        <svg viewBox="0 0 124 168" className="w-full h-auto max-w-[112px]">
           {/* Stem */}
           <line x1={cx} y1={cy + 6} x2={cx} y2={158} stroke="#16a34a" strokeWidth={3} strokeLinecap="round" />
           {/* Left leaf */}
@@ -173,7 +173,7 @@ const XorGate = ({
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <svg viewBox="0 0 208 92" className="w-[172px] h-[76px]">
+      <svg viewBox="0 0 208 92" className="w-full h-auto max-w-[172px]">
         {/* Input A */}
         <circle
           cx={18}
@@ -404,7 +404,7 @@ const AutoMpgCar = ({
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex gap-3 items-center">
-        <svg viewBox="0 0 230 100" className="w-[158px] h-[70px] flex-shrink-0">
+        <svg viewBox="0 0 230 100" className="w-full h-auto max-w-[158px] flex-shrink-0">
           {/* Trunk */}
           <rect
             x={chassisLeft - trunkLen}

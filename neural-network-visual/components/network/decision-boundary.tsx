@@ -273,8 +273,8 @@ export function DecisionBoundary({ layers, dataset, originalData }: DecisionBoun
               ref={canvasRef}
               width={CANVAS}
               height={CANVAS}
-              className="rounded border border-gray-200 cursor-crosshair block"
-              style={{ width: CANVAS, height: CANVAS }}
+              className="rounded border border-gray-200 cursor-crosshair block w-full h-auto"
+              style={{ maxWidth: CANVAS }}
               onMouseMove={handleMouseMove}
               onMouseLeave={() => setHover(null)}
             />

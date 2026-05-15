@@ -57,24 +57,24 @@ export default function RootLayout({
                   <line x1="5" y1="7.5" x2="9.5" y2="9.5" stroke="white" strokeWidth="1" strokeOpacity="0.6" />
                 </svg>
               </span>
-              <span className="text-base font-semibold tracking-tight">Neural Network Visual</span>
+              <span className="text-xs sm:text-base font-semibold tracking-tight">Neural Network Visual</span>
             </Link>
-            <nav className="flex items-center gap-1">
+            <nav className="flex items-center gap-0.5 sm:gap-1">
               <Link
                 href="/"
-                className="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
+                className="px-1.5 py-1 sm:px-3 sm:py-1.5 rounded-md text-[11px] sm:text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
               >
                 Neural Network
               </Link>
               <Link
                 href="/transformer"
-                className="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
+                className="px-1.5 py-1 sm:px-3 sm:py-1.5 rounded-md text-[11px] sm:text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
               >
                 Transformers
               </Link>
               <Link
                 href="/about"
-                className="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
+                className="px-1.5 py-1 sm:px-3 sm:py-1.5 rounded-md text-[11px] sm:text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
               >
                 About
               </Link>

@@ -578,21 +578,24 @@ const Config = () => {
           </div>
 
           {/* Learning rate row */}
-          <div className="flex flex-col gap-1 border-t border-gray-100 pt-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 font-semibold whitespace-nowrap">η</span>
-              <Slider
-                value={[learningRate]}
-                onValueChange={(v) => setLearningRate(v[0])}
-                max={1}
-                step={0.01}
-                className="flex-1"
-              />
-              <span className="text-xs font-mono text-gray-700 w-8 text-right">{learningRate.toFixed(2)}</span>
+          <div className="flex items-center gap-2 border-t border-gray-100 pt-2">
+            <div className="relative group flex items-center gap-1 whitespace-nowrap">
+              <span className="text-xs text-gray-500 font-semibold">Learning Rate <span className="text-gray-400 font-normal">(η)</span></span>
+              <span className="cursor-default text-gray-300 text-xs">ⓘ</span>
+              <div className="absolute bottom-full left-0 mb-1.5 z-50 hidden group-hover:block w-56 bg-gray-900 text-white text-[11px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none leading-snug">
+                <span className={getLRFeedback(learningRate, dataset).color.replace('text-', 'text-').replace('-600', '-300').replace('-800', '-200')}>
+                  {getLRFeedback(learningRate, dataset).text}
+                </span>
+              </div>
             </div>
-            <p className={`text-[10px] ${getLRFeedback(learningRate, dataset).color}`}>
-              {getLRFeedback(learningRate, dataset).text}
-            </p>
+            <Slider
+              value={[learningRate]}
+              onValueChange={(v) => setLearningRate(v[0])}
+              max={1}
+              step={0.01}
+              className="flex-1"
+            />
+            <span className="text-xs font-mono text-gray-700 w-8 text-right">{learningRate.toFixed(2)}</span>
           </div>
         </div>
       )}
