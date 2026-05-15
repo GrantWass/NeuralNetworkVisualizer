@@ -591,24 +591,26 @@ const Config = () => {
             </>
           )}
           <div className="flex flex-col items-center gap-0.5">
-            <Input
-              type="number"
-              value={sampleIndex}
-              onChange={(e) => {
-                const max = dataset === "xor" ? 3 : 25;
-                setSampleIndex(Math.max(0, Math.min(max, Number(e.target.value))));
-              }}
-              min={0}
-              max={dataset === "xor" ? 3 : 25}
-              className="w-12 text-center text-sm h-7 px-1"
-            />
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setSampleIndex(Math.max(0, sampleIndex - 1))}
+                disabled={sampleIndex === 0}
+                className="w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 text-xs"
+              >‹</button>
+              <span className="font-mono text-sm font-semibold text-gray-900 w-5 text-center">{sampleIndex}</span>
+              <button
+                onClick={() => setSampleIndex(Math.min(dataset === "xor" ? 3 : 25, sampleIndex + 1))}
+                disabled={sampleIndex === (dataset === "xor" ? 3 : 25)}
+                className="w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 text-xs"
+              >›</button>
+            </div>
             <p className="text-[10px] text-gray-400">sample</p>
           </div>
           <div className="w-px h-7 bg-gray-200" />
           <button
             onClick={runTrainingCycle}
             disabled={runModel}
-            className="flex items-center gap-1.5 bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+            className="w-20 flex items-center justify-center gap-1.5 bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
           >
             {runModel ? "…" : "▶ Train"}
           </button>

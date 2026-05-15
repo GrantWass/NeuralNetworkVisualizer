@@ -192,10 +192,10 @@ const ACTIVATION_FNS: Record<string, (x: number) => number> = {
 };
 
 const ACTIVATION_DESCRIPTIONS: Record<string, string> = {
-  relu:    "Returns max(0, x). Commonly used for hidden layers — simple, effective, and reduces vanishing gradients.",
-  sigmoid: "S-shaped curve, outputs 0–1. Used in binary classification output layers where probabilities are needed.",
-  tanh:    "Outputs −1 to 1. Centers data and often converges faster than sigmoid in hidden layers.",
-  linear:  "Identity function: outputs x unchanged. Typically used for regression output layers.",
+  relu:    "ReLU returns max(0, x) — zero for any negative input, identity for positive. Commonly used in hidden layers for its simplicity and resistance to vanishing gradients.",
+  sigmoid: "Sigmoid squashes any input to a 0–1 probability via 1/(1+e⁻ˣ). Typically used in binary classification output layers.",
+  tanh:    "Tanh is a scaled sigmoid that outputs −1 to 1, centering activations around zero. Often converges faster than sigmoid in hidden layers.",
+  linear:  "Linear (identity) passes x through unchanged. Used in regression output layers where the prediction is an unbounded continuous value.",
 };
 
 function ActivationMiniChart({ activation, zVal }: { activation: string; zVal: number; aVal: number }) {
@@ -774,20 +774,21 @@ const Explain = () => {
                             yMean={yMean}
                             yStd={yStd}
                         />
-                        <div className="flex items-center gap-2 px-1">
-                            <span className="text-xs text-gray-500 whitespace-nowrap">Sample #</span>
-                            <input
-                                type="number"
-                                value={sampleIndex}
-                                onChange={(e) => {
-                                    const max = dataset === "xor" ? 3 : 25;
-                                    setSampleIndex(Math.max(0, Math.min(max, Number(e.target.value))));
-                                }}
-                                min={0}
-                                max={dataset === "xor" ? 3 : 25}
-                                className="w-14 text-center text-xs border border-gray-200 rounded px-1 py-0.5"
-                            />
-                            <span className="text-xs text-gray-400">0 – {dataset === "xor" ? 3 : 25}</span>
+                        <div className="flex items-center justify-between px-0.5 pt-1 border-t border-gray-100">
+                            <span className="text-[10px] text-gray-400 uppercase tracking-wide">Sample</span>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setSampleIndex(Math.max(0, sampleIndex - 1))}
+                                    disabled={sampleIndex === 0}
+                                    className="w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 text-xs"
+                                >‹</button>
+                                <span className="font-mono text-sm font-semibold text-gray-900 w-5 text-center">{sampleIndex}</span>
+                                <button
+                                    onClick={() => setSampleIndex(Math.min(dataset === "xor" ? 3 : 25, sampleIndex + 1))}
+                                    disabled={sampleIndex === (dataset === "xor" ? 3 : 25)}
+                                    className="w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 text-xs"
+                                >›</button>
+                            </div>
                         </div>
                     </div>
                 )}

@@ -330,6 +330,13 @@ export function DecisionBoundary({ layers, dataset, originalData }: DecisionBoun
               ))
             )}
           </div>
+
+          {/* Iris 2D disclaimer */}
+          {dataset === "iris" && (
+            <p className="text-[10px] text-gray-400 text-center mt-1.5 leading-snug">
+              The network uses all 4 features to classify — this slice shows only 2, so boundaries may look imperfect.
+            </p>
+          )}
         </div>
       )}
     </div>
