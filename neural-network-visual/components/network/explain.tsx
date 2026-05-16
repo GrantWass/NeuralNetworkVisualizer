@@ -15,7 +15,7 @@ import {
   Legend,
 } from 'chart.js';
 import { InputInfo, OutputInfo } from "@/components/network/tooltips";
-import { reshapeTo2D, transpose, multiplyMatrices } from "@/components/network/lib/utils"
+import { transpose, multiplyMatrices } from "@/components/network/lib/utils"
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import { useMemo } from "react";
@@ -875,7 +875,7 @@ const Explain = () => {
                             )}
                         </div>
                     </>
-                ) : hasTrained && originalData[di] && (
+                ) : originalData[di] && (
                     <div className="flex-1 min-w-0 flex flex-col gap-2 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                         <SampleVisual
                             dataset={dataset}

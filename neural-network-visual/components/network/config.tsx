@@ -511,7 +511,7 @@ const Config = () => {
       {/* Floating training widget — visible from step 4 onward */}
       {wizardStep === 4 && sessionId && (
         <div className="fixed top-16 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg p-3 flex flex-col gap-2 min-w-[280px]">
-          {/* Stats + sample row — always rendered so widget stays the same size */}
+          {/* Stats row — always rendered so widget stays the same size */}
           <div className="flex items-center gap-3 text-center">
             <div>
               <p className="text-lg font-bold text-gray-900 leading-none">{epoch > 0 ? epoch : 0}</p>
@@ -528,23 +528,6 @@ const Config = () => {
                 {epoch > 0 ? (name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)) : "—"}
               </p>
               <p className="text-[10px] text-gray-400 mt-0.5">{name === "accuracy" ? "accuracy" : "MAE"}</p>
-            </div>
-            <div className="w-px h-7 bg-gray-200" />
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="flex items-center gap-0.5">
-                <button
-                  onClick={() => setSampleIndex(Math.max(0, sampleIndex - 1))}
-                  disabled={sampleIndex === 0}
-                  className="w-6 h-6 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-25 text-gray-700 text-base font-bold leading-none"
-                >‹</button>
-                <span className="font-mono text-sm font-semibold text-gray-900 w-6 text-center">{sampleIndex}</span>
-                <button
-                  onClick={() => setSampleIndex(Math.min(dataset === "xor" ? 3 : 25, sampleIndex + 1))}
-                  disabled={sampleIndex === (dataset === "xor" ? 3 : 25)}
-                  className="w-6 h-6 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-25 text-gray-700 text-base font-bold leading-none"
-                >›</button>
-              </div>
-              <p className="text-[10px] text-gray-400">sample</p>
             </div>
           </div>
 
@@ -581,6 +564,24 @@ const Config = () => {
             >
               {runModel ? "…" : "▶ Train"}
             </button>
+          </div>
+
+          {/* Sample stepper — bottom of widget */}
+          <div className="flex items-center justify-between border-t border-gray-100 pt-2">
+            <span className="text-[10px] text-gray-400 uppercase tracking-wide">Sample</span>
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => setSampleIndex(Math.max(0, sampleIndex - 1))}
+                disabled={sampleIndex === 0}
+                className="w-6 h-6 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-25 text-gray-700 text-base font-bold leading-none"
+              >‹</button>
+              <span className="font-mono text-sm font-semibold text-gray-900 w-6 text-center">{sampleIndex}</span>
+              <button
+                onClick={() => setSampleIndex(Math.min(dataset === "xor" ? 3 : 25, sampleIndex + 1))}
+                disabled={sampleIndex === (dataset === "xor" ? 3 : 25)}
+                className="w-6 h-6 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-25 text-gray-700 text-base font-bold leading-none"
+              >›</button>
+            </div>
           </div>
         </div>
       )}
