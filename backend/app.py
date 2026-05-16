@@ -5,6 +5,11 @@ import numpy as np
 from NeuralNetwork import NeuralNetwork
 from datasets import load_dataset  # Assume a function to load the dataset
 import uuid
+import pickle
+import base64
+import time
+from collections import OrderedDict
+import boto3
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional, Union
 from mangum import Mangum
@@ -44,12 +49,61 @@ app.add_middleware(
     allow_methods=["*"],  # Allow all HTTP methods like GET, POST, OPTIONS
     allow_headers=["*"],  # Allow all headers
 )
-# NOTE: in-memory store — concurrent Lambda instances won't share state and
-# sessions are lost on cold starts. To fix at scale, back this with DynamoDB:
-# table with session_id partition key, TTL on a `ttl` attribute, serialize
-# session dicts with pickle+base64. Free tier covers typical demo traffic
-# (~1M req/month); on-demand beyond that runs ~$1.50 per million interactions.
-user_sessions = {}
+
+_dynamodb = boto3.resource("dynamodb", region_name="us-east-2")
+_sessions_table = _dynamodb.Table("nn-sessions")
+SESSION_TTL_SECONDS = 3 * 60 * 60  # 3 hours
+
+# In-process LRU cache (L1) — avoids a DynamoDB round-trip when the same
+# Lambda instance handles back-to-back requests for the same session.
+_CACHE_MAX = 32
+_session_cache: OrderedDict = OrderedDict()
+
+
+def _cache_get(session_id: str) -> Optional[dict]:
+    if session_id in _session_cache:
+        _session_cache.move_to_end(session_id)
+        return _session_cache[session_id]
+    return None
+
+
+def _cache_put(session_id: str, session: dict) -> None:
+    _session_cache[session_id] = session
+    _session_cache.move_to_end(session_id)
+    if len(_session_cache) > _CACHE_MAX:
+        _session_cache.popitem(last=False)
+
+
+def _cache_evict(session_id: str) -> None:
+    _session_cache.pop(session_id, None)
+
+
+def _save_session(session_id: str, session: dict) -> None:
+    _cache_put(session_id, session)
+    data = base64.b64encode(pickle.dumps(session)).decode("utf-8")
+    _sessions_table.put_item(Item={
+        "session_id": session_id,
+        "data": data,
+        "ttl": int(time.time()) + SESSION_TTL_SECONDS,
+    })
+
+
+def _load_session(session_id: str) -> Optional[dict]:
+    cached = _cache_get(session_id)
+    if cached is not None:
+        return cached
+    resp = _sessions_table.get_item(Key={"session_id": session_id})
+    item = resp.get("Item")
+    if item is None:
+        return None
+    session = pickle.loads(base64.b64decode(item["data"]))
+    _cache_put(session_id, session)
+    return session
+
+
+def _delete_session(session_id: str) -> None:
+    _cache_evict(session_id)
+    _sessions_table.delete_item(Key={"session_id": session_id})
 
 # ------------------ Model Initialization Request ------------------ #
 class InitModelRequest(BaseModel):
@@ -83,11 +137,11 @@ def init_model(request: InitModelRequest):
     network = NeuralNetwork(layers, activations, optimizer="batch")
 
     # Store the model and dataset in the user's session
-    user_sessions[session_id] = {
+    _save_session(session_id, {
         "network": network,
         "X_train": X_train,
         "Y_train": Y_train,
-    }
+    })
 
     return InitModelResponse(
         message="Model initialized successfully",
@@ -129,7 +183,7 @@ class TrainResponse(BaseModel):
 
 @app.post("/train", response_model=TrainResponse)
 def train_model(request: TrainRequest):
-    session = user_sessions.get(request.session_id)
+    session = _load_session(request.session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found. Call /init_model first.")
 
@@ -183,6 +237,7 @@ def train_model(request: TrainRequest):
             layers=layers
         ))
 
+    _save_session(request.session_id, session)
     return TrainResponse(training_results=training_results)
 
 
@@ -199,7 +254,7 @@ class SetWeightResponse(BaseModel):
 
 @app.post("/set_weights", response_model=SetWeightResponse)
 def set_weight(request: SetWeightRequest):
-    session = user_sessions.get(request.session_id)
+    session = _load_session(request.session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found. Call /init_model first.")
 
@@ -224,6 +279,7 @@ def set_weight(request: SetWeightRequest):
         ) for l in network.layers
     ]
 
+    _save_session(request.session_id, session)
     return SetWeightResponse(layers=layers)
 
 
@@ -238,7 +294,7 @@ class PredictResponse(BaseModel):
 
 @app.post("/predict", response_model=PredictResponse)
 def predict(request: PredictRequest):
-    session = user_sessions.get(request.session_id)
+    session = _load_session(request.session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found. Call /init_model first.")
     if len(request.pixels) != 784:
@@ -255,11 +311,11 @@ def predict(request: PredictRequest):
 # ------------------ Clear Session ------------------ #
 @app.post("/clear_session")
 def clear_session(session_id: str):
-    if session_id in user_sessions:
-        del user_sessions[session_id]
-        return {"message": "Session cleared successfully"}
-    else:
+    session = _load_session(session_id)
+    if session is None:
         raise HTTPException(status_code=404, detail="Session not found.")
+    _delete_session(session_id)
+    return {"message": "Session cleared successfully"}
 
 
 # ── Attention endpoint disabled ───────────────────────────────────────────────

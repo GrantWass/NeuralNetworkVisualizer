@@ -8,12 +8,21 @@ import Graph from "@/components/network/neural";
 import Explain from "@/components/network/explain";
 import { JsonLd } from "@/components/JsonLd";
 import ContactInfo from "./contact";
+import {
+  BrainCircuit,
+  Network,
+  TrendingUp,
+  ScanEye,
+  Compass,
+  Layers,
+} from "lucide-react";
 
 type MarkdownBlock =
   | { type: "h2"; text: string }
   | { type: "h3"; text: string }
   | { type: "h4"; text: string }
   | { type: "p"; text: string }
+  | { type: "blockquote"; text: string }
   | { type: "ul"; items: string[] }
   | { type: "ol"; items: string[] };
 
@@ -72,6 +81,13 @@ function parseMarkdown(content: string): MarkdownBlock[] {
       flushParagraph();
       flushList();
       blocks.push({ type: "h3", text: trimmed.slice(4).trim() });
+      continue;
+    }
+
+    if (trimmed.startsWith("> ")) {
+      flushParagraph();
+      flushList();
+      blocks.push({ type: "blockquote", text: trimmed.slice(2).trim() });
       continue;
     }
 
@@ -153,6 +169,94 @@ function renderInline(text: string) {
 }
 
 const markdownBlocks = parseMarkdown(markdown);
+
+const SECTION_ICONS: Record<string, ReactNode> = {
+  "The problem neural networks solve": (
+    <BrainCircuit className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
+  ),
+  "How a neural network represents information": (
+    <Network className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
+  ),
+  "How a neural network learns": (
+    <TrendingUp className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
+  ),
+  "Reading the visualization": (
+    <ScanEye className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
+  ),
+  "What's next": (
+    <Compass className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
+  ),
+};
+
+const SUBSECTION_ICONS: Record<string, ReactNode> = {
+  "Weights, biases, and activations": (
+    <Layers className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+  ),
+};
+
+// Activation function names get pill styling
+const ACTIVATION_FN_NAMES = new Set(["ReLU", "Sigmoid", "Tanh", "Softmax"]);
+
+// The 5-step training loop gets stepper treatment
+const TRAINING_STEPS = [
+  "Make a prediction",
+  "Measure error",
+  "Compute responsibility",
+  "Update parameters",
+  "Repeat",
+];
+
+function isTrainingStepList(items: string[]) {
+  return (
+    items.length === TRAINING_STEPS.length &&
+    items.every((item, i) => item === TRAINING_STEPS[i])
+  );
+}
+
+function isActivationFnList(items: string[]) {
+  return items.length > 0 && items.every((item) => ACTIVATION_FN_NAMES.has(item));
+}
+
+function TrainingStepper() {
+  return (
+    <div className="my-2 flex flex-wrap items-center gap-1">
+      {TRAINING_STEPS.map((step, i) => (
+        <div key={step} className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5 rounded-md border border-border bg-muted/50 px-2.5 py-1.5">
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-indigo-500 text-[10px] font-bold text-white">
+              {i + 1}
+            </span>
+            <span className="text-xs font-medium text-foreground">{step}</span>
+          </div>
+          {i < TRAINING_STEPS.length - 1 && (
+            <span className="text-muted-foreground/50 text-xs">→</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ActivationChips({ items }: { items: string[] }) {
+  const colors: Record<string, string> = {
+    ReLU: "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800",
+    Sigmoid: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800",
+    Tanh: "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800",
+    Softmax: "bg-green-100 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800",
+  };
+  return (
+    <div className="my-1 flex flex-wrap gap-2">
+      {items.map((name) => (
+        <span
+          key={name}
+          className={`rounded-md border px-2.5 py-1 text-xs font-mono font-semibold ${colors[name] ?? "bg-muted text-foreground border-border"}`}
+        >
+          {name}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export const metadata: Metadata = {
   title: "Interactive Neural Network Visualization",
@@ -247,17 +351,21 @@ export default function NeuralNetworkViz() {
       <article className="mt-8 w-full space-y-3 border-t border-border pt-6">
         {markdownBlocks.map((block, index) => {
           if (block.type === "h2") {
+            const icon = SECTION_ICONS[block.text];
             return (
-              <h2 key={index} className="text-lg font-semibold">
-                {renderInline(block.text)}
+              <h2 key={index} className="flex items-start gap-2 text-lg font-semibold pt-2 first:pt-0">
+                {icon}
+                <span>{renderInline(block.text)}</span>
               </h2>
             );
           }
 
           if (block.type === "h3") {
+            const icon = SUBSECTION_ICONS[block.text];
             return (
-              <h3 key={index} className="text-base font-semibold text-foreground">
-                {renderInline(block.text)}
+              <h3 key={index} className="flex items-start gap-1.5 text-base font-semibold text-foreground">
+                {icon}
+                <span>{renderInline(block.text)}</span>
               </h3>
             );
           }
@@ -270,7 +378,21 @@ export default function NeuralNetworkViz() {
             );
           }
 
+          if (block.type === "blockquote") {
+            return (
+              <blockquote
+                key={index}
+                className="my-1 border-l-2 border-indigo-400 pl-4 italic text-muted-foreground"
+              >
+                {renderInline(block.text)}
+              </blockquote>
+            );
+          }
+
           if (block.type === "ul") {
+            if (isActivationFnList(block.items)) {
+              return <ActivationChips key={index} items={block.items} />;
+            }
             return (
               <ul key={index} className="list-disc pl-5 space-y-0.5 text-muted-foreground">
                 {block.items.map((item, itemIndex) => (
@@ -281,6 +403,9 @@ export default function NeuralNetworkViz() {
           }
 
           if (block.type === "ol") {
+            if (isTrainingStepList(block.items)) {
+              return <TrainingStepper key={index} />;
+            }
             return (
               <ol key={index} className="list-decimal pl-5 space-y-0.5 text-muted-foreground">
                 {block.items.map((item, itemIndex) => (

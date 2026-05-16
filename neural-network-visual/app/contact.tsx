@@ -1,24 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Linkedin, Mail, Copy, Check, MessageSquare } from "lucide-react"
+import { useState } from "react"
+import { Linkedin, Mail, Copy, Check, MessageSquare, Globe, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/components/network/lib/utils"
 
 export default function ContactInfo() {
   const [copied, setCopied] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
 
   const copyEmail = () => {
     navigator.clipboard.writeText("grantmwasserman@gmail.com")
@@ -26,120 +14,82 @@ export default function ContactInfo() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const contactContent = (
-    <div className="">
-      <a
-        href="https://www.linkedin.com/in/grant-wass/"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-2 p-2 rounded-lg transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-800 group"
-      >
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-          <Linkedin className="w-2.5 h-2.5" />
-        </div>
-        <div className="flex-1">
-          <p className="font-medium text-sm text-gray-800 dark:text-gray-200">LinkedIn</p>
-        </div>
-      </a>
-
-      <a
-        href="https://grantwasserman.com"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-2 p-2 rounded-lg transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-800 group"
-      >
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-          <MessageSquare className="w-3.5 h-3.5" />
-        </div>
-        <div className="flex-1">
-          <p className="font-medium text-sm text-gray-800 dark:text-gray-200">Portfolio</p>
-        </div>
-      </a>
-
-      <div className="flex items-center gap-2 p-2 rounded-lg transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-800 group">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
-          <Mail className="w-3.5 h-3.5" />
-        </div>
-        <div className="flex-1">
-          <p className="font-medium text-sm text-gray-800 dark:text-gray-200 truncate">
-            grantmwasserman@gmail.com
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6"
-          onClick={copyEmail}
-          title={copied ? "Copied!" : "Copy email"}
-        >
-          {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-gray-400" />}
-          <span className="sr-only">{copied ? "Copied" : "Copy email"}</span>
-        </Button>
-      </div>
-    </div>
-  )
-
-  if (isMobile) {
-    return (
-      <>
-        <Button
-          variant="outline"
-          size="icon"
-          className="fixed bottom-4 right-4 h-12 w-12 rounded-full shadow-lg"
-          onClick={() => setIsOpen(true)}
-        >
-          <MessageSquare className="h-5 w-5" />
-        </Button>
-        {isOpen && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50">
-            <Card className="w-[90%] max-w-md">
-              <CardHeader className="pb-1 pt-3 flex justify-between flex-row">
-                <CardTitle className="mt-2 text-base font-bold text-gray-800 dark:text-gray-100 w-[50%]">Connect with Me</CardTitle>
-                <div className="flex justify-end mt-2">
-                  <Button onClick={() => setIsOpen(false)}>Close</Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2 pt-1 pb-4">
-                {contactContent}
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </>
-    )
-  }
-
-  // Desktop: collapsed dropdown controlled by isOpen (closed by default)
   return (
     <>
-      {/* Floating toggle button */}
       <Button
         variant="outline"
-        className="fixed bottom-4 right-4 rounded-full shadow-lg z-50 px-4 py-2 flex items-center gap-2"
+        className="fixed bottom-4 right-4 rounded-full shadow-md z-50 px-4 py-2 flex items-center gap-2"
         onClick={() => setIsOpen((s) => !s)}
         aria-expanded={isOpen}
-        aria-label={isOpen ? "Close contact" : "Open contact"}
+        aria-label={isOpen ? "Close contact" : "Connect with me"}
       >
-        <MessageSquare className="h-5 w-5" />
-        <span className="font-medium">Connect with Me</span>
+        <MessageSquare className="h-4 w-4" />
+        <span className="text-sm font-medium">Connect</span>
       </Button>
 
-      {/* Dropdown card (appears above the button) */}
       {isOpen && (
-        <div className="fixed bottom-20 right-4 z-50">
-          <Card className={cn("w-80 p-0 shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950")}>
-            <CardHeader className="pb-1 pt-3 flex justify-between flex-row">
-              <CardTitle className="mt-2 text-base font-bold text-gray-800 dark:text-gray-100 w-[50%]">Connect with Me</CardTitle>
-              <div className="flex justify-end mt-2">
-                <Button onClick={() => setIsOpen(false)}>Close</Button>
+        <>
+          {/* backdrop (mobile only) */}
+          <div
+            className="fixed inset-0 z-40 sm:hidden"
+            onClick={() => setIsOpen(false)}
+          />
+
+          <div className="fixed bottom-16 right-4 z-50 w-[calc(100vw-2rem)] max-w-xs rounded-xl border border-border bg-background shadow-lg">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <span className="text-sm font-semibold">Connect with me</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground"
+                onClick={() => setIsOpen(false)}
+              >
+                <X className="h-3.5 w-3.5" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
+
+            <div className="p-2 space-y-0.5">
+              <a
+                href="https://www.linkedin.com/in/grant-wass/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted"
+              >
+                <Linkedin className="h-4 w-4 text-blue-500 shrink-0" />
+                <span className="font-medium">LinkedIn</span>
+              </a>
+
+              <a
+                href="https://grantwasserman.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted"
+              >
+                <Globe className="h-4 w-4 text-green-500 shrink-0" />
+                <span className="font-medium">Portfolio</span>
+              </a>
+
+              <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm">
+                <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="flex-1 text-muted-foreground truncate">grantmwasserman@gmail.com</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0"
+                  onClick={copyEmail}
+                  title={copied ? "Copied!" : "Copy email"}
+                >
+                  {copied
+                    ? <Check className="h-3.5 w-3.5 text-green-500" />
+                    : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
+                  <span className="sr-only">{copied ? "Copied" : "Copy email"}</span>
+                </Button>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-1 p-2">
-              {contactContent}
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </>
       )}
     </>
   )
-} 
+}
