@@ -259,12 +259,12 @@ function ActivationChips({ items }: { items: string[] }) {
 }
 
 export const metadata: Metadata = {
-  title: "Interactive Neural Network Visualization",
+  title: "Interactive Neural Network Visualizer — See How Each Layer Activates",
   description:
     "An interactive tool for understanding how neural networks learn. Configure hidden layers, train on real data, and watch forward and backpropagation step by step.",
   alternates: { canonical: "https://nn-visual.com" },
   openGraph: {
-    title: "Interactive Neural Network Visualization",
+    title: "Interactive Neural Network Visualizer — See How Each Layer Activates",
     description:
       "An interactive tool for understanding how neural networks learn. Configure hidden layers, train on real data, and watch forward and backpropagation step by step.",
     url: "https://nn-visual.com",
