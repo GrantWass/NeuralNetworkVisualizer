@@ -3,6 +3,7 @@
 import useStore from "@/components/network/lib/store";
 import { NeuronLayer, NetworkState } from "@/components/network/static/types";
 import { useState, useEffect, useRef } from "react";
+import { Play } from "lucide-react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -957,7 +958,7 @@ const Explain = () => {
                                         onClick={enterStepMode}
                                         className="text-xs border border-gray-300 rounded-md px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700"
                                     >
-                                        Step Through ▶
+                                        <span className="flex items-center gap-1.5">Step Through <Play size={12} /></span>
                                     </button>
                                 ) : (
                                     <div className="flex items-center gap-2">
@@ -1088,7 +1089,7 @@ const Explain = () => {
                                 </div>
                                 {!backStepMode ? (
                                     <button onClick={enterBackStepMode} className="text-xs border border-gray-300 rounded-md px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700">
-                                        Step Through ▶
+                                        <span className="flex items-center gap-1.5">Step Through <Play size={12} /></span>
                                     </button>
                                 ) : (
                                     <div className="flex items-center gap-2">
@@ -1241,7 +1242,7 @@ const Explain = () => {
                                 </div>
                                 {!calcStepMode ? (
                                     <button onClick={enterCalcStepMode} className="text-xs border border-gray-300 rounded-md px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700">
-                                        Step Through ▶
+                                        <span className="flex items-center gap-1.5">Step Through <Play size={12} /></span>
                                     </button>
                                 ) : (
                                     <div className="flex items-center gap-2">

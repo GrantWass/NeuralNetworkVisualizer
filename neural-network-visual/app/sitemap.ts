@@ -9,14 +9,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
-      url: 'https://nn-visual.com/transformer',
-      lastModified: new Date(),
+      url: 'https://nn-visual.com/attention',
+      lastModified: new Date('2026-05-20'),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: 'https://nn-visual.com/transformers',
+      lastModified: new Date('2026-05-21'),
       changeFrequency: 'weekly',
       priority: 0.8,
     },
     {
       url: 'https://nn-visual.com/about',
-      lastModified: new Date(),
+      lastModified: new Date('2026-05-21'),
       changeFrequency: 'monthly',
       priority: 0.5,
     },

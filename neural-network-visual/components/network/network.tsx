@@ -143,7 +143,7 @@ const MnistConnections: React.FC<{
 // --------------------
 // Subcomponents
 // --------------------
-const ConnectionLines: React.FC<{
+const ConnectionLines = React.memo<{
   network: NetworkState;
   SVGWIDTH: number;
   SVGHEIGHT: number;
@@ -152,7 +152,7 @@ const ConnectionLines: React.FC<{
   flashKey?: number;
   stepLayerHighlight?: number | null;
   dataset?: string;
-}> = ({ network, SVGWIDTH, SVGHEIGHT, onClick, flashConnections = [], flashKey = 0, stepLayerHighlight, dataset }) => {
+}>(({ network, SVGWIDTH, SVGHEIGHT, onClick, flashConnections = [], flashKey = 0, stepLayerHighlight, dataset }) => {
   const { layerSpacing, SHIFT } = computeLayout(SVGWIDTH, network.layers.length);
   const inStepMode = stepLayerHighlight !== null && stepLayerHighlight !== undefined;
 
@@ -229,7 +229,7 @@ const ConnectionLines: React.FC<{
       })}
     </>
   );
-};
+});
 
 
 const NodeCircles: React.FC<{

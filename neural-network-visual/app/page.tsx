@@ -322,7 +322,7 @@ const articleLd = {
 
 export default function NeuralNetworkViz() {
   return (
-    <div className="p-4 max-w-9xl mx-auto relative">
+    <div className="p-4 max-w-6xl mx-auto relative">
       <JsonLd data={learningResourceLd} />
       <JsonLd data={articleLd} />
 
@@ -428,9 +428,13 @@ export default function NeuralNetworkViz() {
           Continue learning
         </h2>
         <p className="mt-2 text-muted-foreground">
-          Explore the{" "}
-          <Link href="/transformer" className="underline underline-offset-4 hover:text-foreground">
-            interactive transformer visualization
+          Explore{" "}
+          <Link href="/attention" className="underline underline-offset-4 hover:text-foreground">
+            how attention works
+          </Link>
+          , see the{" "}
+          <Link href="/transformers" className="underline underline-offset-4 hover:text-foreground">
+            full transformer architecture
           </Link>
           , or read{" "}
           <Link href="/about" className="underline underline-offset-4 hover:text-foreground">

@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { forwardPassSingle } from "@/components/network/lib/store";
 import type { NeuronLayer } from "@/components/network/static/types";
 
@@ -51,10 +51,19 @@ const CANVAS = 200;
 export function DecisionBoundary({ layers, dataset, originalData }: DecisionBoundaryProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hover, setHover] = useState<HoverInfo | null>(null);
+  const gridCacheRef = useRef<{ imageData: ImageData; key: string } | null>(null);
 
   // Iris axis selectors — default to petal length (2) × petal width (3)
   const [axisA, setAxisA] = useState(2); // X axis feature index
   const [axisB, setAxisB] = useState(3); // Y axis feature index
+
+  // Stable fingerprint of the inputs that determine the grid colors.
+  // Sampling a few weights per layer is enough to detect any training update.
+  const weightsKey = useMemo(() => {
+    if (!layers.length) return "";
+    const sample = layers.slice(1, 3).flatMap((l) => (l.weights?.[0] ?? []).slice(0, 8));
+    return `${dataset}|${axisA}|${axisB}|${sample.map((v) => v.toFixed(4)).join(",")}`;
+  }, [layers, dataset, axisA, axisB]);
 
   const getRange = useCallback(() => {
     if (dataset === "xor") {
@@ -106,47 +115,52 @@ export function DecisionBoundary({ layers, dataset, originalData }: DecisionBoun
     if (!range) return;
     const { minA, maxA, minB, maxB } = range;
 
-    const imageData = ctx.createImageData(CANVAS, CANVAS);
-    const cellSize = CANVAS / GRID;
+    // Only recompute the expensive grid when weights/config changed
+    if (!gridCacheRef.current || gridCacheRef.current.key !== weightsKey) {
+      const imageData = ctx.createImageData(CANVAS, CANVAS);
+      const cellSize = CANVAS / GRID;
 
-    for (let gy = 0; gy < GRID; gy++) {
-      for (let gx = 0; gx < GRID; gx++) {
-        const rawA = minA + (gx / (GRID - 1)) * (maxA - minA);
-        const rawB = maxB - (gy / (GRID - 1)) * (maxB - minB); // flip y
-        const probs = predict(rawA, rawB);
+      for (let gy = 0; gy < GRID; gy++) {
+        for (let gx = 0; gx < GRID; gx++) {
+          const rawA = minA + (gx / (GRID - 1)) * (maxA - minA);
+          const rawB = maxB - (gy / (GRID - 1)) * (maxB - minB); // flip y
+          const probs = predict(rawA, rawB);
 
-        let r = 200, g = 200, b = 200;
-        if (dataset === "xor") {
-          const p = probs[0] ?? 0.5;
-          const [c0, c1] = [XOR_COLORS[0], XOR_COLORS[1]];
-          r = Math.round(c0[0] * (1 - p) + c1[0] * p);
-          g = Math.round(c0[1] * (1 - p) + c1[1] * p);
-          b = Math.round(c0[2] * (1 - p) + c1[2] * p);
-        } else {
-          const cls = probs.reduce((best, v, i) => (v > probs[best] ? i : best), 0);
-          const conf = probs[cls] ?? 0.5;
-          const alpha = 0.3 + conf * 0.6;
-          const col = IRIS_COLORS[cls % IRIS_COLORS.length];
-          r = Math.round(col[0] * alpha + 245 * (1 - alpha));
-          g = Math.round(col[1] * alpha + 245 * (1 - alpha));
-          b = Math.round(col[2] * alpha + 245 * (1 - alpha));
-        }
+          let r = 200, g = 200, b = 200;
+          if (dataset === "xor") {
+            const p = probs[0] ?? 0.5;
+            const [c0, c1] = [XOR_COLORS[0], XOR_COLORS[1]];
+            r = Math.round(c0[0] * (1 - p) + c1[0] * p);
+            g = Math.round(c0[1] * (1 - p) + c1[1] * p);
+            b = Math.round(c0[2] * (1 - p) + c1[2] * p);
+          } else {
+            const cls = probs.reduce((best, v, i) => (v > probs[best] ? i : best), 0);
+            const conf = probs[cls] ?? 0.5;
+            const alpha = 0.3 + conf * 0.6;
+            const col = IRIS_COLORS[cls % IRIS_COLORS.length];
+            r = Math.round(col[0] * alpha + 245 * (1 - alpha));
+            g = Math.round(col[1] * alpha + 245 * (1 - alpha));
+            b = Math.round(col[2] * alpha + 245 * (1 - alpha));
+          }
 
-        for (let dy = 0; dy < cellSize; dy++) {
-          for (let dx = 0; dx < cellSize; dx++) {
-            const px = Math.floor(gx * cellSize) + dx;
-            const py = Math.floor(gy * cellSize) + dy;
-            if (px >= CANVAS || py >= CANVAS) continue;
-            const idx = (py * CANVAS + px) * 4;
-            imageData.data[idx] = r;
-            imageData.data[idx + 1] = g;
-            imageData.data[idx + 2] = b;
-            imageData.data[idx + 3] = 255;
+          for (let dy = 0; dy < cellSize; dy++) {
+            for (let dx = 0; dx < cellSize; dx++) {
+              const px = Math.floor(gx * cellSize) + dx;
+              const py = Math.floor(gy * cellSize) + dy;
+              if (px >= CANVAS || py >= CANVAS) continue;
+              const idx = (py * CANVAS + px) * 4;
+              imageData.data[idx] = r;
+              imageData.data[idx + 1] = g;
+              imageData.data[idx + 2] = b;
+              imageData.data[idx + 3] = 255;
+            }
           }
         }
       }
+      gridCacheRef.current = { imageData, key: weightsKey };
     }
-    ctx.putImageData(imageData, 0, 0);
+
+    ctx.putImageData(gridCacheRef.current.imageData, 0, 0);
 
     // Draw training data points
     ctx.save();
@@ -187,7 +201,7 @@ export function DecisionBoundary({ layers, dataset, originalData }: DecisionBoun
       }
     }
     ctx.restore();
-  }, [layers, dataset, originalData, getRange, predict, axisA, axisB]);
+  }, [weightsKey, originalData, getRange, predict, dataset, axisA, axisB]);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {

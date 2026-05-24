@@ -51,9 +51,9 @@ export const HeatmapSVG: React.FC<HeatmapSVGProps> = ({
   } | null>(null);
 
   const n = tokens.length;
-  const labelPad = 70; // left labels
-  const topPad = 70;   // top labels
-  const width = labelPad + n * cellSize;
+  const labelPad = 60; // left labels
+  const topPad = 50;   // top labels
+  const width = labelPad + n * cellSize + 40; // extra for tooltip overflow
   const height = topPad + n * cellSize;
 
   // Truncate long tokens for display

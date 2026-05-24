@@ -8,7 +8,10 @@ import useStore from "@/components/network/lib/store";
 import { DATASETS, ACTIVATION_FUNCTIONS, DATASET_INPUT_FEATURES } from "@/components/network/static/constants";
 import { HIDDEN_LAYER_LEARN_MORE } from "@/components/network/static/explanation";
 import { useEffect, useState } from "react";
+import { Play } from "lucide-react";
 import { ActivationInfoPopup } from "./activation";
+import LeaderboardPanel from "@/components/network/leaderboard";
+import { Trophy } from "lucide-react";
 
 // ─── Dataset metadata for Step 1 ──────────────────────────────────────────────
 const DATASET_DETAILS: Record<string, {
@@ -46,7 +49,7 @@ const DATASET_DETAILS: Record<string, {
   mnist: {
     task: "Classification",
     taskType: "Which handwritten digit is this?",
-    inputs: ["784 pixel values (28×28 grayscale image, normalized 0–1)"],
+    inputs: ["784 pixel values (28×28 grayscale image)"],
     output: "Digit class 0–9",
     loss: "Cross-Entropy Loss",
     samples: "~2,500 samples · 10 classes (25% stratified subset)",
@@ -396,7 +399,7 @@ const StepInitialize = ({
               </svg>
               Initializing…
             </span>
-          ) : "Initialize Model ▶"}
+          ) : <span className="flex items-center gap-1.5">Initialize Model <Play size={13} /></span>}
         </Button>
       </div>
     </div>
@@ -456,6 +459,7 @@ const Config = () => {
     sessionId,
     hiddenLayers,
     learningRate,
+    trainingEpochs,
     dataset,
     activations,
     epoch,
@@ -464,6 +468,7 @@ const Config = () => {
     name,
     sampleIndex,
     setLearningRate,
+    setTrainingEpochs,
     initModel,
     clearSessionAndReset,
     runTrainingCycle,
@@ -476,6 +481,8 @@ const Config = () => {
     setSampleIndex,
     isInitializing,
     runModel,
+    leaderboardOpen,
+    setLeaderboardOpen,
   } = useStore();
 
   // Wizard step: 1=dataset, 2=configure, 3=initialize, 4=train
@@ -562,7 +569,7 @@ const Config = () => {
               disabled={runModel}
               className="w-20 flex-shrink-0 flex items-center justify-center bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
             >
-              {runModel ? "…" : "▶ Train"}
+              {runModel ? "…" : <span className="flex items-center gap-1.5"><Play size={13} /> Train</span>}
             </button>
           </div>
 
@@ -583,8 +590,29 @@ const Config = () => {
               >›</button>
             </div>
           </div>
+
+          {/* Epochs input + leaderboard */}
+          <div className="flex items-center gap-2 border-t border-gray-100 pt-2">
+            <span className="text-[10px] text-gray-400 uppercase tracking-wide whitespace-nowrap">Epochs / click</span>
+            <input
+              type="number"
+              min={1}
+              max={999}
+              value={trainingEpochs}
+              onChange={(e) => setTrainingEpochs(Math.max(1, Math.min(999, parseInt(e.target.value) || 1)))}
+              className="w-16 text-xs border border-gray-200 rounded-md px-2 py-1 font-mono outline-none focus:ring-1 focus:ring-gray-300 text-center"
+            />
+            <button
+              onClick={() => setLeaderboardOpen(true)}
+              className="flex-1 flex items-center justify-center gap-1 border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-medium py-1 rounded-lg transition-colors"
+            >
+              <Trophy size={11} /> Leaderboard
+            </button>
+          </div>
         </div>
       )}
+
+      {leaderboardOpen && <LeaderboardPanel />}
 
       {/* Step content */}
       {wizardStep < 4 && (

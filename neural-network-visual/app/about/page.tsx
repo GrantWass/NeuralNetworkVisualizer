@@ -32,8 +32,13 @@ const personLd = {
     },
     {
       "@type": "WebApplication",
-      name: "Interactive Transformer Visualization",
-      url: "https://nn-visual.com/transformer",
+      name: "How Attention Works — Interactive Visualization",
+      url: "https://nn-visual.com/attention",
+    },
+    {
+      "@type": "WebApplication",
+      name: "How Transformers Work — Interactive Architecture Diagram",
+      url: "https://nn-visual.com/transformers",
     },
   ],
 };
@@ -56,12 +61,12 @@ const articleLd = {
     name: "Grant Wasserman",
   },
   datePublished: "2026-05-14",
-  dateModified: "2026-05-14",
+  dateModified: "2026-05-21",
 };
 
 export default function AboutPage() {
   return (
-    <div className="p-4 max-w-9xl mx-auto">
+    <div className="p-4 max-w-6xl mx-auto">
       <JsonLd data={personLd} />
       <JsonLd data={articleLd} />
 
@@ -139,7 +144,7 @@ export default function AboutPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Try it</h2>
           <p className="text-muted-foreground leading-relaxed">
-            Both visualizers are live and require no setup.
+            All three visualizers are live and require no setup.
           </p>
           <ul className="space-y-3 text-muted-foreground">
             <li>
@@ -155,13 +160,24 @@ export default function AboutPage() {
             </li>
             <li>
               <Link
-                href="/transformer"
+                href="/attention"
                 className="underline underline-offset-4 hover:text-foreground font-medium text-foreground"
               >
-                Transformer Visualizer
+                Attention Visualizer
               </Link>
-              {" "}— explore self-attention layer by layer. See how a model decides which
-              tokens to focus on when building meaning from a sequence.
+              {" "}— explore self-attention using real BERT weights. Click any token to step
+              through the Q·K scoring, see multi-head patterns, and compare encoder vs. decoder masking.
+            </li>
+            <li>
+              <Link
+                href="/transformers"
+                className="underline underline-offset-4 hover:text-foreground font-medium text-foreground"
+              >
+                Transformer Architecture Visualizer
+              </Link>
+              {" "}— see the full transformer pipeline with a live GPT-2 inference diagram.
+              Explore how embeddings, stacked attention blocks, and feed-forward layers
+              work together to produce an output distribution.
             </li>
           </ul>
         </section>

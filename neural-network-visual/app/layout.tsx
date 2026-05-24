@@ -67,7 +67,13 @@ export default function RootLayout({
                 Neural Network
               </Link>
               <Link
-                href="/transformer"
+                href="/attention"
+                className="px-1.5 py-1 sm:px-3 sm:py-1.5 rounded-md text-[11px] sm:text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
+              >
+                Attention
+              </Link>
+              <Link
+                href="/transformers"
                 className="px-1.5 py-1 sm:px-3 sm:py-1.5 rounded-md text-[11px] sm:text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
               >
                 Transformers
@@ -82,7 +88,7 @@ export default function RootLayout({
           </div>
         </header>
 
-        <main className="max-w-6xl mx-auto px-4 pt-6">
+        <main className="px-4 pt-6">
           {children}
         </main>
         <Toaster />

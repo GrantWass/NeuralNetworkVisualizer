@@ -54,7 +54,7 @@ function WordDot({ word, x, y, z, color }: Point3D) {
         <sphereGeometry args={[hovered ? 0.075 : 0.055, 24, 24]} />
         <meshStandardMaterial color={color} roughness={0.3} metalness={0.1} />
       </mesh>
-      <Html distanceFactor={8} center>
+      <Html distanceFactor={8} center zIndexRange={[20, 0]}>
         <div
           style={{
             background: "rgba(0,0,0,0.72)",
@@ -203,72 +203,79 @@ export function EmbeddingExplorer() {
   const busy = status === "loading-model" || status === "computing";
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-xl font-semibold">Word Embeddings in 3D</h2>
-      <p className="text-muted-foreground leading-relaxed max-w-2xl">
-        Before attention runs, each token is converted into a dense vector
-        called an <strong>embedding</strong> — a point in high-dimensional
-        space where meaning is encoded as geometry. Words with similar meanings
-        land close together; unrelated words are far apart. Enter words below
-        to see their embeddings projected into 3D using UMAP.
-      </p>
-
-      <div className="flex gap-2 max-w-lg">
-        <Input
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={(e) => !busy && e.key === "Enter" && compute()}
-          placeholder="king, queen, man, woman, dog, cat"
-          className="flex-1 font-mono text-sm"
-        />
-        <Button onClick={compute} disabled={busy}>
-          {buttonLabel}
-        </Button>
-      </div>
-
-      {status === "loading-model" && (
-        <div className="space-y-1 max-w-lg">
-          <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-            <div
-              className="h-full bg-indigo-500 rounded-full transition-all duration-300"
-              style={{ width: `${modelProgress}%` }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Loading model… {modelProgress}%
+    <section>
+      <div className="flex flex-col sm:flex-row gap-6 items-start">
+        {/* Left: description + controls (1/4) */}
+        <div className="sm:w-1/4 space-y-3 flex-shrink-0">
+          <h2 className="text-xl font-semibold">Word Embeddings in 3D</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Before attention runs, each token is converted into a dense vector called an{" "}
+            <strong>embedding</strong> — a point in high-dimensional space where meaning is
+            encoded as geometry. Words with similar meanings land close together; unrelated
+            words are far apart.
           </p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Enter words below to project their 768-dimensional embeddings into 3D.
+          </p>
+          <div className="flex flex-col gap-2">
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => !busy && e.key === "Enter" && compute()}
+              placeholder="king, queen, man, woman, dog, cat"
+              className="font-mono text-sm"
+            />
+            <Button onClick={compute} disabled={busy} className="w-full">
+              {buttonLabel}
+            </Button>
+          </div>
+          {status === "loading-model" && (
+            <div className="space-y-1">
+              <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                <div
+                  className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+                  style={{ width: `${modelProgress}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Loading model… {modelProgress}%</p>
+            </div>
+          )}
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          {visualizedWords.length > 0 && (
+            <div className="pt-1">
+              <p className="text-[11px] text-muted-foreground font-medium mb-1">Showing</p>
+              <div className="flex flex-wrap gap-x-2 gap-y-1">
+                {visualizedWords.map((w, i) => (
+                  <span key={w} className="text-xs font-mono" style={{ color: COLORS[i % COLORS.length] }}>
+                    {w}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      )}
-      {error && <p className="text-xs text-destructive">{error}</p>}
 
-      {points.length > 0 && (
-        <div className="space-y-2">
+        {/* Right: 3D canvas (3/4) */}
+        <div className="flex-1 min-w-0">
           <div
             className="rounded-lg border border-border bg-card overflow-hidden"
             style={{ height: 420 }}
           >
-            <Canvas camera={{ position: [0, 0, 3.8], fov: 55 }}>
-              <Scene points={points} />
-            </Canvas>
+            {points.length > 0 ? (
+              <Canvas camera={{ position: [0, 0, 3.8], fov: 55 }}>
+                <Scene points={points} />
+              </Canvas>
+            ) : (
+              <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
+                {busy ? "Computing…" : "Enter words and click Visualize"}
+              </div>
+            )}
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-y-1 px-1">
-            <p className="text-xs text-muted-foreground">
-              Showing:{" "}
-              {visualizedWords.map((w, i) => (
-                <span key={w}>
-                  <span style={{ color: COLORS[i % COLORS.length] }}>{w}</span>
-                  {i < visualizedWords.length - 1 && (
-                    <span className="text-muted-foreground/50"> · </span>
-                  )}
-                </span>
-              ))}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Drag to rotate · scroll to zoom
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground mt-1.5 text-right">
+            Drag to rotate · scroll to zoom
+          </p>
         </div>
-      )}
+      </div>
     </section>
   );
 }
