@@ -3,7 +3,7 @@ uvicorn[standard]
 pydantic
 numpy==1.26.4
 python-multipart
-mangum
+mangum>=0.17.0
 requests
 boto3
 # transformers>=4.40.0   # re-enable with /attention endpoint

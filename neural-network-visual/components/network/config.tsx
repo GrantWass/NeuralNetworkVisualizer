@@ -517,9 +517,16 @@ const Config = () => {
 
       {/* Floating training widget — visible from step 4 onward */}
       {wizardStep === 4 && sessionId && (
-        <div className="fixed top-16 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg p-3 flex flex-col gap-2 min-w-[280px]">
+        <div className="fixed top-16 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg p-3 flex flex-col gap-2 min-w-[280px] relative">
           {/* Stats row — always rendered so widget stays the same size */}
           <div className="flex items-center gap-3 text-center">
+            <button
+              onClick={() => setLeaderboardOpen(true)}
+              title="Leaderboard"
+              className="ml-auto absolute top-3 right-3 text-amber-400 hover:text-amber-500 transition-colors"
+            >
+              <Trophy size={14} />
+            </button>
             <div>
               <p className="text-lg font-bold text-gray-900 leading-none">{epoch}</p>
               <p className="text-[10px] text-gray-400 mt-0.5">epochs</p>
@@ -604,15 +611,6 @@ const Config = () => {
             </div>
           </div>
 
-          {/* Leaderboard — full row */}
-          <div className="border-t border-gray-100 pt-2">
-            <button
-              onClick={() => setLeaderboardOpen(true)}
-              className="w-full flex items-center justify-center gap-1.5 border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-medium py-1.5 rounded-lg transition-colors"
-            >
-              <Trophy size={11} /> Leaderboard
-            </button>
-          </div>
         </div>
       )}
 

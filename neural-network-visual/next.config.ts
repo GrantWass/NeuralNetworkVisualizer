@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/transformer",
+        destination: "/attention",
+        permanent: true,
+      },
+    ];
+  },
   // Turbopack (dev server): shim Node-only modules so default imports return {} not undefined.
   // @xenova/transformers checks isEmpty(fs) via Object.keys — throws if fs is undefined.
   turbopack: {

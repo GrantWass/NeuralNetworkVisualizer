@@ -300,8 +300,13 @@ const Explain = () => {
       getDisplayIndex,
       leaderboard,
       leaderboardLoading,
+      leaderboardSubmitting,
       fetchLeaderboard,
       setLeaderboardOpen,
+      submittableScore,
+      xorEpochsTo100,
+      submitLeaderboardScore,
+      computeQualification,
     } = useStore();
 
     // Actual index into the training data arrays (stratified, not just 0–25)
@@ -309,6 +314,11 @@ const Explain = () => {
 
     const [view, setView] = useState<PropagationView>('forward');
     const [fontSize, setFontSize] = useState("md");
+
+    // Inline leaderboard submit state
+    const [lbUsername, setLbUsername] = useState("");
+    const [lbSubmitted, setLbSubmitted] = useState<{ rank: number } | null>(null);
+    const [lbSubmitError, setLbSubmitError] = useState("");
 
     // Value tracer state
     const [highlightedValueId, setHighlightedValueId] = useState<string | null>(null);
@@ -649,12 +659,20 @@ const Explain = () => {
     const fullExplanation = getExplanation() || '';
     const hasTrained = network?.layers && network.layers[0].A?.length > 0;
 
+    // Mock samples shown before data loads so the preview is never empty
+    const MOCK_SAMPLE: Record<string, number[]> = {
+      iris:     [5.1, 3.5, 1.4, 0.2, 1, 0, 0],   // Setosa
+      xor:      [1, 0, 1],
+      auto_mpg: [170, 95, 2815, 16.5, 23.0],
+      mnist:    [],
+    };
+    const sampleRow = originalData[di] ?? MOCK_SAMPLE[dataset] ?? [];
+
     return (
         <>
-            {/* Connection panel + Decision Boundary (XOR/Iris) + Prediction side by side */}
-            <div className="flex flex-wrap gap-3 mx-2 mt-4 mb-2">
-                {/* Left: connection / node details — full width on mobile, flex-1 on sm+ */}
-                <div className="w-full sm:flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+            {/* Node / Connection details popup */}
+            {(hoveredConnection || (hoveredNode && network)) && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-4 w-[340px] max-w-[calc(100vw-2rem)]">
                     {hoveredConnection ? (
                         <>
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Connection</p>
@@ -689,8 +707,6 @@ const Explain = () => {
                                 )}
                             </div>
                             {!sessionId && <p className="text-xs text-gray-400 italic mt-1">Initialize the model to edit weights.</p>}
-
-                            {/* Weight strength bar + description — always shown */}
                             {(() => {
                                 const w = hoveredConnection.weight;
                                 const MAX = 3.0;
@@ -701,19 +717,12 @@ const Explain = () => {
                                 return (
                                     <div className="mt-3 pt-3 border-t border-gray-100">
                                         <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Weight strength</p>
-                                        {/* Center-anchored bar */}
                                         <div className="relative h-4 bg-gray-100 rounded-full overflow-hidden mb-1.5">
                                             <div className="absolute top-0 bottom-0 left-1/2 w-px bg-gray-300 z-10" />
                                             {isPos ? (
-                                                <div
-                                                    className="absolute top-0 bottom-0 bg-indigo-400 rounded-r-full"
-                                                    style={{ left: "50%", width: `${pct * 50}%` }}
-                                                />
+                                                <div className="absolute top-0 bottom-0 bg-indigo-400 rounded-r-full" style={{ left: "50%", width: `${pct * 50}%` }} />
                                             ) : (
-                                                <div
-                                                    className="absolute top-0 bottom-0 bg-orange-400 rounded-l-full"
-                                                    style={{ right: "50%", width: `${pct * 50}%` }}
-                                                />
+                                                <div className="absolute top-0 bottom-0 bg-orange-400 rounded-l-full" style={{ right: "50%", width: `${pct * 50}%` }} />
                                             )}
                                         </div>
                                         <div className="flex justify-between text-[9px] text-gray-400 mb-2">
@@ -725,7 +734,6 @@ const Explain = () => {
                                     </div>
                                 );
                             })()}
-                            {/* Activation flow for current sample */}
                             {hasTrained && network && (() => {
                                 const li = hoveredConnection.layerIndex;
                                 const fromAct = li === 0
@@ -738,25 +746,13 @@ const Explain = () => {
                                     <div className="mt-3 pt-3 border-t border-gray-100">
                                         <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Signal this step</p>
                                         <div className="flex items-center gap-2 text-center">
-                                            <div className="flex-1">
-                                                <p className="text-[9px] text-gray-400">From (A)</p>
-                                                <p className="font-mono text-sm font-semibold text-gray-800">{fromAct?.toFixed(3) ?? "—"}</p>
-                                            </div>
+                                            <div className="flex-1"><p className="text-[9px] text-gray-400">From (A)</p><p className="font-mono text-sm font-semibold text-gray-800">{fromAct?.toFixed(3) ?? "—"}</p></div>
                                             <span className="text-gray-300 text-xs">×</span>
-                                            <div className="flex-1">
-                                                <p className="text-[9px] text-gray-400">Weight</p>
-                                                <p className="font-mono text-sm font-semibold text-gray-800">{hoveredConnection.weight.toFixed(3)}</p>
-                                            </div>
+                                            <div className="flex-1"><p className="text-[9px] text-gray-400">Weight</p><p className="font-mono text-sm font-semibold text-gray-800">{hoveredConnection.weight.toFixed(3)}</p></div>
                                             <span className="text-gray-300 text-xs">=</span>
-                                            <div className="flex-1">
-                                                <p className="text-[9px] text-gray-400">Contribution</p>
-                                                <p className={`font-mono text-sm font-semibold ${contribution !== undefined && contribution > 0 ? "text-indigo-600" : "text-orange-500"}`}>{contribution?.toFixed(3) ?? "—"}</p>
-                                            </div>
+                                            <div className="flex-1"><p className="text-[9px] text-gray-400">Contribution</p><p className={`font-mono text-sm font-semibold ${contribution !== undefined && contribution > 0 ? "text-indigo-600" : "text-orange-500"}`}>{contribution?.toFixed(3) ?? "—"}</p></div>
                                             <span className="text-gray-300 text-xs">→</span>
-                                            <div className="flex-1">
-                                                <p className="text-[9px] text-gray-400">To (A)</p>
-                                                <p className="font-mono text-sm font-semibold text-gray-800">{toAct?.toFixed(3) ?? "—"}</p>
-                                            </div>
+                                            <div className="flex-1"><p className="text-[9px] text-gray-400">To (A)</p><p className="font-mono text-sm font-semibold text-gray-800">{toAct?.toFixed(3) ?? "—"}</p></div>
                                         </div>
                                         {gradient !== undefined && (
                                             <div className="mt-2 flex items-center gap-2">
@@ -810,40 +806,93 @@ const Explain = () => {
                                 <p className="text-sm text-gray-500">Input node — values come from the dataset.</p>
                             )}
                         </>
-                    ) : (
-                        <div className="flex flex-col h-full min-h-[60px]">
-                            <div className="flex items-center justify-between mb-2">
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Leaderboard</p>
-                                <button
-                                    onClick={() => setLeaderboardOpen(true)}
-                                    className="text-[10px] text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
-                                >
-                                    View all
-                                </button>
-                            </div>
-                            {leaderboardLoading ? (
-                                <div className="space-y-1.5">
-                                    {[1,2,3].map(i => (
-                                        <div key={i} className="h-3 bg-gray-100 rounded animate-pulse" />
-                                    ))}
+                    ) : null}
+                </div>
+            )}
+
+            {/* Connection panel + Decision Boundary (XOR/Iris) + Prediction side by side */}
+            <div className="flex flex-wrap gap-3 mx-2 mt-4 mb-2">
+                {/* Left: inline leaderboard — always visible */}
+                <div className="w-full sm:flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col">
+                    {(() => {
+                        const score = dataset === "xor" ? xorEpochsTo100 : submittableScore;
+                        const { qualifies, rank: projectedRank } = score !== null ? computeQualification() : { qualifies: false, rank: null };
+                        const formatScore = (s: number) => dataset === "xor" ? `${s} ep` : dataset === "auto_mpg" ? s.toFixed(3) : `${s.toFixed(1)}%`;
+                        const entries = leaderboard[dataset] ?? [];
+                        return (
+                            <>
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Leaderboard</p>
+                                    <button onClick={() => setLeaderboardOpen(true)} className="text-[10px] text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors">View all</button>
                                 </div>
-                            ) : (leaderboard[dataset] ?? []).length === 0 ? (
-                                <p className="text-xs text-gray-400 text-center mt-2">No entries yet — be the first!</p>
-                            ) : (
-                                <div className="space-y-1">
-                                    {(leaderboard[dataset] ?? []).slice(0, 5).map((entry) => (
-                                        <div key={entry.rank} className="flex items-center gap-2 text-xs">
-                                            <span className="w-4 text-gray-400 font-mono text-right flex-shrink-0">{entry.rank}</span>
-                                            <span className="flex-1 text-gray-700 font-medium truncate">{entry.username}</span>
-                                            <span className="font-mono text-gray-500 flex-shrink-0">
-                                                {dataset === "xor" ? `${entry.score} ep` : dataset === "auto_mpg" ? entry.score.toFixed(3) : `${entry.score.toFixed(1)}%`}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                                {leaderboardLoading ? (
+                                    <div className="space-y-1.5">{[1,2,3].map(i => <div key={i} className="h-3 bg-gray-100 rounded animate-pulse" />)}</div>
+                                ) : entries.length === 0 ? (
+                                    <p className="text-xs text-gray-400 text-center mt-2">No entries yet — be the first!</p>
+                                ) : (
+                                    <div className="space-y-1 mb-2">
+                                        {entries.slice(0, 5).map((entry) => (
+                                            <div key={entry.rank} className="flex items-center gap-2 text-xs">
+                                                <span className="w-4 text-gray-400 font-mono text-right flex-shrink-0">{entry.rank}</span>
+                                                <span className="flex-1 text-gray-700 font-medium truncate">{entry.username}</span>
+                                                <span className="font-mono text-gray-500 flex-shrink-0">{formatScore(entry.score)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {score !== null && !lbSubmitted && (
+                                    <div className="mt-auto pt-2 border-t border-gray-100">
+                                        {qualifies ? (
+                                            <div className="space-y-1.5">
+                                                <p className="text-[10px] text-emerald-600 font-semibold">
+                                                    You qualify! {formatScore(score)}{projectedRank !== null ? ` · Rank #${projectedRank}` : ""}
+                                                </p>
+                                                <div className="flex gap-1.5">
+                                                    <input
+                                                        type="text"
+                                                        maxLength={32}
+                                                        placeholder="Username"
+                                                        value={lbUsername}
+                                                        onChange={(e) => setLbUsername(e.target.value)}
+                                                        onKeyDown={async (e) => {
+                                                            if (e.key !== 'Enter') return;
+                                                            setLbSubmitError("");
+                                                            if (!lbUsername.trim() || !/^[a-zA-Z0-9_-]+$/.test(lbUsername.trim())) { setLbSubmitError("Letters, digits, _ and - only"); return; }
+                                                            const result = await submitLeaderboardScore(lbUsername.trim());
+                                                            if (result?.accepted && result.rank !== null) setLbSubmitted({ rank: result.rank });
+                                                            else if (result && !result.accepted) setLbSubmitError("Didn't make top 10!");
+                                                        }}
+                                                        className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-gray-300"
+                                                    />
+                                                    <button
+                                                        disabled={leaderboardSubmitting || !lbUsername.trim()}
+                                                        onClick={async () => {
+                                                            setLbSubmitError("");
+                                                            if (!lbUsername.trim() || !/^[a-zA-Z0-9_-]+$/.test(lbUsername.trim())) { setLbSubmitError("Letters, digits, _ and - only"); return; }
+                                                            const result = await submitLeaderboardScore(lbUsername.trim());
+                                                            if (result?.accepted && result.rank !== null) setLbSubmitted({ rank: result.rank });
+                                                            else if (result && !result.accepted) setLbSubmitError("Didn't make top 10!");
+                                                        }}
+                                                        className="text-xs bg-gray-900 text-white px-2.5 py-1 rounded hover:bg-gray-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+                                                    >
+                                                        {leaderboardSubmitting ? "…" : "Submit"}
+                                                    </button>
+                                                </div>
+                                                {lbSubmitError && <p className="text-[10px] text-red-500">{lbSubmitError}</p>}
+                                            </div>
+                                        ) : (
+                                            <p className="text-[10px] text-gray-400">Your score: {formatScore(score)}</p>
+                                        )}
+                                    </div>
+                                )}
+                                {lbSubmitted && (
+                                    <div className="mt-auto pt-2 border-t border-gray-100 text-center">
+                                        <p className="text-xs font-semibold text-emerald-600">Ranked #{lbSubmitted.rank}!</p>
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
                 </div>
 
                 {/* Middle: decision boundary for XOR/Iris, prediction scatter for auto_mpg */}
@@ -913,12 +962,12 @@ const Explain = () => {
                             )}
                         </div>
                     </>
-                ) : originalData[di] && (
+                ) : dataset !== "mnist" && sampleRow.length > 0 && (
                     <div className="flex-1 min-w-0 flex flex-col bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                         <div className="flex-1 flex flex-col justify-center">
                         <SampleVisual
                             dataset={dataset}
-                            original={originalData[di]}
+                            original={sampleRow}
                             network={network}
                             sampleIndex={di}
                             yMean={yMean}

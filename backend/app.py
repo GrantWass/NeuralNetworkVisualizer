@@ -411,4 +411,4 @@ def submit_leaderboard(request: LeaderboardSubmitRequest):
 
 
 # AWS Lambda entrypoint (API Gateway / ALB compatible)
-lambda_handler = Mangum(app)
+lambda_handler = Mangum(app, lifespan="off")
