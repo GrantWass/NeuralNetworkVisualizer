@@ -3,7 +3,8 @@
 import useStore from "@/components/network/lib/store";
 import { NeuronLayer, NetworkState } from "@/components/network/static/types";
 import { useState, useEffect, useRef } from "react";
-import { Play } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Play, X } from "lucide-react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -292,6 +293,8 @@ const Explain = () => {
       sessionId,
       hoveredConnection,
       hoveredNode,
+      setHoveredConnection,
+      setHoveredNode,
       setWeight,
       yMean,
       yStd,
@@ -670,9 +673,16 @@ const Explain = () => {
 
     return (
         <>
-            {/* Node / Connection details popup */}
-            {(hoveredConnection || (hoveredNode && network)) && (
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-4 w-[340px] max-w-[calc(100vw-2rem)]">
+            {/* Node / Connection details popup — portalled over the graph */}
+            {(hoveredConnection || (hoveredNode && network)) && typeof document !== "undefined" && createPortal(
+                <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 9998 }}
+                    className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-5 w-[360px] max-w-[calc(100vw-2rem)]">
+                <button
+                    onClick={() => { setHoveredConnection(null); setHoveredNode(null); }}
+                    className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                    <X size={15} strokeWidth={2.5} />
+                </button>
                     {hoveredConnection ? (
                         <>
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Connection</p>
@@ -807,7 +817,8 @@ const Explain = () => {
                             )}
                         </>
                     ) : null}
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Connection panel + Decision Boundary (XOR/Iris) + Prediction side by side */}

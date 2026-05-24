@@ -8,6 +8,7 @@ import useStore from "@/components/network/lib/store";
 import { DATASETS, ACTIVATION_FUNCTIONS, DATASET_INPUT_FEATURES } from "@/components/network/static/constants";
 import { HIDDEN_LAYER_LEARN_MORE } from "@/components/network/static/explanation";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Play } from "lucide-react";
 import { ActivationInfoPopup } from "./activation";
 import LeaderboardPanel from "@/components/network/leaderboard";
@@ -515,103 +516,58 @@ const Config = () => {
         <StepIndicator currentStep={wizardStep} onClickStep={setWizardStep} />
       </div>
 
-      {/* Floating training widget — visible from step 4 onward */}
-      {wizardStep === 4 && sessionId && (
-        <div className="fixed top-16 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg p-3 flex flex-col gap-2 min-w-[280px] relative">
-          {/* Stats row — always rendered so widget stays the same size */}
-          <button
-            onClick={() => setLeaderboardOpen(true)}
-            title="Leaderboard"
-            className="absolute top-3 right-3 text-amber-400 hover:text-amber-500 transition-colors"
-          >
-            <Trophy size={14} />
-          </button>
-          <div className="flex items-center gap-3 text-center">
-            <div>
-              <p className="text-lg font-bold text-gray-900 leading-none">{epoch}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">epochs</p>
+      {/* Floating training widget — portalled to body so fixed positioning is always viewport-relative */}
+      {wizardStep === 4 && sessionId && typeof document !== "undefined" && createPortal(
+        <div style={{ position: "fixed", top: 56, right: 16, zIndex: 9999 }}
+          className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+        >
+          {/* Row 1: stats + train */}
+          <div className="flex items-center gap-0 divide-x divide-gray-100">
+            <div className="flex flex-col items-center px-3 py-2 min-w-[52px]">
+              <span className="text-base font-bold text-gray-900 leading-none tabular-nums">{epoch}</span>
+              <span className="text-[9px] text-gray-400 mt-0.5">ep</span>
             </div>
-            <div className="w-px h-7 bg-gray-200" />
-            <div>
-              <p className="text-lg font-bold text-gray-900 leading-none">{epoch > 0 ? loss.toFixed(3) : "1.000"}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">loss</p>
+            <div className="flex flex-col items-center px-3 py-2 min-w-[52px]">
+              <span className="text-base font-bold text-gray-900 leading-none tabular-nums">{epoch > 0 ? loss.toFixed(3) : "1.000"}</span>
+              <span className="text-[9px] text-gray-400 mt-0.5">loss</span>
             </div>
-            <div className="w-px h-7 bg-gray-200" />
-            <div>
-              <p className="text-lg font-bold text-gray-900 leading-none">
-                {epoch > 0
-                  ? (name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2))
-                  : (name === "accuracy" ? "33.3%" : "0.00")}
-              </p>
-              <p className="text-[10px] text-gray-400 mt-0.5">{name === "accuracy" ? "accuracy" : "MAE"}</p>
-            </div>
-          </div>
-
-          {/* Learning rate + Train button row */}
-          <div className="flex items-end gap-2 border-t border-gray-100 pt-2">
-            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-              <div className="relative group flex items-center gap-1">
-                <span className="text-xs text-gray-500 font-semibold whitespace-nowrap">Learning Rate <span className="text-gray-400 font-normal">(η)</span></span>
-                <button className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-100 hover:bg-gray-200 flex-shrink-0">
-                  <svg width="10" height="10" viewBox="0 0 20 20" fill="none" aria-hidden>
-                    <circle cx="10" cy="10" r="9" stroke="#6b7280" strokeWidth="1.5" fill="#fff" />
-                    <path d="M10 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm1 2.5h-2v5h2v-5z" fill="#6b7280" />
-                  </svg>
-                </button>
-                <div className="absolute top-full left-0 mt-1.5 z-50 hidden group-hover:block w-60 bg-gray-900 text-white text-[11px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none leading-snug">
-                  Controls how large each weight update is. A higher rate learns faster but risks overshooting; a lower rate is more stable but takes longer to converge. Start around 0.05–0.1 and adjust based on the loss curve.
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Slider
-                  value={[learningRate]}
-                  onValueChange={(v) => setLearningRate(v[0])}
-                  max={1}
-                  step={0.01}
-                  className="flex-1"
-                />
-                <span className="text-xs font-mono text-gray-700 w-8 text-right flex-shrink-0">{learningRate.toFixed(2)}</span>
-              </div>
+            <div className="flex flex-col items-center px-3 py-2 min-w-[52px]">
+              <span className="text-base font-bold text-gray-900 leading-none tabular-nums">
+                {epoch > 0 ? (name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)) : (name === "accuracy" ? "33.3%" : "0.00")}
+              </span>
+              <span className="text-[9px] text-gray-400 mt-0.5">{name === "accuracy" ? "acc" : "MAE"}</span>
             </div>
             <button
               onClick={runTrainingCycle}
               disabled={runModel}
-              className="w-20 flex-shrink-0 flex items-center justify-center bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
+              className="flex items-center gap-1 bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-xs font-semibold px-3 py-[18px] transition-colors"
             >
-              {runModel ? "…" : <span className="flex items-center gap-1.5"><Play size={13} /> Train</span>}
+              {runModel ? "…" : <><Play size={11} /> Train</>}
+            </button>
+            <button
+              onClick={() => setLeaderboardOpen(true)}
+              title="Leaderboard"
+              className="px-2.5 py-[18px] text-amber-400 hover:text-amber-500 transition-colors"
+            >
+              <Trophy size={13} />
             </button>
           </div>
-
-          {/* Sample stepper + epochs input */}
-          <div className="flex items-center justify-between border-t border-gray-100 pt-2">
-            <span className="text-[10px] text-gray-400 uppercase tracking-wide">Sample</span>
-            <div className="flex items-center gap-0.5">
-              <button
-                onClick={() => setSampleIndex(Math.max(0, sampleIndex - 1))}
-                disabled={sampleIndex === 0}
-                className="w-6 h-6 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-25 text-gray-700 text-base font-bold leading-none"
-              >‹</button>
-              <span className="font-mono text-sm font-semibold text-gray-900 w-6 text-center">{sampleIndex}</span>
-              <button
-                onClick={() => setSampleIndex(Math.min(dataset === "xor" ? 3 : 25, sampleIndex + 1))}
-                disabled={sampleIndex === (dataset === "xor" ? 3 : 25)}
-                className="w-6 h-6 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-25 text-gray-700 text-base font-bold leading-none"
-              >›</button>
-            </div>
-            <div className="flex items-center gap-1.5 ml-3">
-              <span className="text-[10px] text-gray-400 uppercase tracking-wide whitespace-nowrap">Epochs / click</span>
-              <input
-                type="number"
-                min={1}
-                max={999}
-                value={trainingEpochs}
-                onChange={(e) => setTrainingEpochs(Math.max(1, Math.min(999, parseInt(e.target.value) || 1)))}
-                className="w-14 text-xs border border-gray-200 rounded-md px-2 py-1 font-mono outline-none focus:ring-1 focus:ring-gray-300 text-center"
-              />
-            </div>
+          {/* Row 2: LR slider + sample stepper + epochs */}
+          <div className="flex items-center gap-3 px-3 py-1.5 border-t border-gray-100 bg-gray-50">
+            <span className="text-[9px] text-gray-400 font-medium shrink-0">η</span>
+            <Slider value={[learningRate]} onValueChange={(v) => setLearningRate(v[0])} max={1} step={0.01} className="w-20" />
+            <span className="text-[9px] font-mono text-gray-600 w-6 shrink-0">{learningRate.toFixed(2)}</span>
+            <div className="w-px h-3 bg-gray-200 shrink-0" />
+            <span className="text-[9px] text-gray-400 shrink-0">S</span>
+            <button onClick={() => setSampleIndex(Math.max(0, sampleIndex - 1))} disabled={sampleIndex === 0} className="w-4 h-4 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-25 text-gray-700 text-xs font-bold leading-none">‹</button>
+            <span className="font-mono text-xs font-semibold text-gray-900 w-4 text-center">{sampleIndex}</span>
+            <button onClick={() => setSampleIndex(Math.min(dataset === "xor" ? 3 : 25, sampleIndex + 1))} disabled={sampleIndex === (dataset === "xor" ? 3 : 25)} className="w-4 h-4 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-25 text-gray-700 text-xs font-bold leading-none">›</button>
+            <div className="w-px h-3 bg-gray-200 shrink-0" />
+            <input type="number" min={1} max={999} value={trainingEpochs} onChange={(e) => setTrainingEpochs(Math.max(1, Math.min(999, parseInt(e.target.value) || 1)))} className="w-10 text-[9px] border border-gray-200 rounded px-1 py-0.5 font-mono outline-none focus:ring-1 focus:ring-gray-300 text-center bg-white" />
+            <span className="text-[9px] text-gray-400 shrink-0">ep/click</span>
           </div>
-
-        </div>
+        </div>,
+        document.body
       )}
 
       {leaderboardOpen && <LeaderboardPanel />}
