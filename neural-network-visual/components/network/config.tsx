@@ -516,27 +516,35 @@ const Config = () => {
         <StepIndicator currentStep={wizardStep} onClickStep={setWizardStep} />
       </div>
 
-      {/* Floating training widget — portalled to body so fixed positioning is always viewport-relative */}
-      {wizardStep === 4 && sessionId && typeof document !== "undefined" && createPortal(
+      {/* Floating training widget — portalled to body, always fixed top-right once a session exists */}
+      {sessionId && typeof document !== "undefined" && createPortal(
         <div style={{ position: "fixed", top: 56, right: 16, zIndex: 9999 }}
           className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
         >
           {/* Row 1: stats + train */}
-          <div className="flex items-center gap-0 divide-x divide-gray-100">
-            <div className="flex flex-col items-center px-3 py-2 min-w-[52px]">
-              <span className="text-base font-bold text-gray-900 leading-none tabular-nums">{epoch}</span>
-              <span className="text-[9px] text-gray-400 mt-0.5">ep</span>
-            </div>
-            <div className="flex flex-col items-center px-3 py-2 min-w-[52px]">
-              <span className="text-base font-bold text-gray-900 leading-none tabular-nums">{epoch > 0 ? loss.toFixed(3) : "1.000"}</span>
-              <span className="text-[9px] text-gray-400 mt-0.5">loss</span>
-            </div>
-            <div className="flex flex-col items-center px-3 py-2 min-w-[52px]">
-              <span className="text-base font-bold text-gray-900 leading-none tabular-nums">
-                {epoch > 0 ? (name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)) : (name === "accuracy" ? "33.3%" : "0.00")}
-              </span>
-              <span className="text-[9px] text-gray-400 mt-0.5">{name === "accuracy" ? "acc" : "MAE"}</span>
-            </div>
+          <div className="flex items-center divide-x divide-gray-100">
+            {epoch > 0 ? (
+              <>
+                <div className="flex flex-col items-center px-3 py-2 w-[62px]">
+                  <span className="text-base font-bold text-gray-900 leading-none tabular-nums">{epoch}</span>
+                  <span className="text-[9px] text-gray-400 mt-0.5">epochs</span>
+                </div>
+                <div className="flex flex-col items-center px-3 py-2 w-[62px]">
+                  <span className="text-base font-bold text-gray-900 leading-none tabular-nums">{loss.toFixed(3)}</span>
+                  <span className="text-[9px] text-gray-400 mt-0.5">loss</span>
+                </div>
+                <div className="flex flex-col items-center px-3 py-2 w-[62px]">
+                  <span className="text-base font-bold text-gray-900 leading-none tabular-nums">
+                    {name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)}
+                  </span>
+                  <span className="text-[9px] text-gray-400 mt-0.5">{name === "accuracy" ? "accuracy" : "MAE"}</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center px-4 py-2">
+                <span className="text-[10px] text-gray-400">Not trained yet</span>
+              </div>
+            )}
             <button
               onClick={runTrainingCycle}
               disabled={runModel}
@@ -552,19 +560,19 @@ const Config = () => {
               <Trophy size={13} />
             </button>
           </div>
-          {/* Row 2: LR slider + sample stepper + epochs */}
+          {/* Row 2: learning rate slider + sample stepper + epochs per click */}
           <div className="flex items-center gap-3 px-3 py-1.5 border-t border-gray-100 bg-gray-50">
-            <span className="text-[9px] text-gray-400 font-medium shrink-0">η</span>
+            <span className="text-[9px] text-gray-400 font-medium shrink-0">LR</span>
             <Slider value={[learningRate]} onValueChange={(v) => setLearningRate(v[0])} max={1} step={0.01} className="w-20" />
             <span className="text-[9px] font-mono text-gray-600 w-6 shrink-0">{learningRate.toFixed(2)}</span>
             <div className="w-px h-3 bg-gray-200 shrink-0" />
-            <span className="text-[9px] text-gray-400 shrink-0">S</span>
+            <span className="text-[9px] text-gray-400 shrink-0">Sample</span>
             <button onClick={() => setSampleIndex(Math.max(0, sampleIndex - 1))} disabled={sampleIndex === 0} className="w-4 h-4 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-25 text-gray-700 text-xs font-bold leading-none">‹</button>
             <span className="font-mono text-xs font-semibold text-gray-900 w-4 text-center">{sampleIndex}</span>
             <button onClick={() => setSampleIndex(Math.min(dataset === "xor" ? 3 : 25, sampleIndex + 1))} disabled={sampleIndex === (dataset === "xor" ? 3 : 25)} className="w-4 h-4 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-25 text-gray-700 text-xs font-bold leading-none">›</button>
             <div className="w-px h-3 bg-gray-200 shrink-0" />
             <input type="number" min={1} max={999} value={trainingEpochs} onChange={(e) => setTrainingEpochs(Math.max(1, Math.min(999, parseInt(e.target.value) || 1)))} className="w-10 text-[9px] border border-gray-200 rounded px-1 py-0.5 font-mono outline-none focus:ring-1 focus:ring-gray-300 text-center bg-white" />
-            <span className="text-[9px] text-gray-400 shrink-0">ep/click</span>
+            <span className="text-[9px] text-gray-400 shrink-0">per click</span>
           </div>
         </div>,
         document.body

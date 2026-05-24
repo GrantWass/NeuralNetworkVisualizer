@@ -4,7 +4,7 @@ import useStore from "@/components/network/lib/store";
 import { NeuronLayer, NetworkState } from "@/components/network/static/types";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Play, X, Trophy } from "lucide-react";
+import { Play, X } from "lucide-react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -311,10 +311,6 @@ const Explain = () => {
       submitLeaderboardScore,
       computeQualification,
       epoch,
-      loss,
-      metric,
-      runModel,
-      runTrainingCycle,
     } = useStore();
 
     // Actual index into the training data arrays (stratified, not just 0–25)
@@ -678,44 +674,6 @@ const Explain = () => {
 
     return (
         <>
-            {/* Training stats — fixed top-right card */}
-            {sessionId && typeof document !== "undefined" && createPortal(
-                <div style={{ position: "fixed", top: 56, right: 16, zIndex: 9999 }}
-                    className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
-                >
-                    <div className="flex items-center gap-0 divide-x divide-gray-100">
-                        <div className="flex flex-col items-center px-3 py-2 min-w-[52px]">
-                            <span className="text-base font-bold text-gray-900 leading-none tabular-nums">{epoch}</span>
-                            <span className="text-[9px] text-gray-400 mt-0.5">ep</span>
-                        </div>
-                        <div className="flex flex-col items-center px-3 py-2 min-w-[52px]">
-                            <span className="text-base font-bold text-gray-900 leading-none tabular-nums">{epoch > 0 ? loss.toFixed(3) : "1.000"}</span>
-                            <span className="text-[9px] text-gray-400 mt-0.5">loss</span>
-                        </div>
-                        <div className="flex flex-col items-center px-3 py-2 min-w-[52px]">
-                            <span className="text-base font-bold text-gray-900 leading-none tabular-nums">
-                                {epoch > 0 ? (name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)) : (name === "accuracy" ? "33.3%" : "0.00")}
-                            </span>
-                            <span className="text-[9px] text-gray-400 mt-0.5">{name === "accuracy" ? "acc" : "MAE"}</span>
-                        </div>
-                        <button
-                            onClick={runTrainingCycle}
-                            disabled={runModel}
-                            className="flex items-center gap-1 bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-xs font-semibold px-3 py-[18px] transition-colors"
-                        >
-                            {runModel ? "…" : <><Play size={11} /> Train</>}
-                        </button>
-                        <button
-                            onClick={() => setLeaderboardOpen(true)}
-                            title="Leaderboard"
-                            className="px-2.5 py-[18px] text-amber-400 hover:text-amber-500 transition-colors"
-                        >
-                            <Trophy size={13} />
-                        </button>
-                    </div>
-                </div>,
-                document.body
-            )}
 
             {/* Node / Connection details popup — portalled over the graph */}
             {(hoveredConnection || (hoveredNode && network)) && typeof document !== "undefined" && createPortal(
@@ -900,13 +858,11 @@ const Explain = () => {
                                 {/* Metric + epoch cap info */}
                                 <p className="text-[10px] text-gray-400 leading-snug">
                                     {METRIC_LABELS[dataset]}
-                                    {cap !== null && (
-                                        <span className="ml-1 text-gray-300">
-                                            · train to epoch {cap} to lock in score
-                                            {epoch < cap && epoch > 0 && <span className="text-gray-400 font-medium"> ({cap - epoch} to go)</span>}
-                                        </span>
-                                    )}
+                                    {cap !== null && <span className="ml-1 text-gray-300">· train to epoch {cap}</span>}
                                 </p>
+                                {cap !== null && epoch > 0 && epoch < cap && (
+                                    <p className="text-[10px] text-gray-300">{cap - epoch} epochs to go</p>
+                                )}
 
                                 {/* Entries */}
                                 {leaderboardLoading ? (
@@ -959,10 +915,10 @@ const Explain = () => {
                                             <p className="text-[10px] text-gray-400">Your score: <span className="font-mono font-medium text-gray-600">{formatScore(score)}</span> — didn&apos;t make top 10</p>
                                         )
                                     ) : cap !== null ? (
-                                        <p className="text-[10px] text-gray-400">
-                                            Train to epoch <span className="font-mono font-medium text-gray-600">{cap}</span> to submit a score
-                                            {epoch > 0 && <span className="text-gray-400"> · at {epoch} now</span>}
-                                        </p>
+                                        <div className="space-y-0.5">
+                                            <p className="text-[10px] text-gray-400">Train to epoch <span className="font-mono font-medium text-gray-600">{cap}</span> to submit</p>
+                                            {epoch > 0 && <p className="text-[10px] text-gray-300">at epoch {epoch} now · {cap - epoch} to go</p>}
+                                        </div>
                                     ) : dataset === "xor" ? (
                                         <p className="text-[10px] text-gray-400">Reach 100% accuracy to submit a score</p>
                                     ) : null}
