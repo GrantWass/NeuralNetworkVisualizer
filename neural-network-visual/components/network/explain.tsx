@@ -310,6 +310,7 @@ const Explain = () => {
       xorEpochsTo100,
       submitLeaderboardScore,
       computeQualification,
+      epoch,
     } = useStore();
 
     // Actual index into the training data arrays (stratified, not just 0–25)
@@ -673,6 +674,25 @@ const Explain = () => {
 
     return (
         <>
+            {/* Training stats — fixed top-right pill */}
+            {epoch > 0 && (
+                <div className="fixed top-3 right-3 z-[9999] flex items-center gap-2 bg-white/90 backdrop-blur border border-gray-200 rounded-full shadow-md px-3 py-1.5 text-xs font-mono select-none">
+                    <span className="text-gray-400">ep</span>
+                    <span className="font-semibold text-gray-900">{epoch}</span>
+                    <span className="w-px h-3 bg-gray-200" />
+                    <span className="text-gray-400">loss</span>
+                    <span className="font-semibold text-gray-900">{losses.length > 0 ? losses[losses.length - 1].toFixed(3) : "—"}</span>
+                    <span className="w-px h-3 bg-gray-200" />
+                    <span className="font-semibold text-gray-900">
+                        {accuracies.length > 0
+                            ? name === "accuracy"
+                                ? `${accuracies[accuracies.length - 1].toFixed(1)}%`
+                                : accuracies[accuracies.length - 1].toFixed(3)
+                            : "—"}
+                    </span>
+                </div>
+            )}
+
             {/* Node / Connection details popup — portalled over the graph */}
             {(hoveredConnection || (hoveredNode && network)) && typeof document !== "undefined" && createPortal(
                 <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 9998 }}
@@ -824,24 +844,53 @@ const Explain = () => {
             {/* Connection panel + Decision Boundary (XOR/Iris) + Prediction side by side */}
             <div className="flex flex-wrap gap-3 mx-2 mt-4 mb-2">
                 {/* Left: inline leaderboard — always visible */}
-                <div className="w-full sm:flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col">
+                <div className="w-full sm:flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col gap-2">
                     {(() => {
+                        const EPOCH_CAPS: Record<string, number | null> = { xor: null, iris: 100, auto_mpg: 200, mnist: 300 };
+                        const METRIC_LABELS: Record<string, string> = { xor: "Fewest epochs to 100%", iris: "Accuracy at epoch 100", auto_mpg: "MAE at epoch 200", mnist: "Accuracy at epoch 300" };
+                        const cap = EPOCH_CAPS[dataset] ?? null;
                         const score = dataset === "xor" ? xorEpochsTo100 : submittableScore;
                         const { qualifies, rank: projectedRank } = score !== null ? computeQualification() : { qualifies: false, rank: null };
                         const formatScore = (s: number) => dataset === "xor" ? `${s} ep` : dataset === "auto_mpg" ? s.toFixed(3) : `${s.toFixed(1)}%`;
                         const entries = leaderboard[dataset] ?? [];
+
+                        const handleSubmit = async () => {
+                            setLbSubmitError("");
+                            if (!lbUsername.trim() || !/^[a-zA-Z0-9_-]+$/.test(lbUsername.trim())) {
+                                setLbSubmitError("Letters, digits, _ and - only");
+                                return;
+                            }
+                            const result = await submitLeaderboardScore(lbUsername.trim());
+                            if (result?.accepted && result.rank !== null) setLbSubmitted({ rank: result.rank });
+                            else if (result && !result.accepted) setLbSubmitError("Score didn't make top 10.");
+                        };
+
                         return (
                             <>
-                                <div className="flex items-center justify-between mb-2">
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Leaderboard</p>
+                                {/* Header */}
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Leaderboard</p>
                                     <button onClick={() => setLeaderboardOpen(true)} className="text-[10px] text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors">View all</button>
                                 </div>
+
+                                {/* Metric + epoch cap info */}
+                                <p className="text-[10px] text-gray-400 leading-snug">
+                                    {METRIC_LABELS[dataset]}
+                                    {cap !== null && (
+                                        <span className="ml-1 text-gray-300">
+                                            · train to epoch {cap} to lock in score
+                                            {epoch < cap && epoch > 0 && <span className="text-gray-400 font-medium"> ({cap - epoch} to go)</span>}
+                                        </span>
+                                    )}
+                                </p>
+
+                                {/* Entries */}
                                 {leaderboardLoading ? (
                                     <div className="space-y-1.5">{[1,2,3].map(i => <div key={i} className="h-3 bg-gray-100 rounded animate-pulse" />)}</div>
                                 ) : entries.length === 0 ? (
-                                    <p className="text-xs text-gray-400 text-center mt-2">No entries yet — be the first!</p>
+                                    <p className="text-xs text-gray-400">No entries yet — be the first!</p>
                                 ) : (
-                                    <div className="space-y-1 mb-2">
+                                    <div className="space-y-1">
                                         {entries.slice(0, 5).map((entry) => (
                                             <div key={entry.rank} className="flex items-center gap-2 text-xs">
                                                 <span className="w-4 text-gray-400 font-mono text-right flex-shrink-0">{entry.rank}</span>
@@ -851,39 +900,30 @@ const Explain = () => {
                                         ))}
                                     </div>
                                 )}
-                                {score !== null && !lbSubmitted && (
-                                    <div className="mt-auto pt-2 border-t border-gray-100">
-                                        {qualifies ? (
+
+                                {/* Submit / score status */}
+                                <div className="mt-auto pt-2 border-t border-gray-100">
+                                    {lbSubmitted ? (
+                                        <p className="text-xs font-semibold text-emerald-600 text-center">🎉 Ranked #{lbSubmitted.rank}!</p>
+                                    ) : score !== null ? (
+                                        qualifies ? (
                                             <div className="space-y-1.5">
                                                 <p className="text-[10px] text-emerald-600 font-semibold">
-                                                    You qualify! {formatScore(score)}{projectedRank !== null ? ` · Rank #${projectedRank}` : ""}
+                                                    You qualify! {formatScore(score)}{projectedRank !== null ? ` · projected rank #${projectedRank}` : ""}
                                                 </p>
                                                 <div className="flex gap-1.5">
                                                     <input
                                                         type="text"
                                                         maxLength={32}
-                                                        placeholder="Username"
+                                                        placeholder="Enter username"
                                                         value={lbUsername}
                                                         onChange={(e) => setLbUsername(e.target.value)}
-                                                        onKeyDown={async (e) => {
-                                                            if (e.key !== 'Enter') return;
-                                                            setLbSubmitError("");
-                                                            if (!lbUsername.trim() || !/^[a-zA-Z0-9_-]+$/.test(lbUsername.trim())) { setLbSubmitError("Letters, digits, _ and - only"); return; }
-                                                            const result = await submitLeaderboardScore(lbUsername.trim());
-                                                            if (result?.accepted && result.rank !== null) setLbSubmitted({ rank: result.rank });
-                                                            else if (result && !result.accepted) setLbSubmitError("Didn't make top 10!");
-                                                        }}
-                                                        className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-gray-300"
+                                                        onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
+                                                        className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-gray-400"
                                                     />
                                                     <button
                                                         disabled={leaderboardSubmitting || !lbUsername.trim()}
-                                                        onClick={async () => {
-                                                            setLbSubmitError("");
-                                                            if (!lbUsername.trim() || !/^[a-zA-Z0-9_-]+$/.test(lbUsername.trim())) { setLbSubmitError("Letters, digits, _ and - only"); return; }
-                                                            const result = await submitLeaderboardScore(lbUsername.trim());
-                                                            if (result?.accepted && result.rank !== null) setLbSubmitted({ rank: result.rank });
-                                                            else if (result && !result.accepted) setLbSubmitError("Didn't make top 10!");
-                                                        }}
+                                                        onClick={handleSubmit}
                                                         className="text-xs bg-gray-900 text-white px-2.5 py-1 rounded hover:bg-gray-700 disabled:opacity-50 transition-colors whitespace-nowrap"
                                                     >
                                                         {leaderboardSubmitting ? "…" : "Submit"}
@@ -892,15 +932,17 @@ const Explain = () => {
                                                 {lbSubmitError && <p className="text-[10px] text-red-500">{lbSubmitError}</p>}
                                             </div>
                                         ) : (
-                                            <p className="text-[10px] text-gray-400">Your score: {formatScore(score)}</p>
-                                        )}
-                                    </div>
-                                )}
-                                {lbSubmitted && (
-                                    <div className="mt-auto pt-2 border-t border-gray-100 text-center">
-                                        <p className="text-xs font-semibold text-emerald-600">Ranked #{lbSubmitted.rank}!</p>
-                                    </div>
-                                )}
+                                            <p className="text-[10px] text-gray-400">Your score: <span className="font-mono font-medium text-gray-600">{formatScore(score)}</span> — didn&apos;t make top 10</p>
+                                        )
+                                    ) : cap !== null ? (
+                                        <p className="text-[10px] text-gray-400">
+                                            Train to epoch <span className="font-mono font-medium text-gray-600">{cap}</span> to submit a score
+                                            {epoch > 0 && <span className="text-gray-400"> · at {epoch} now</span>}
+                                        </p>
+                                    ) : dataset === "xor" ? (
+                                        <p className="text-[10px] text-gray-400">Reach 100% accuracy to submit a score</p>
+                                    ) : null}
+                                </div>
                             </>
                         );
                     })()}
