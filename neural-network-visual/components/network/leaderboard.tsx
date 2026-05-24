@@ -135,13 +135,13 @@ export default function LeaderboardPanel() {
         </div>
 
         {/* Metric subtitle */}
-        <div className="px-5 pb-2 pt-1">
-          <p className="text-[11px] text-gray-400">
-            {metricDisplay}
-            {epochCap !== null && (
-              <span className="ml-1 text-gray-300">· train to epoch {epochCap} to lock in score</span>
-            )}
-          </p>
+        <div className="px-5 pb-2 pt-1 flex items-center gap-2">
+          <p className="text-[11px] text-gray-400">{metricDisplay}</p>
+          {epochCap !== null && (
+            <span className="text-[11px] font-medium text-gray-500 bg-gray-100 rounded px-1.5 py-0.5 whitespace-nowrap">
+              max {epochCap} epochs
+            </span>
+          )}
         </div>
 
         {/* Table */}

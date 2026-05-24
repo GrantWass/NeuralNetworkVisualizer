@@ -29,6 +29,8 @@ app.add_middleware(
 _dynamodb = boto3.resource("dynamodb", region_name="us-east-2")
 _sessions_table = _dynamodb.Table("nn-sessions")
 _leaderboard_table = _dynamodb.Table("nn-leaderboard")
+_s3 = boto3.client("s3", region_name="us-east-2")
+SESSION_BUCKET = "nn-sessions-data"
 SESSION_TTL_SECONDS = 3 * 60 * 60  # 3 hours
 
 LEADERBOARD_CONFIG = {
@@ -107,10 +109,11 @@ class LeaderboardSubmitResponse(BaseModel):
 
 def _save_session(session_id: str, session: dict) -> None:
     _cache_put(session_id, session)
-    data = base64.b64encode(pickle.dumps(session)).decode("utf-8")
+    s3_key = f"sessions/{session_id}.pkl"
+    _s3.put_object(Bucket=SESSION_BUCKET, Key=s3_key, Body=pickle.dumps(session))
     _sessions_table.put_item(Item={
         "session_id": session_id,
-        "data": data,
+        "s3_key": s3_key,
         "ttl": int(time.time()) + SESSION_TTL_SECONDS,
     })
 
@@ -123,7 +126,11 @@ def _load_session(session_id: str) -> Optional[dict]:
     item = resp.get("Item")
     if item is None:
         return None
-    session = pickle.loads(base64.b64decode(item["data"]))
+    s3_key = item.get("s3_key")
+    if s3_key is None:
+        return None
+    obj = _s3.get_object(Bucket=SESSION_BUCKET, Key=s3_key)
+    session = pickle.loads(obj["Body"].read())
     _cache_put(session_id, session)
     return session
 
@@ -163,11 +170,10 @@ def init_model(request: InitModelRequest):
     activations = request.activations + [output_activation]
     network = NeuralNetwork(layers, activations, optimizer="batch")
 
-    # Store the model and dataset in the user's session
+    # Store only the model + dataset name — reload data on demand to stay under DynamoDB 400KB limit
     _save_session(session_id, {
         "network": network,
-        "X_train": X_train,
-        "Y_train": Y_train,
+        "dataset": request.dataset,
     })
 
     return InitModelResponse(
@@ -215,8 +221,7 @@ def train_model(request: TrainRequest):
         raise HTTPException(status_code=404, detail="Session not found. Call /init_model first.")
 
     network = session["network"]
-    X_train = session["X_train"]
-    Y_train = session["Y_train"]
+    X_train, _, Y_train, _, _, _, _, _, _, _ = load_dataset(session["dataset"])
 
     training_results = []
 
@@ -288,7 +293,7 @@ def set_weight(request: SetWeightRequest):
         raise HTTPException(status_code=404, detail="Session not found. Call /init_model first.")
 
     network = session["network"]
-    X_train = session["X_train"]
+    X_train, _, _, _, _, _, _, _, _, _ = load_dataset(session["dataset"])
 
     if request.layer_index < 0 or request.layer_index >= len(network.layers):
         raise HTTPException(status_code=400, detail="Invalid layer_index")

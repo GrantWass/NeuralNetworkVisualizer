@@ -519,14 +519,14 @@ const Config = () => {
       {wizardStep === 4 && sessionId && (
         <div className="fixed top-16 right-4 z-40 bg-white border border-gray-200 rounded-xl shadow-lg p-3 flex flex-col gap-2 min-w-[280px] relative">
           {/* Stats row — always rendered so widget stays the same size */}
+          <button
+            onClick={() => setLeaderboardOpen(true)}
+            title="Leaderboard"
+            className="absolute top-3 right-3 text-amber-400 hover:text-amber-500 transition-colors"
+          >
+            <Trophy size={14} />
+          </button>
           <div className="flex items-center gap-3 text-center">
-            <button
-              onClick={() => setLeaderboardOpen(true)}
-              title="Leaderboard"
-              className="ml-auto absolute top-3 right-3 text-amber-400 hover:text-amber-500 transition-colors"
-            >
-              <Trophy size={14} />
-            </button>
             <div>
               <p className="text-lg font-bold text-gray-900 leading-none">{epoch}</p>
               <p className="text-[10px] text-gray-400 mt-0.5">epochs</p>
