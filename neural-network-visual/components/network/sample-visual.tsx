@@ -30,18 +30,19 @@ const IrisFlower = ({
   const [hovered, setHovered] = useState(false);
   const [sepalLen, sepalWid, petalLen, petalWid] = original;
 
-  const predIdx =
-    outputActivations.length > 0
-      ? outputActivations.indexOf(Math.max(...outputActivations))
-      : -1;
+  const labelIdx = original.slice(4, 7).indexOf(1);
+  const actualClass = IRIS_CLASSES[labelIdx] as IrisClass | undefined;
+
+  const trained = outputActivations.length > 0;
+  const predIdx = trained
+    ? outputActivations.indexOf(Math.max(...outputActivations))
+    : labelIdx >= 0 ? labelIdx : 0;
   const predClass = IRIS_CLASSES[predIdx] as IrisClass | undefined;
-  const predConf = predIdx >= 0 ? (outputActivations[predIdx] ?? 0) : 0;
+  const predConf = trained ? (outputActivations[predIdx] ?? 0) : 0.33;
   const predColor = predClass ? IRIS_PETAL[predClass] : "#d1d5db";
   const predBadge = predClass ? IRIS_BADGE[predClass] : "#6b7280";
 
-  const labelIdx = original.slice(4, 7).indexOf(1);
-  const actualClass = IRIS_CLASSES[labelIdx] as IrisClass | undefined;
-  const isCorrect = predIdx >= 0 && predIdx === labelIdx;
+  const isCorrect = trained && predIdx === labelIdx;
 
   const petalRY = 9 + norm(petalLen, 1.0, 6.9) * 21;
   const petalRX = 3 + norm(petalWid, 0.1, 2.5) * 9;
@@ -53,7 +54,7 @@ const IrisFlower = ({
   const ringR = Math.max(petalRY, sepalRY) + 9;
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-3 py-2">
       <div
         className="relative cursor-default"
         onMouseEnter={() => setHovered(true)}
@@ -123,22 +124,18 @@ const IrisFlower = ({
       </div>
 
       <div className="flex items-center gap-1.5">
-        {predClass ? (
+        {predClass && (
           <span
             className="px-2 py-0.5 rounded-full text-white text-[10px] font-semibold"
             style={{ backgroundColor: predBadge }}
           >
             {predClass} {(predConf * 100).toFixed(0)}%
           </span>
-        ) : (
-          <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px]">
-            Not trained
-          </span>
         )}
-        {isCorrect ? (
+        {trained && isCorrect ? (
           <span className="text-green-600 font-bold text-[11px]">✓</span>
         ) : (
-          actualClass && (
+          trained && actualClass && (
             <span className="text-[10px] text-gray-500">
               actual: {actualClass}
             </span>
@@ -161,18 +158,19 @@ const XorGate = ({
   const inputB = Math.round(original[1] ?? 0);
   const actual = Math.round(original[2] ?? 0);
 
+  const trained = outputActivations.length > 0;
   const rawOut = outputActivations[0] ?? -1;
   const hasPred = rawOut >= 0;
-  const predicted = rawOut >= 0.5 ? 1 : 0;
-  const confidence = predicted === 1 ? rawOut : 1 - rawOut;
-  const isCorrect = hasPred && predicted === actual;
+  const predicted = hasPred ? (rawOut >= 0.5 ? 1 : 0) : actual;
+  const confidence = hasPred ? (predicted === 1 ? rawOut : 1 - rawOut) : 0.5;
+  const isCorrect = trained && hasPred && predicted === actual;
 
-  const gateStroke = !hasPred ? "#9ca3af" : isCorrect ? "#22c55e" : "#ef4444";
+  const gateStroke = !trained ? "#9ca3af" : isCorrect ? "#22c55e" : "#ef4444";
   const inputFill = (v: number) => (v === 1 ? "#1e3a8a" : "#f9fafb");
   const inputText = (v: number) => (v === 1 ? "white" : "#374151");
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-3 py-2">
       <svg viewBox="0 0 208 92" className="w-full h-auto max-w-[172px]">
         {/* Input A */}
         <circle
@@ -262,7 +260,7 @@ const XorGate = ({
           cy={46}
           r={16}
           fill={
-            !hasPred ? "#f3f4f6" : isCorrect ? "#dcfce7" : "#fee2e2"
+            !trained ? "#f3f4f6" : isCorrect ? "#dcfce7" : "#fee2e2"
           }
           stroke={gateStroke}
           strokeWidth={2}
@@ -285,27 +283,23 @@ const XorGate = ({
           fill={gateStroke}
           fontWeight="bold"
         >
-          {hasPred ? predicted : "?"}
+          {predicted}
         </text>
       </svg>
 
       <div className="flex items-center gap-2">
-        {hasPred ? (
-          <span
-            className={`px-2 py-0.5 rounded-full font-semibold text-[10px] ${
-              isCorrect
-                ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
-            }`}
-          >
-            {predicted} · {(confidence * 100).toFixed(0)}%
-          </span>
-        ) : (
-          <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px]">
-            Not trained
-          </span>
-        )}
-        {hasPred &&
+        <span
+          className={`px-2 py-0.5 rounded-full font-semibold text-[10px] ${
+            !trained
+              ? "bg-gray-100 text-gray-500"
+              : isCorrect
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+          }`}
+        >
+          {predicted} · {(confidence * 100).toFixed(0)}%
+        </span>
+        {trained &&
           (isCorrect ? (
             <span className="text-green-600 text-[11px]">✓ correct</span>
           ) : (
@@ -347,8 +341,8 @@ const AutoMpgCar = ({
   const wtN    = norm(wt,    1613, 5140);
   const accelN = norm(accel, 8,    24.8);
 
-  const hasPred = outputActivations.length > 0;
-  const rawPred = hasPred ? outputActivations[0] : null;
+  const trained = outputActivations.length > 0;
+  const rawPred = trained ? outputActivations[0] : null;
   const predMpg =
     rawPred != null && yMean != null && yStd != null
       ? rawPred * yStd + yMean
@@ -356,8 +350,9 @@ const AutoMpgCar = ({
       ? rawPred
       : null;
 
-  const bodyColor = predMpg != null ? mpgToColor(predMpg) : "#9ca3af";
-  const delta = predMpg != null ? predMpg - actualMpg : null;
+  const displayMpg = predMpg ?? actualMpg;
+  const bodyColor = mpgToColor(displayMpg);
+  const delta = trained && predMpg != null ? predMpg - actualMpg : null;
 
   // Car geometry (viewBox 0 0 230 100)
   const groundY     = 82;
@@ -402,7 +397,7 @@ const AutoMpgCar = ({
   ];
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-3 py-1">
       <div className="flex gap-3 items-center">
         <svg viewBox="0 0 230 100" className="w-full h-auto max-w-[158px] flex-shrink-0">
           {/* Trunk */}
@@ -463,7 +458,7 @@ const AutoMpgCar = ({
             className="px-1.5 py-0.5 rounded font-bold text-white text-sm leading-tight"
             style={{ backgroundColor: bodyColor }}
           >
-            {predMpg != null ? predMpg.toFixed(1) : "—"}
+            {displayMpg.toFixed(1)}
           </div>
           <div className="text-[9px] text-gray-500 mt-0.5">
             Actual: {actualMpg?.toFixed(1)}
@@ -537,10 +532,6 @@ export const SampleVisual: React.FC<SampleVisualProps> = ({
 
   return (
     <div>
-      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2.5">
-        Sample Preview
-      </p>
-
       {dataset === "iris" && (
         <IrisFlower original={original} outputActivations={outputActivations} />
       )}

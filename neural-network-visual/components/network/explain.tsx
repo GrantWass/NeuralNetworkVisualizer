@@ -298,6 +298,10 @@ const Explain = () => {
       drawnDigitPrediction,
       setSampleIndex,
       getDisplayIndex,
+      leaderboard,
+      leaderboardLoading,
+      fetchLeaderboard,
+      setLeaderboardOpen,
     } = useStore();
 
     // Actual index into the training data arrays (stratified, not just 0–25)
@@ -474,6 +478,10 @@ const Explain = () => {
       if (view !== 'calculation') { setCalcStepMode(false); setCalcStepIndex(0); }
       if (view !== 'backward') { setBackStepMode(false); setBackStepIndex(0); }
     }, [view]);
+
+    useEffect(() => {
+      if (!leaderboard[dataset]) fetchLeaderboard(dataset);
+    }, [dataset]);
 
     const enterStepMode = () => { setStepMode(true); setStepIndex(0); };
     const exitStepMode = () => { setStepMode(false); setStepLayerHighlight(null); };
@@ -803,8 +811,37 @@ const Explain = () => {
                             )}
                         </>
                     ) : (
-                        <div className="flex items-center justify-center h-full min-h-[60px]">
-                            <p className="text-sm text-gray-400">Click a node or connection in the graph</p>
+                        <div className="flex flex-col h-full min-h-[60px]">
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Leaderboard</p>
+                                <button
+                                    onClick={() => setLeaderboardOpen(true)}
+                                    className="text-[10px] text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
+                                >
+                                    View all
+                                </button>
+                            </div>
+                            {leaderboardLoading ? (
+                                <div className="space-y-1.5">
+                                    {[1,2,3].map(i => (
+                                        <div key={i} className="h-3 bg-gray-100 rounded animate-pulse" />
+                                    ))}
+                                </div>
+                            ) : (leaderboard[dataset] ?? []).length === 0 ? (
+                                <p className="text-xs text-gray-400 text-center mt-2">No entries yet — be the first!</p>
+                            ) : (
+                                <div className="space-y-1">
+                                    {(leaderboard[dataset] ?? []).slice(0, 5).map((entry) => (
+                                        <div key={entry.rank} className="flex items-center gap-2 text-xs">
+                                            <span className="w-4 text-gray-400 font-mono text-right flex-shrink-0">{entry.rank}</span>
+                                            <span className="flex-1 text-gray-700 font-medium truncate">{entry.username}</span>
+                                            <span className="font-mono text-gray-500 flex-shrink-0">
+                                                {dataset === "xor" ? `${entry.score} ep` : dataset === "auto_mpg" ? entry.score.toFixed(3) : `${entry.score.toFixed(1)}%`}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -877,7 +914,8 @@ const Explain = () => {
                         </div>
                     </>
                 ) : originalData[di] && (
-                    <div className="flex-1 min-w-0 flex flex-col gap-2 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                    <div className="flex-1 min-w-0 flex flex-col bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                        <div className="flex-1 flex flex-col justify-center">
                         <SampleVisual
                             dataset={dataset}
                             original={originalData[di]}
@@ -886,7 +924,8 @@ const Explain = () => {
                             yMean={yMean}
                             yStd={yStd}
                         />
-                        <div className="flex items-center justify-between px-0.5 pt-1 border-t border-gray-100">
+                        </div>
+                        <div className="flex items-center justify-between px-0.5 pt-1 border-t border-gray-100 mt-2">
                             <span className="text-[10px] text-gray-400 uppercase tracking-wide">Sample</span>
                             <div className="flex items-center gap-0.5">
                                 <button

@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import numpy as np
 import re
+from decimal import Decimal
 # import math  # re-enable with /attention endpoint (used for sqrt(HEAD_DIM))
 from NeuralNetwork import NeuralNetwork
 from datasets import load_dataset  # Assume a function to load the dataset
@@ -69,7 +70,7 @@ def _is_better(dataset: str, new_score: float, existing_score: float) -> bool:
 
 def _qualifies_for_top10(dataset: str, score: float, entries: list) -> Optional[int]:
     for i, entry in enumerate(entries):
-        if _is_better(dataset, score, entry["score"]):
+        if _is_better(dataset, score, float(entry["score"])):
             return i
     if len(entries) < 10:
         return len(entries)
@@ -392,7 +393,7 @@ def submit_leaderboard(request: LeaderboardSubmitRequest):
 
     new_entry = {
         "username": username,
-        "score": request.score,
+        "score": Decimal(str(request.score)),
         "epoch": request.epoch,
         "submitted_at": int(time.time()),
     }

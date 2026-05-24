@@ -521,18 +521,20 @@ const Config = () => {
           {/* Stats row — always rendered so widget stays the same size */}
           <div className="flex items-center gap-3 text-center">
             <div>
-              <p className="text-lg font-bold text-gray-900 leading-none">{epoch > 0 ? epoch : 0}</p>
+              <p className="text-lg font-bold text-gray-900 leading-none">{epoch}</p>
               <p className="text-[10px] text-gray-400 mt-0.5">epochs</p>
             </div>
             <div className="w-px h-7 bg-gray-200" />
             <div>
-              <p className="text-lg font-bold text-gray-900 leading-none">{epoch > 0 ? loss.toFixed(3) : "—"}</p>
+              <p className="text-lg font-bold text-gray-900 leading-none">{epoch > 0 ? loss.toFixed(3) : "1.000"}</p>
               <p className="text-[10px] text-gray-400 mt-0.5">loss</p>
             </div>
             <div className="w-px h-7 bg-gray-200" />
             <div>
               <p className="text-lg font-bold text-gray-900 leading-none">
-                {epoch > 0 ? (name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)) : "—"}
+                {epoch > 0
+                  ? (name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2))
+                  : (name === "accuracy" ? "33.3%" : "0.00")}
               </p>
               <p className="text-[10px] text-gray-400 mt-0.5">{name === "accuracy" ? "accuracy" : "MAE"}</p>
             </div>
@@ -573,7 +575,7 @@ const Config = () => {
             </button>
           </div>
 
-          {/* Sample stepper — bottom of widget */}
+          {/* Sample stepper + epochs input */}
           <div className="flex items-center justify-between border-t border-gray-100 pt-2">
             <span className="text-[10px] text-gray-400 uppercase tracking-wide">Sample</span>
             <div className="flex items-center gap-0.5">
@@ -589,22 +591,24 @@ const Config = () => {
                 className="w-6 h-6 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-25 text-gray-700 text-base font-bold leading-none"
               >›</button>
             </div>
+            <div className="flex items-center gap-1.5 ml-3">
+              <span className="text-[10px] text-gray-400 uppercase tracking-wide whitespace-nowrap">Epochs / click</span>
+              <input
+                type="number"
+                min={1}
+                max={999}
+                value={trainingEpochs}
+                onChange={(e) => setTrainingEpochs(Math.max(1, Math.min(999, parseInt(e.target.value) || 1)))}
+                className="w-14 text-xs border border-gray-200 rounded-md px-2 py-1 font-mono outline-none focus:ring-1 focus:ring-gray-300 text-center"
+              />
+            </div>
           </div>
 
-          {/* Epochs input + leaderboard */}
-          <div className="flex items-center gap-2 border-t border-gray-100 pt-2">
-            <span className="text-[10px] text-gray-400 uppercase tracking-wide whitespace-nowrap">Epochs / click</span>
-            <input
-              type="number"
-              min={1}
-              max={999}
-              value={trainingEpochs}
-              onChange={(e) => setTrainingEpochs(Math.max(1, Math.min(999, parseInt(e.target.value) || 1)))}
-              className="w-16 text-xs border border-gray-200 rounded-md px-2 py-1 font-mono outline-none focus:ring-1 focus:ring-gray-300 text-center"
-            />
+          {/* Leaderboard — full row */}
+          <div className="border-t border-gray-100 pt-2">
             <button
               onClick={() => setLeaderboardOpen(true)}
-              className="flex-1 flex items-center justify-center gap-1 border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-medium py-1 rounded-lg transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-medium py-1.5 rounded-lg transition-colors"
             >
               <Trophy size={11} /> Leaderboard
             </button>
