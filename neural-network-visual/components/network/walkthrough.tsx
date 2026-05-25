@@ -28,7 +28,7 @@ const STEPS: Step[] = [
         <p>Build, train, and explore neural networks — no code required.</p>
         <p className="text-gray-500 text-xs">
           This 2-minute tour covers every major feature. Hit <strong>Next</strong> to
-          start, or <strong>Skip tour</strong> if you&apos;d rather dive straight in.
+          start, or <strong>Skip tour </strong> if you&apos;d rather dive straight in.
         </p>
         <div className="grid grid-cols-3 gap-2 text-xs text-center pt-1">
           {["Pick dataset", "Design network", "Train & explore"].map((s, i) => (
@@ -361,6 +361,7 @@ export default function Walkthrough() {
     setTrainingEpochs,
     setTourActive,
     setTourStep,
+    clearSessionAndReset,
   } = useStore();
   const tourInitRef = useRef(false);
 
@@ -495,8 +496,20 @@ export default function Walkthrough() {
       const el = document.querySelector(s.target);
       if (el) {
         unlockScroll();
-        const r       = el.getBoundingClientRect();
-        const targetY = window.scrollY + r.top - window.innerHeight / 2 + r.height / 2;
+        const r   = el.getBoundingClientRect();
+        const pad = s.padding ?? 12;
+        const placement = s.placement ?? "bottom";
+        let targetY: number;
+        if (placement === "bottom") {
+          // Element near top of viewport → full lower half available for tooltip
+          targetY = window.scrollY + r.top - MARGIN - pad;
+        } else if (placement === "top") {
+          // Element near bottom → full upper half available for tooltip
+          targetY = window.scrollY + r.bottom - window.innerHeight + MARGIN + pad;
+        } else {
+          // left / right — center element vertically
+          targetY = window.scrollY + r.top - window.innerHeight / 2 + r.height / 2;
+        }
         window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
         positionTimer.current = setTimeout(() => { lockScroll(); updatePositions(); }, 650);
         return;
@@ -545,6 +558,11 @@ export default function Walkthrough() {
     unlockScroll();
     setOpen(false);
     setSpotlight(null);
+    // Reset the model if the tour initialized it, so the page is clean afterward
+    if (tourInitRef.current) {
+      tourInitRef.current = false;
+      clearSessionAndReset();
+    }
     // Don't persist in preview mode — ?tour should always re-trigger on reload
     if (!previewMode) {
       try { localStorage.setItem(STORAGE_KEY, "1"); } catch { /* ignore */ }
