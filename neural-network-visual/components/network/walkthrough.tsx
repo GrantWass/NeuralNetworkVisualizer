@@ -360,6 +360,7 @@ export default function Walkthrough() {
     runTrainingCycle,
     setTrainingEpochs,
     setTourActive,
+    setTourStep,
   } = useStore();
   const tourInitRef = useRef(false);
 
@@ -511,6 +512,9 @@ export default function Walkthrough() {
   useEffect(() => {
     if (open) { setTourActive(true); } else { unlockScroll(); setTourActive(false); }
   }, [open, setTourActive]);
+
+  // Keep store in sync with current step so other components can react
+  useEffect(() => { setTourStep(step); }, [step, setTourStep]);
   useEffect(() => () => { unlockScroll(); setTourActive(false); }, [setTourActive]);
 
   // Recompute on resize

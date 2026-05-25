@@ -487,6 +487,7 @@ const Config = () => {
     leaderboardOpen,
     setLeaderboardOpen,
     tourActive,
+    tourStep,
   } = useStore();
 
   // Wizard step: 1=dataset, 2=configure, 3=initialize, 4=train
@@ -520,7 +521,7 @@ const Config = () => {
       </div>
 
       {/* Floating training widget — portalled to body, always fixed top-right once a session exists */}
-      {sessionId && typeof document !== "undefined" && createPortal(
+      {sessionId && typeof document !== "undefined" && (!tourActive || tourStep === 4) && createPortal(
         <div data-tour="training-widget" style={{ position: "fixed", top: 56, right: 16, zIndex: 9999 }}
           className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden w-[320px] relative"
         >

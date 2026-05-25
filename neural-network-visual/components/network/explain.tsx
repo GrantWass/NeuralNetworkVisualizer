@@ -1490,8 +1490,10 @@ const Explain = () => {
                 </>
             )}
 
-            {/* Loss and Accuracy Charts */}
-            <div data-tour="charts" className="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
+        </div>{/* end math-panel */}
+
+        {/* Loss and Accuracy Charts */}
+        <div data-tour="charts" className="mt-4 mx-2 grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
                 <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
                     <div className="flex items-baseline gap-2 mb-0.5">
                         <h3 className="text-sm font-semibold text-gray-800">Training Loss</h3>
@@ -1527,7 +1529,7 @@ const Explain = () => {
             </div>
 
             {/* Explanation panel */}
-            <div className="mt-4 sm:mt-6 bg-white border border-gray-200 rounded-lg p-4 text-sm text-gray-700">
+            <div className="mt-4 sm:mt-6 mx-2 bg-white border border-gray-200 rounded-lg p-4 text-sm text-gray-700">
                 <h3 className="font-semibold text-gray-900 mb-3">About this training run</h3>
                 <ReactMarkdown
                     rehypePlugins={[rehypeRaw]}
@@ -1544,7 +1546,6 @@ const Explain = () => {
                     {fullExplanation}
                 </ReactMarkdown>
             </div>
-        </div>
 
         {/* ── Fixed bottom value tracer panel ── */}
         {highlightedValueId && valueMap.get(highlightedValueId) && (() => {
