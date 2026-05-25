@@ -84,7 +84,7 @@ const Graph = () => {
     }, [epoch]);
 
     return (
-        <div className="grid place-items-center w-full mt-8 mb-2">
+        <div data-tour="network-svg" className="grid place-items-center w-full mt-8 mb-2">
             <svg
                 className="w-[90%] max-w-[1000px] h-auto aspect-[2/1] border border-gray-300 rounded"
                 viewBox="0 0 1000 500"

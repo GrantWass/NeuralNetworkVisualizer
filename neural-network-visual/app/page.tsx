@@ -6,6 +6,7 @@ import Link from "next/link";
 import Config from "@/components/network/config";
 import Graph from "@/components/network/neural";
 import Explain from "@/components/network/explain";
+import Walkthrough from "@/components/network/walkthrough";
 import { JsonLd } from "@/components/JsonLd";
 import ContactInfo from "./contact";
 import {
@@ -327,10 +328,13 @@ export default function NeuralNetworkViz() {
       <JsonLd data={articleLd} />
 
       <header className="mt-4 mb-6 space-y-4 pb-6 border-b border-border">
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-500" />
-          Interactive Visualization
-        </span>
+        <div className="flex items-center justify-between gap-4">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-500" />
+            Interactive Visualization
+          </span>
+          <Walkthrough />
+        </div>
         <h1 className="text-3xl font-bold tracking-tight">Neural Network Visualizer</h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
           Configure a network, train it on real data, and watch forward and

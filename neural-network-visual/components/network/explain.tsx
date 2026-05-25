@@ -826,7 +826,7 @@ const Explain = () => {
             {/* Connection panel + Decision Boundary (XOR/Iris) + Prediction side by side */}
             <div className="flex flex-wrap gap-3 mx-2 mt-4 mb-2">
                 {/* Left: inline leaderboard — always visible */}
-                <div className="w-full sm:flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col gap-2">
+                <div data-tour="leaderboard-inline" className="w-full sm:flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col gap-2">
                     {(() => {
                         const EPOCH_CAPS: Record<string, number | null> = { xor: null, iris: 100, auto_mpg: 200, mnist: 300 };
                         const METRIC_LABELS: Record<string, string> = { xor: "Fewest epochs to 100%", iris: "Accuracy at epoch 100", auto_mpg: "MAE at epoch 200", mnist: "Accuracy at epoch 300" };
@@ -930,7 +930,7 @@ const Explain = () => {
 
                 {/* Middle: decision boundary for XOR/Iris, prediction scatter for auto_mpg */}
                 {(dataset === "xor" || dataset === "iris") && network && (
-                    <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                    <div data-tour="dataset-viz" className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                         <DecisionBoundary
                             layers={network.layers}
                             dataset={dataset}
@@ -939,7 +939,7 @@ const Explain = () => {
                     </div>
                 )}
                 {dataset === "auto_mpg" && network && (
-                    <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                    <div data-tour="dataset-viz" className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                         <RegressionChart
                             network={network}
                             originalData={originalData}
@@ -952,7 +952,7 @@ const Explain = () => {
                 {/* Right: for MNIST — draw canvas + prediction; otherwise sample preview */}
                 {dataset === "mnist" ? (
                     <>
-                        <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col items-center gap-2">
+                        <div data-tour="dataset-viz" className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col items-center gap-2">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide self-start">Draw a Digit</p>
                             <DigitCanvas hidePrediction />
                         </div>
@@ -1026,7 +1026,7 @@ const Explain = () => {
                     </div>
                 )}
             </div>
-        <div className="mt-2 p-4 bg-gray-100 rounded-lg mx-2 shadow-md">
+        <div data-tour="math-panel" className="mt-2 p-4 bg-gray-100 rounded-lg mx-2 shadow-md">
 
             {hasTrained && dataset !== "mnist" && (
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
@@ -1491,7 +1491,7 @@ const Explain = () => {
             )}
 
             {/* Loss and Accuracy Charts */}
-            <div className="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
+            <div data-tour="charts" className="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
                 <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
                     <div className="flex items-baseline gap-2 mb-0.5">
                         <h3 className="text-sm font-semibold text-gray-800">Training Loss</h3>

@@ -126,31 +126,33 @@ const StepDataset = ({
 
       {/* Selected dataset info */}
       {details && (
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+        <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+            {/* Inputs */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Inputs (features)</p>
-              <ul className="space-y-0.5">
+              <p className="font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Inputs</p>
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5">
                 {details.inputs.map((inp) => (
-                  <li key={inp} className="flex items-center gap-1.5 text-gray-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+                  <span key={inp} className="flex items-center gap-1 text-gray-600">
+                    <span className="w-1 h-1 rounded-full bg-blue-400 flex-shrink-0" />
                     {inp}
-                  </li>
+                  </span>
                 ))}
-              </ul>
+              </div>
             </div>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Output</p>
-                <p className="text-gray-700">{details.output}</p>
+            {/* Right column: output + loss + size stacked */}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-semibold text-gray-400 uppercase tracking-wide shrink-0">Output</span>
+                <span className="text-gray-600 truncate">{details.output}</span>
               </div>
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Loss function</p>
-                <p className="text-gray-700">{details.loss}</p>
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-semibold text-gray-400 uppercase tracking-wide shrink-0">Loss</span>
+                <span className="text-gray-600">{details.loss}</span>
               </div>
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Dataset size</p>
-                <p className="text-gray-700">{details.samples}</p>
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-semibold text-gray-400 uppercase tracking-wide shrink-0">Size</span>
+                <span className="text-gray-600">{details.samples}</span>
               </div>
             </div>
           </div>
@@ -518,7 +520,7 @@ const Config = () => {
 
       {/* Floating training widget — portalled to body, always fixed top-right once a session exists */}
       {sessionId && typeof document !== "undefined" && createPortal(
-        <div style={{ position: "fixed", top: 56, right: 16, zIndex: 9999 }}
+        <div data-tour="training-widget" style={{ position: "fixed", top: 56, right: 16, zIndex: 9999 }}
           className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden w-[320px]"
         >
           {/* Row 1: epochs · loss · metric · Train · Leaderboard */}
@@ -578,7 +580,7 @@ const Config = () => {
 
       {/* Step content */}
       {wizardStep < 4 && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 shadow-sm">
+        <div data-tour="wizard-container" className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 shadow-sm">
           {wizardStep === 1 && (
             <StepDataset
               dataset={dataset}
