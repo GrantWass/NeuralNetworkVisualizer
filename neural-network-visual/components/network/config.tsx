@@ -486,6 +486,7 @@ const Config = () => {
     runModel,
     leaderboardOpen,
     setLeaderboardOpen,
+    tourActive,
   } = useStore();
 
   // Wizard step: 1=dataset, 2=configure, 3=initialize, 4=train
@@ -521,8 +522,11 @@ const Config = () => {
       {/* Floating training widget — portalled to body, always fixed top-right once a session exists */}
       {sessionId && typeof document !== "undefined" && createPortal(
         <div data-tour="training-widget" style={{ position: "fixed", top: 56, right: 16, zIndex: 9999 }}
-          className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden w-[320px]"
+          className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden w-[320px] relative"
         >
+          {tourActive && (
+            <div className="absolute inset-0 bg-white/60 rounded-xl z-10 pointer-events-none" />
+          )}
           {/* Row 1: epochs · loss · metric · Train · Leaderboard */}
           <div className="flex items-stretch divide-x divide-gray-100">
             <div className="flex flex-col items-center justify-center px-3 py-2 flex-1">

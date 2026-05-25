@@ -40,9 +40,6 @@ const STEPS: Step[] = [
             </div>
           ))}
         </div>
-        <p className="text-xs text-gray-400 pt-1">
-          The Iris dataset is being initialized in the background — the network, charts, and training widget will all show live data by the time you reach those steps.
-        </p>
       </div>
     ),
     placement: "center",
@@ -72,7 +69,9 @@ const STEPS: Step[] = [
         </p>
       </div>
     ),
-    placement: "center",
+    target: "[data-tour='wizard-container']",
+    placement: "bottom",
+    padding: 6,
   },
 
   // 2 — Network configuration
@@ -97,7 +96,9 @@ const STEPS: Step[] = [
         </p>
       </div>
     ),
-    placement: "center",
+    target: "[data-tour='wizard-container']",
+    placement: "bottom",
+    padding: 6,
   },
 
   // 3 — Network diagram
@@ -358,6 +359,7 @@ export default function Walkthrough() {
     initModel,
     runTrainingCycle,
     setTrainingEpochs,
+    setTourActive,
   } = useStore();
   const tourInitRef = useRef(false);
 
@@ -373,28 +375,27 @@ export default function Walkthrough() {
     }
   }, []);
 
-  // ── Auto-init + train when tour opens ─────────────────────────────────────
-  // Only fires once per tour session; skipped if the user already has a model
+  // ── Auto-init + train when user advances past the config steps ───────────
+  // Fires once (guarded by ref) the moment step 3 is reached, so the network,
+  // training widget, and charts all show real data by the time the user gets there.
   useEffect(() => {
-    if (!open) return;
+    if (!open || step !== 3) return;
     if (tourInitRef.current) return;
     tourInitRef.current = true;
 
     if (sessionId) return; // user already has a trained model — use it as-is
 
     // Store defaults: dataset="iris", hiddenLayers=[4,4], activations=["relu","relu"]
-    // Just call initModel (it reads those defaults) then train 20 epochs
     initModel().then(() => {
       setTrainingEpochs(20);
       return runTrainingCycle();
     }).then(() => {
-      setTrainingEpochs(1); // restore default
+      setTrainingEpochs(1);
     }).catch(() => {
-      // Backend unavailable — tour still works, components just show untrained state
       setTrainingEpochs(1);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [step, open]);
 
   // Reset the init guard when the tour is closed so it can fire again next open
   useEffect(() => {
@@ -496,7 +497,7 @@ export default function Walkthrough() {
         const r       = el.getBoundingClientRect();
         const targetY = window.scrollY + r.top - window.innerHeight / 2 + r.height / 2;
         window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
-        positionTimer.current = setTimeout(() => { lockScroll(); updatePositions(); }, 420);
+        positionTimer.current = setTimeout(() => { lockScroll(); updatePositions(); }, 650);
         return;
       }
     }
@@ -506,9 +507,11 @@ export default function Walkthrough() {
     return () => clearTimeout(positionTimer.current);
   }, [step, open, updatePositions]);
 
-  // Unlock when tour closes or unmounts
-  useEffect(() => { if (!open) unlockScroll(); }, [open]);
-  useEffect(() => () => unlockScroll(), []);
+  // Unlock + deactivate tour when closed; activate when opened
+  useEffect(() => {
+    if (open) { setTourActive(true); } else { unlockScroll(); setTourActive(false); }
+  }, [open, setTourActive]);
+  useEffect(() => () => { unlockScroll(); setTourActive(false); }, [setTourActive]);
 
   // Recompute on resize
   useEffect(() => {

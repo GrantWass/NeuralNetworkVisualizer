@@ -168,7 +168,7 @@ export const createTrainingSlice: StateCreator<any, [], [], TrainingSlice> = (se
           yStd: data.y_std ?? null,
         });
         const arch = data.layer_sizes.join(" → ");
-        toast.success("Model ready", {
+        if (!get().tourActive) toast.success("Model ready", {
           description: `Architecture: ${arch} · ${data.layer_sizes.reduce((a: number, b: number, i: number, arr: number[]) => i < arr.length - 1 ? a + arr[i] * arr[i + 1] + arr[i + 1] : a, 0)} parameters`,
         });
       } else {
@@ -368,7 +368,7 @@ export const createTrainingSlice: StateCreator<any, [], [], TrainingSlice> = (se
           ? `${result.metric.toFixed(1)}% accuracy`
           : `MAE ${result.metric.toFixed(3)}`;
         const { epoch: currentEpoch } = get();
-        toast.success(`Epoch ${currentEpoch}`, {
+        if (!get().tourActive) toast.success(`Epoch ${currentEpoch}`, {
           description: `Loss ${result.loss.toFixed(4)} ${lossArrow} · ${metricLabel}`,
         });
       } else {

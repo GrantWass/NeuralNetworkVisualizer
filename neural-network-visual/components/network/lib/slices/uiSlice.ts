@@ -6,10 +6,12 @@ export interface UISlice {
   hoveredNode: HoveredNode | null;
   configOpen: boolean;
   stepLayerHighlight: number | null;
+  tourActive: boolean;
   setHoveredConnection: (hoveredConnection: HoveredConnection | null) => void;
   setHoveredNode: (hoveredNode: HoveredNode | null) => void;
   setConfigOpen: (configOpen: boolean) => void;
   setStepLayerHighlight: (index: number | null) => void;
+  setTourActive: (active: boolean) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,6 +20,7 @@ export const createUISlice: StateCreator<any, [], [], UISlice> = (set, get) => (
   hoveredNode: null,
   configOpen: true,
   stepLayerHighlight: null,
+  tourActive: false,
 
   setHoveredConnection: (hoveredConnection) => {
     if (hoveredConnection) get().setHoveredNode(null);
@@ -29,4 +32,5 @@ export const createUISlice: StateCreator<any, [], [], UISlice> = (set, get) => (
   },
   setConfigOpen: (configOpen) => set({ configOpen }),
   setStepLayerHighlight: (stepLayerHighlight) => set({ stepLayerHighlight }),
+  setTourActive: (tourActive) => set({ tourActive }),
 });
