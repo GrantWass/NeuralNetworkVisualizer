@@ -15,6 +15,7 @@ type Step = {
   target?: string;
   placement?: Placement;
   padding?: number;
+  width?: number; // overrides TOOLTIP_W for this step
 };
 
 // ─── Step definitions ─────────────────────────────────────────────────────────
@@ -50,28 +51,27 @@ const STEPS: Step[] = [
     title: "Step 1 · Choose a Dataset",
     body: (
       <div className="space-y-2">
-        <p>The dataset defines what problem the network will learn to solve.</p>
-        <ul className="text-sm space-y-1.5">
+        <p className="text-sm">The dataset defines what problem the network learns to solve.</p>
+        <div className="grid grid-cols-2 gap-1.5 text-xs">
           {[
             ["Iris",     "Classify flower species from 4 measurements"],
             ["Auto MPG", "Predict fuel efficiency — a regression task"],
             ["XOR",      "Learn a non-linear boolean rule from scratch"],
             ["MNIST",    "Recognize handwritten digits 0–9, draw your own"],
           ].map(([name, desc]) => (
-            <li key={name} className="flex gap-2">
-              <span className="font-semibold text-indigo-600 shrink-0 w-20">{name}</span>
-              <span className="text-gray-600">{desc}</span>
-            </li>
+            <div key={name} className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+              <p className="font-semibold text-indigo-600">{name}</p>
+              <p className="text-gray-500 leading-snug mt-0.5">{desc}</p>
+            </div>
           ))}
-        </ul>
-        <p className="text-xs text-gray-400">
-          Click a card to see its inputs, output, loss function, and sample count. Each dataset switches the network architecture and loss function automatically.
-        </p>
+        </div>
+        <p className="text-xs text-gray-400">Click a card to see its inputs, output, loss function, and sample count.</p>
       </div>
     ),
     target: "[data-tour='wizard-container']",
     placement: "bottom",
     padding: 6,
+    width: 560,
   },
 
   // 2 — Network configuration
@@ -79,26 +79,28 @@ const STEPS: Step[] = [
     title: "Step 2 · Design Your Network",
     body: (
       <div className="space-y-2">
-        <p>
-          Choose the number of hidden layers (1–3), nodes per layer, and the{" "}
-          <strong>activation function</strong> for each layer.
-        </p>
-        <div className="bg-gray-50 rounded-lg p-2 text-xs font-mono text-gray-600 border border-gray-200">
-          Input (4) → Hidden 1 (4, relu) → Hidden 2 (4, relu) → Output (3, softmax)
+        <p className="text-sm">Choose hidden layers (1–3), nodes per layer, and the <strong>activation function</strong> for each.</p>
+        <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs font-mono text-gray-600 border border-gray-200">
+          Input (4) → Hidden (4, relu) → Output (3, softmax)
         </div>
-        <ul className="text-sm space-y-1 text-gray-600">
-          <li>The architecture preview updates live as you configure</li>
-          <li>Total parameter count shown so you can gauge model size</li>
-          <li>Try <strong>relu</strong> for hidden layers — it usually trains fastest</li>
-        </ul>
-        <p className="text-xs text-gray-400">
-          Hit <strong>Initialize Model</strong> when you&apos;re happy with the design.
-        </p>
+        <div className="grid grid-cols-3 gap-1.5 text-xs text-center">
+          {[
+            ["Architecture preview", "Updates live as you adjust"],
+            ["Parameter count", "Shown so you can gauge size"],
+            ["relu for hidden layers", "Usually trains fastest"],
+          ].map(([label, sub]) => (
+            <div key={label} className="bg-indigo-50 rounded-lg p-2 border border-indigo-100">
+              <p className="font-semibold text-indigo-700 leading-snug">{label}</p>
+              <p className="text-indigo-500 mt-0.5 leading-snug">{sub}</p>
+            </div>
+          ))}
+        </div>
       </div>
     ),
     target: "[data-tour='wizard-container']",
     placement: "bottom",
     padding: 6,
+    width: 560,
   },
 
   // 3 — Network diagram
@@ -106,11 +108,8 @@ const STEPS: Step[] = [
     title: "The Network Diagram",
     body: (
       <div className="space-y-2">
-        <p>
-          Each circle is a neuron; each line is a weight. The diagram updates live
-          as you train — <strong>brightness</strong> reflects activation strength.
-        </p>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs mt-1">
+        <p className="text-sm">Each circle is a neuron; each line is a weight. Brightness reflects activation strength — updates live as you train.</p>
+        <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
           {[
             [<span key="b" className="w-3 h-3 rounded-full bg-blue-400 border border-blue-600 shrink-0 inline-block"/>, "Input node"],
             [<span key="g" className="w-3 h-3 rounded-full bg-gray-400 border border-gray-600 shrink-0 inline-block"/>, "Hidden node"],
@@ -122,14 +121,13 @@ const STEPS: Step[] = [
             <div key={i} className="flex items-center gap-1.5">{icon}<span className="text-gray-600">{label}</span></div>
           ))}
         </div>
-        <p className="text-xs text-indigo-700 font-medium">
-          Click any node or weight line to inspect its value, gradient, and contribution to the output.
-        </p>
+        <p className="text-xs text-indigo-700 font-medium">Click any node or weight to inspect its value, gradient, and contribution to the output.</p>
       </div>
     ),
     target: "[data-tour='network-svg']",
     placement: "bottom",
     padding: 8,
+    width: 560,
   },
 
   // 4 — Training widget
@@ -216,30 +214,25 @@ const STEPS: Step[] = [
   {
     title: "The Underlying Math",
     body: (
-      <div className="space-y-2.5">
-        <p>
-          This section shows the <strong>actual matrix math</strong> inside your
-          network — with real values from the last training step.
-        </p>
-        <div className="grid grid-cols-3 gap-1.5 text-xs text-center">
-          <div className="bg-black text-white rounded-lg px-2 py-1.5 font-medium">1 · Forward Pass</div>
-          <div className="bg-white border border-gray-300 rounded-lg px-2 py-1.5 text-gray-600">2 · Gradients</div>
-          <div className="bg-white border border-gray-300 rounded-lg px-2 py-1.5 text-gray-600">3 · Update Weights</div>
+      <div className="space-y-2">
+        <p className="text-sm">The section below shows the <strong>actual matrix math</strong> with real values from the last training step — three views:</p>
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          {([
+            ["1 · Forward Pass", "Input × W + b → activation → A", true],
+            ["2 · Gradients", "Chain-rule backprop — dZ, dW, dB", false],
+            ["3 · Update Weights", "W_new = W_old − η · dW", false],
+          ] as [string, string, boolean][]).map(([title, sub, active]) => (
+            <div key={title} className={`rounded-lg px-2 py-2 border text-center ${active ? "bg-black text-white border-black" : "bg-white text-gray-600 border-gray-200"}`}>
+              <p className="font-semibold leading-snug">{title}</p>
+              <p className={`mt-0.5 leading-snug font-mono text-[10px] ${active ? "text-gray-300" : "text-gray-400"}`}>{sub}</p>
+            </div>
+          ))}
         </div>
-        <ul className="text-sm space-y-1 text-gray-600">
-          <li><strong>Forward</strong>: Input × W + b → activation → A</li>
-          <li><strong>Gradients</strong>: Chain-rule backprop — dZ, dW, dB</li>
-          <li><strong>Update</strong>: W_new = W_old − η · dW</li>
-        </ul>
-        <p className="text-xs text-indigo-700 font-medium">
-          Use &quot;Step Through&quot; to walk layer by layer. Hover any matrix cell to activate the
-          Value Tracer — it shows exactly where that value flows through the network.
-        </p>
+        <p className="text-xs text-indigo-700 font-medium">Use &quot;Step Through&quot; to walk layer by layer. Hover any matrix cell to trace where that value flows.</p>
       </div>
     ),
-    target: "[data-tour='math-panel']",
-    placement: "top",
-    padding: 4,
+    placement: "center",
+    width: 560,
   },
 
   // 8 — Charts
@@ -387,7 +380,8 @@ export default function Walkthrough() {
 
     if (sessionId) return; // user already has a trained model — use it as-is
 
-    // Store defaults: dataset="iris", hiddenLayers=[4,4], activations=["relu","relu"]
+    // One hidden layer of 4 nodes for a compact iris network
+    useStore.setState({ hiddenLayers: [4], activations: ["relu"] });
     initModel().then(() => {
       setTrainingEpochs(20);
       return runTrainingCycle();
@@ -409,7 +403,7 @@ export default function Walkthrough() {
     const s  = STEPS[step];
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const w  = Math.min(TOOLTIP_W, vw - MARGIN * 2);
+    const w  = Math.min(s.width ?? TOOLTIP_W, vw - MARGIN * 2);
 
     const centeredStyle: React.CSSProperties = {
       position: "fixed",
