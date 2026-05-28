@@ -71,7 +71,7 @@ const STEPS: Step[] = [
     target: "[data-tour='wizard-container']",
     placement: "bottom",
     padding: 6,
-    width: 560,
+    width: 680,
   },
 
   // 2 — Network configuration
@@ -100,7 +100,7 @@ const STEPS: Step[] = [
     target: "[data-tour='wizard-container']",
     placement: "bottom",
     padding: 6,
-    width: 560,
+    width: 680,
   },
 
   // 3 — Network diagram
@@ -127,7 +127,7 @@ const STEPS: Step[] = [
     target: "[data-tour='network-svg']",
     placement: "bottom",
     padding: 8,
-    width: 560,
+    width: 680,
   },
 
   // 4 — Training widget
@@ -232,7 +232,7 @@ const STEPS: Step[] = [
       </div>
     ),
     placement: "center",
-    width: 560,
+    width: 680,
   },
 
   // 8 — Charts
