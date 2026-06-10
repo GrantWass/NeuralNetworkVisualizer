@@ -217,7 +217,7 @@ const STEPS: Step[] = [
     body: (
       <div className="space-y-2">
         <p className="text-sm">The dataset defines what problem the network learns to solve.</p>
-        <div className="grid grid-cols-2 gap-1.5 text-xs">
+        <div className="grid grid-cols-4 gap-1.5 text-xs">
           {[
             ["Iris",     "Classify flower species from 4 measurements"],
             ["Auto MPG", "Predict fuel efficiency — a regression task"],
@@ -379,19 +379,7 @@ const STEPS: Step[] = [
     title: "The Underlying Math",
     body: (
       <div className="space-y-2">
-        <p className="text-sm">Below the network you&apos;ll find the <strong>actual matrix math</strong> with real values from the last training step — three views:</p>
-        <div className="grid grid-cols-3 gap-2 text-xs">
-          {([
-            ["1 · Forward Pass", "Input × W + b → activation → A", true],
-            ["2 · Gradients", "Chain-rule backprop — dZ, dW, dB", false],
-            ["3 · Update Weights", "W_new = W_old − η · dW", false],
-          ] as [string, string, boolean][]).map(([title, sub, active]) => (
-            <div key={title} className={`rounded-lg px-2 py-2 border text-center ${active ? "bg-black text-white border-black" : "bg-white text-gray-600 border-gray-200"}`}>
-              <p className="font-semibold leading-snug">{title}</p>
-              <p className={`mt-0.5 leading-snug font-mono text-[10px] ${active ? "text-gray-300" : "text-gray-400"}`}>{sub}</p>
-            </div>
-          ))}
-        </div>
+        <p className="text-sm">Below the network you&apos;ll find the <strong>actual matrix math</strong> with real values from the last training step. Click each tab to explore the three views:</p>
         <MiniMathPreview />
         <p className="text-xs text-indigo-700 font-medium">Use &quot;Step Through&quot; to walk layer by layer. Hover any matrix cell to trace where that value flows.</p>
       </div>
@@ -505,10 +493,9 @@ export default function Walkthrough() {
   const [step,          setStep]          = useState(0);
   const [spotlight,     setSpotlight]     = useState<SpotlightRect | null>(null);
   const [tooltipStyle,  setTooltipStyle]  = useState<React.CSSProperties>({});
+  const [positioned,    setPositioned]    = useState(false);
   const [mounted,       setMounted]       = useState(false);
-  // Only visible/active when ?tour is in the URL — lets you test in prod without
-  // exposing the button or auto-show to regular users.
-  const [previewMode,   setPreviewMode]   = useState(false);
+  const [previewMode] = useState(false);
   const positionTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Store actions for auto-training
@@ -523,13 +510,12 @@ export default function Walkthrough() {
   } = useStore();
   const tourInitRef = useRef(false);
 
-  // ── Mount: check for ?tour param ──────────────────────────────────────────
+  // ── Mount: auto-open on first visit ───────────────────────────────────────
   useEffect(() => {
     setMounted(true);
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("tour")) {
-      setPreviewMode(true);
-      // Auto-open immediately in preview mode (don't gate on localStorage)
+    let seen = false;
+    try { seen = !!localStorage.getItem(STORAGE_KEY); } catch { /* ignore */ }
+    if (!seen) {
       const t = setTimeout(() => setOpen(true), 400);
       return () => clearTimeout(t);
     }
@@ -569,6 +555,7 @@ export default function Walkthrough() {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const w  = Math.min(s.width ?? TOOLTIP_W, vw - MARGIN * 2);
+    setPositioned(true);
 
     const centeredStyle: React.CSSProperties = {
       position: "fixed",
@@ -648,6 +635,7 @@ export default function Walkthrough() {
   // ── Scroll to target then lock scroll ─────────────────────────────────────
   useEffect(() => {
     if (!open) return;
+    setPositioned(false);
     clearTimeout(positionTimer.current);
 
     const s = STEPS[step];
@@ -734,17 +722,15 @@ export default function Walkthrough() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Tour trigger button — only shown in ?tour preview mode */}
-      {previewMode && (
-        <button
-          onClick={startTour}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 border border-indigo-200 hover:border-indigo-400 rounded-full px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 transition-all"
-          title="Start interactive tour"
-        >
-          <Map size={12} />
-          Tour
-        </button>
-      )}
+      {/* Tour trigger button */}
+      <button
+        onClick={startTour}
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 border border-indigo-200 hover:border-indigo-400 rounded-full px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 transition-all"
+        title="Start interactive tour"
+      >
+        <Map size={12} />
+        Tour
+      </button>
 
       {/* Portal overlay */}
       {open && typeof document !== "undefined" && createPortal(
@@ -776,7 +762,7 @@ export default function Walkthrough() {
           {/* Tooltip card */}
           <div
             style={{ ...tooltipStyle, zIndex: 9991 }}
-            className="bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
+            className={`bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden transition-opacity duration-150 ${positioned ? "opacity-100" : "opacity-0"}`}
           >
             {/* Progress bar */}
             <div className="h-1 bg-gray-100 shrink-0">
