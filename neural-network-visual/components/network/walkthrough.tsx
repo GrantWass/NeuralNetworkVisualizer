@@ -9,6 +9,171 @@ const STORAGE_KEY = "nn-viz-tour-v3";
 
 type Placement = "top" | "bottom" | "left" | "right" | "center";
 
+// ─── Static mini previews (fake data, used in tour overlays) ──────────────────
+
+const MiniNetworkPreview = () => (
+  <div className="flex flex-col items-center mt-3">
+    <svg
+      viewBox="0 0 320 170"
+      className="w-full max-w-[340px] h-auto border border-gray-200 rounded-lg bg-white"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* connections input→hidden */}
+      {[[54,60,136,42],[54,60,136,85],[54,60,136,128],[54,102,136,42],[54,102,136,85],[54,102,136,128]].map(([x1,y1,x2,y2],i) => (
+        <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+          stroke={i%3===1?"#f97316":"#6366f1"} strokeWidth={[1.5,1,2,1.5,2,1][i]} opacity={[0.6,0.5,0.7,0.5,0.8,0.4][i]} />
+      ))}
+      {/* connections hidden→output */}
+      {[[164,42,246,65],[164,42,246,108],[164,85,246,65],[164,85,246,108],[164,128,246,65],[164,128,246,108]].map(([x1,y1,x2,y2],i) => (
+        <line key={i+6} x1={x1} y1={y1} x2={x2} y2={y2}
+          stroke={i===1||i===4?"#f97316":"#6366f1"} strokeWidth={[1.5,1,2,1.5,1,2][i]} opacity={[0.7,0.5,0.6,0.7,0.4,0.8][i]} />
+      ))}
+      {/* input nodes */}
+      <circle cx="40" cy="60" r="15" fill="hsl(210,100%,65%)" stroke="#475569" strokeWidth="1.5"/>
+      <circle cx="40" cy="102" r="15" fill="hsl(210,100%,55%)" stroke="#475569" strokeWidth="1.5"/>
+      {/* hidden nodes */}
+      <circle cx="150" cy="42" r="15" fill="hsl(215,30%,68%)" stroke="#475569" strokeWidth="1.5"/>
+      <circle cx="150" cy="85" r="15" fill="hsl(215,30%,52%)" stroke="#475569" strokeWidth="1.5"/>
+      <circle cx="150" cy="128" r="15" fill="hsl(215,30%,44%)" stroke="#475569" strokeWidth="1.5"/>
+      {/* output nodes */}
+      <circle cx="260" cy="65" r="15" fill="hsl(0,70%,65%)" stroke="#7f1d1d" strokeWidth="1.5"/>
+      <circle cx="260" cy="108" r="15" fill="hsl(0,70%,52%)" stroke="#7f1d1d" strokeWidth="1.5"/>
+      {/* layer labels */}
+      <text x="40"  y="158" textAnchor="middle" fontSize="10" fill="#64748b">Input</text>
+      <text x="150" y="158" textAnchor="middle" fontSize="10" fill="#64748b">Hidden</text>
+      <text x="260" y="158" textAnchor="middle" fontSize="10" fill="#64748b">Output</text>
+    </svg>
+    <p className="text-[10px] text-gray-400 mt-1.5 italic">Preview — fake data, actual values update live during training</p>
+  </div>
+);
+
+type MiniMathView = "forward" | "gradients" | "update";
+
+const MiniMathPreview = () => {
+  const [view, setView] = useState<MiniMathView>("forward");
+
+  const cell = (v: string, color?: string) => (
+    <span className={`px-1 py-0.5 font-mono text-[10px] ${color ?? "text-gray-700"}`}>{v}</span>
+  );
+  const mat = (rows: string[][], label: string, sub?: string, cls?: string, textColor?: string) => (
+    <div className="flex flex-col items-center shrink-0">
+      <span className="text-[9px] text-gray-400 mb-0.5 whitespace-nowrap">{label}</span>
+      {sub && <span className="text-[8px] text-gray-300 mb-0.5">{sub}</span>}
+      <div className={`border rounded px-0.5 py-0.5 ${cls ?? "border-gray-300 bg-white"}`}>
+        {rows.map((row, i) => (
+          <div key={i} className="flex">{row.map((v) => cell(v, textColor))}</div>
+        ))}
+      </div>
+    </div>
+  );
+  const op = (s: string) => <span className="text-gray-400 text-sm self-center shrink-0">{s}</span>;
+
+  const TABS: { id: MiniMathView; label: string }[] = [
+    { id: "forward",   label: "1 · Forward Pass"   },
+    { id: "gradients", label: "2 · Gradients"       },
+    { id: "update",    label: "3 · Update Weights"  },
+  ];
+
+  return (
+    <div className="mt-3 bg-white border border-gray-200 rounded-lg overflow-hidden">
+      {/* tab row */}
+      <div className="flex border-b border-gray-100">
+        {TABS.map(({ id, label }) => (
+          <button
+            key={id}
+            onClick={() => setView(id)}
+            className={`flex-1 py-1.5 text-[10px] font-medium transition-colors ${
+              view === id
+                ? "bg-gray-900 text-white"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* content */}
+      <div className="p-3 overflow-x-auto">
+        <p className="text-[9px] text-gray-300 text-center mb-2 italic">illustrative values</p>
+
+        {view === "forward" && (
+          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+            {mat([["5.10"],["3.50"],["1.40"],["0.20"]], "Input A₀", "4×1", "border-blue-300 bg-blue-50", "text-blue-700")}
+            {op("×")}
+            {mat([
+              [" 0.32","-0.14"," 0.87"],
+              ["-0.45"," 0.71","-0.39"],
+              [" 0.18","-0.63"," 0.24"],
+              ["-0.77"," 0.45","-0.12"],
+            ], "Weights W", "4×3")}
+            {op("+")}
+            {mat([[" 0.10"],["-0.05"],["0.22"]], "Bias b", "3×1")}
+            {op("=")}
+            {mat([[" 1.83"],["0.47"],["0.06"]], "Z", "pre-act.", "border-teal-300 bg-teal-50", "text-teal-700")}
+            {op("→relu→")}
+            {mat([[" 1.83"],["0.47"],["0.06"]], "A₁", "output", "border-indigo-300 bg-indigo-50", "text-indigo-700")}
+          </div>
+        )}
+
+        {view === "gradients" && (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-gray-500 font-mono self-center">dZ =</span>
+              {mat([[" 1.83"],["0.47"],["0.06"]], "Ŷ (pred)", "3×1", "border-indigo-300 bg-indigo-50", "text-indigo-700")}
+              {op("−")}
+              {mat([["1"],["0"],["0"]], "Y (true)", "3×1", "border-green-300 bg-green-50", "text-green-700")}
+              {op("=")}
+              {mat([[" 0.83"],["0.47"],["0.06"]], "dZ", "error", "border-amber-300 bg-amber-50", "text-amber-700")}
+            </div>
+            <div className="flex items-center justify-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-gray-500 font-mono self-center">dW =</span>
+              {mat([["5.10","3.50","1.40","0.20"]], "A₀ᵀ", "1×4", "border-blue-300 bg-blue-50", "text-blue-700")}
+              {op("×")}
+              {mat([[" 0.83"],["0.47"],["0.06"]], "dZ", "3×1", "border-amber-300 bg-amber-50", "text-amber-700")}
+              {op("=")}
+              {mat([
+                [" 0.42","-0.07"," 0.02"],
+                [" 0.29","-0.05"," 0.01"],
+                [" 0.11","-0.02"," 0.00"],
+                [" 0.16","-0.03"," 0.00"],
+              ], "dW", "4×3", "border-rose-300 bg-rose-50", "text-rose-700")}
+            </div>
+          </div>
+        )}
+
+        {view === "update" && (
+          <div className="flex flex-col gap-3">
+            <p className="text-[10px] text-gray-500 text-center font-mono">η = 0.01</p>
+            <div className="flex items-center justify-center gap-1.5 flex-wrap">
+              {mat([
+                [" 0.32","-0.14"," 0.87"],
+                ["-0.45"," 0.71","-0.39"],
+                [" 0.18","-0.63"," 0.24"],
+                ["-0.77"," 0.45","-0.12"],
+              ], "W_old", "4×3")}
+              {op("− 0.01 ×")}
+              {mat([
+                [" 0.42","-0.07"," 0.02"],
+                [" 0.29","-0.05"," 0.01"],
+                [" 0.11","-0.02"," 0.00"],
+                [" 0.16","-0.03"," 0.00"],
+              ], "dW", "4×3", "border-rose-300 bg-rose-50", "text-rose-700")}
+              {op("=")}
+              {mat([
+                [" 0.32","-0.14"," 0.87"],
+                ["-0.45"," 0.71","-0.39"],
+                [" 0.18","-0.63"," 0.24"],
+                ["-0.77"," 0.45","-0.12"],
+              ], "W_new", "4×3", "border-indigo-300 bg-indigo-50", "text-indigo-700")}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 type Step = {
   title: string;
   body: React.ReactNode;
@@ -109,7 +274,8 @@ const STEPS: Step[] = [
     body: (
       <div className="space-y-2">
         <p className="text-sm">Each circle is a neuron; each line is a weight. Brightness reflects activation strength — updates live as you train.</p>
-        <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
+        <MiniNetworkPreview />
+        <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs mt-1">
           {[
             [<span key="b" className="w-3 h-3 rounded-full bg-blue-400 border border-blue-600 shrink-0 inline-block"/>, "Input node"],
             [<span key="g" className="w-3 h-3 rounded-full bg-gray-400 border border-gray-600 shrink-0 inline-block"/>, "Hidden node"],
@@ -124,10 +290,8 @@ const STEPS: Step[] = [
         <p className="text-xs text-indigo-700 font-medium">Click any node or weight to inspect its value, gradient, and contribution to the output.</p>
       </div>
     ),
-    target: "[data-tour='network-svg']",
-    placement: "bottom",
-    padding: 8,
-    width: 680,
+    placement: "center",
+    width: 520,
   },
 
   // 4 — Training widget
@@ -215,7 +379,7 @@ const STEPS: Step[] = [
     title: "The Underlying Math",
     body: (
       <div className="space-y-2">
-        <p className="text-sm">The section below shows the <strong>actual matrix math</strong> with real values from the last training step — three views:</p>
+        <p className="text-sm">Below the network you&apos;ll find the <strong>actual matrix math</strong> with real values from the last training step — three views:</p>
         <div className="grid grid-cols-3 gap-2 text-xs">
           {([
             ["1 · Forward Pass", "Input × W + b → activation → A", true],
@@ -228,11 +392,12 @@ const STEPS: Step[] = [
             </div>
           ))}
         </div>
+        <MiniMathPreview />
         <p className="text-xs text-indigo-700 font-medium">Use &quot;Step Through&quot; to walk layer by layer. Hover any matrix cell to trace where that value flows.</p>
       </div>
     ),
     placement: "center",
-    width: 680,
+    width: 600,
   },
 
   // 8 — Charts

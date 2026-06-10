@@ -16,7 +16,7 @@
 
 import type { LayerData, VizExample } from "@/components/transformer/TransformerArchitectureViz";
 
-const MODEL_URL = "/models/gpt2-viz-q8.onnx?v=2"; // bump when model file changes
+const MODEL_URL = "https://nn-models-public.s3.us-east-2.amazonaws.com/gpt2-viz-q8.onnx"; // bump when model file changes
 const MAX_TOKENS = 8;
 const N_LAYERS   = 12;
 const N_HEADS    = 12;
