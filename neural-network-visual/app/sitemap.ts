@@ -4,7 +4,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
       url: 'https://nn-visual.com',
-      lastModified: new Date(),
+      lastModified: new Date('2026-06-09'),
       changeFrequency: 'weekly',
       priority: 1,
     },

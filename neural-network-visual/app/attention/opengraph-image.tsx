@@ -61,7 +61,7 @@ export default function Image() {
             fontWeight: 500,
           }}
         >
-          nn-visual.com/transformer
+          nn-visual.com/attention
         </div>
       </div>
     ),

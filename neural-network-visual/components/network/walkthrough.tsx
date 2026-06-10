@@ -660,8 +660,8 @@ export default function Walkthrough() {
           // left / right — center element vertically
           targetY = window.scrollY + r.top - window.innerHeight / 2 + r.height / 2;
         }
-        window.scrollTo({ top: Math.max(0, targetY), behavior: "instant" });
-        positionTimer.current = setTimeout(() => { lockScroll(); updatePositions(); }, 50);
+        window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
+        positionTimer.current = setTimeout(() => { lockScroll(); updatePositions(); }, 300);
         return;
       }
     }

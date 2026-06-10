@@ -6,7 +6,7 @@ A free interactive visualizer for neural networks and transformer attention. Bui
 
 - [Neural Network Visualizer](https://nn-visual.com/): Configure a neural network architecture, train it on real datasets (Iris, Auto MPG), and watch forward propagation and backpropagation step by step. Includes a full written explanation of how neural networks learn.
 
-- [Transformer Visualization](https://nn-visual.com/transformer): Interactive exploration of self-attention using real BERT weights. Eight hand-curated sentences illustrate specific linguistic phenomena. Users can also enter their own sentence and run live BERT inference.
+- [Transformer Visualization](https://nn-visual.com/transformers): Interactive exploration of self-attention using real BERT weights. Eight hand-curated sentences illustrate specific linguistic phenomena. Users can also enter their own sentence and run live BERT inference.
 
 ## Transformer page features
 
