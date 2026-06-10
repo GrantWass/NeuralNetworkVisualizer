@@ -516,7 +516,7 @@ export default function Walkthrough() {
     let seen = false;
     try { seen = !!localStorage.getItem(STORAGE_KEY); } catch { /* ignore */ }
     if (!seen) {
-      const t = setTimeout(() => setOpen(true), 400);
+      const t = setTimeout(() => setOpen(true), 200);
       return () => clearTimeout(t);
     }
   }, []);
@@ -573,11 +573,12 @@ export default function Walkthrough() {
 
     const r   = el.getBoundingClientRect();
     const pad = s.padding ?? 12;
+    const navH = document.querySelector("header")?.getBoundingClientRect().height ?? 0;
 
     setSpotlight({ x: r.left - pad, y: r.top - pad, width: r.width + pad*2, height: r.height + pad*2 });
 
     const spaceBelow = vh - r.bottom - pad - GAP - MARGIN;
-    const spaceAbove = r.top  - pad - GAP - MARGIN;
+    const spaceAbove = r.top  - pad - GAP - MARGIN - navH;
     const spaceRight = vw - r.right - pad - GAP - MARGIN;
     const spaceLeft  = r.left - pad - GAP - MARGIN;
 
@@ -590,15 +591,15 @@ export default function Walkthrough() {
     });
     const placeAbove = () => {
       const mh  = Math.max(80, spaceAbove);
-      const top = Math.max(MARGIN, r.top - pad - GAP - Math.min(EST_H, mh));
+      const top = Math.max(navH + MARGIN, r.top - pad - GAP - Math.min(EST_H, mh));
       return { top, left: hCenter, maxHeight: mh };
     };
     const placeRight = () => {
-      const top = Math.max(MARGIN, Math.min(vh - EST_H - MARGIN, r.top + r.height/2 - EST_H/2));
+      const top = Math.max(navH + MARGIN, Math.min(vh - EST_H - MARGIN, r.top + r.height/2 - EST_H/2));
       return { top, left: r.right + pad + GAP, maxHeight: vh - top - MARGIN };
     };
     const placeLeft = () => {
-      const top  = Math.max(MARGIN, Math.min(vh - EST_H - MARGIN, r.top + r.height/2 - EST_H/2));
+      const top  = Math.max(navH + MARGIN, Math.min(vh - EST_H - MARGIN, r.top + r.height/2 - EST_H/2));
       const left = Math.max(MARGIN, r.left - pad - GAP - w);
       return { top, left, maxHeight: vh - top - MARGIN };
     };
@@ -646,10 +647,12 @@ export default function Walkthrough() {
         const r   = el.getBoundingClientRect();
         const pad = s.padding ?? 12;
         const placement = s.placement ?? "bottom";
+        const navH = document.querySelector("header")?.getBoundingClientRect().height ?? 0;
         let targetY: number;
         if (placement === "bottom") {
           // Element near top of viewport → full lower half available for tooltip
-          targetY = window.scrollY + r.top - MARGIN - pad;
+          // Subtract navH so the element clears the sticky header
+          targetY = window.scrollY + r.top - MARGIN - pad - navH;
         } else if (placement === "top") {
           // Element near bottom → full upper half available for tooltip
           targetY = window.scrollY + r.bottom - window.innerHeight + MARGIN + pad;
@@ -657,8 +660,8 @@ export default function Walkthrough() {
           // left / right — center element vertically
           targetY = window.scrollY + r.top - window.innerHeight / 2 + r.height / 2;
         }
-        window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
-        positionTimer.current = setTimeout(() => { lockScroll(); updatePositions(); }, 650);
+        window.scrollTo({ top: Math.max(0, targetY), behavior: "instant" });
+        positionTimer.current = setTimeout(() => { lockScroll(); updatePositions(); }, 50);
         return;
       }
     }
@@ -762,7 +765,7 @@ export default function Walkthrough() {
           {/* Tooltip card */}
           <div
             style={{ ...tooltipStyle, zIndex: 9991 }}
-            className={`bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden transition-opacity duration-150 ${positioned ? "opacity-100" : "opacity-0"}`}
+            className={`bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden transition-opacity duration-75 ${positioned ? "opacity-100" : "opacity-0"}`}
           >
             {/* Progress bar */}
             <div className="h-1 bg-gray-100 shrink-0">

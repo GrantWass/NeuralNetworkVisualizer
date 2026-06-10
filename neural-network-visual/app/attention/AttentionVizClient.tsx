@@ -194,6 +194,7 @@ function Section2({
   keyVectors,
   headIndices,
   selectedIdx,
+  onSelectChange,
 }: {
   tokens: string[];
   attentionMatrix: number[][];
@@ -204,6 +205,7 @@ function Section2({
   keyVectors?: number[][][];
   headIndices?: number[];
   selectedIdx: number;
+  onSelectChange: (idx: number) => void;
 }) {
   return (
     <section className="space-y-4">
@@ -258,6 +260,24 @@ function Section2({
         </Gloss>{" "}
         of all Value vectors.
       </p>
+      <div className="flex items-center gap-3 flex-wrap">
+        <p className="text-sm font-medium text-foreground shrink-0">Choose a sentence to visualize</p>
+        <Select
+          value={String(selectedIdx)}
+          onValueChange={(v) => onSelectChange(Number(v))}
+        >
+          <SelectTrigger className="w-56 h-8 text-xs">
+            <SelectValue placeholder="Pick an example" />
+          </SelectTrigger>
+          <SelectContent>
+            {examples.map((ex, i) => (
+              <SelectItem key={ex.id} value={String(i)} className="text-xs">
+                {ex.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <p className="text-muted-foreground leading-relaxed max-w-2xl">
         Click any token below to step through the computation using real BERT attention
         weights. Use the head selector to see how different heads specialize in different
@@ -1082,26 +1102,6 @@ export default function TransformerVizClient() {
 
       <SectionProjections />
 
-      {/* Sentence chooser — floating widget */}
-      <div className="fixed top-8 right-4 z-40 bg-card border border-border rounded-xl shadow-lg p-3 w-60 space-y-2.5">
-        <p className="text-xs font-semibold text-foreground">Choose a sentence to visualize</p>
-        <Select
-          value={String(selectedIdx)}
-          onValueChange={(v) => { setSelectedIdx(Number(v)); }}
-        >
-          <SelectTrigger id="example-select" className="w-full h-8 text-xs">
-            <SelectValue placeholder="Pick an example" />
-          </SelectTrigger>
-          <SelectContent>
-            {examples.map((ex, i) => (
-              <SelectItem key={ex.id} value={String(i)} className="text-xs">
-                {ex.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
       <Section2
         tokens={tokens}
         attentionMatrix={attentionMatrix}
@@ -1112,6 +1112,7 @@ export default function TransformerVizClient() {
         keyVectors={keyVectors}
         headIndices={ex.headIndices}
         selectedIdx={selectedIdx}
+        onSelectChange={setSelectedIdx}
       />
       <SectionMultiHead selectedIdx={selectedIdx} />
       <Section5and6 />
