@@ -495,7 +495,6 @@ export default function Walkthrough() {
   const [tooltipStyle,  setTooltipStyle]  = useState<React.CSSProperties>({});
   const [positioned,    setPositioned]    = useState(false);
   const [mounted,       setMounted]       = useState(false);
-  const [previewMode] = useState(false);
   const positionTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Store actions for auto-training
@@ -506,7 +505,6 @@ export default function Walkthrough() {
     setTrainingEpochs,
     setTourActive,
     setTourStep,
-    clearSessionAndReset,
   } = useStore();
   const tourInitRef = useRef(false);
 
@@ -708,15 +706,7 @@ export default function Walkthrough() {
     unlockScroll();
     setOpen(false);
     setSpotlight(null);
-    // Reset the model if the tour initialized it, so the page is clean afterward
-    if (tourInitRef.current) {
-      tourInitRef.current = false;
-      clearSessionAndReset();
-    }
-    // Don't persist in preview mode — ?tour should always re-trigger on reload
-    if (!previewMode) {
-      try { localStorage.setItem(STORAGE_KEY, "1"); } catch { /* ignore */ }
-    }
+    try { localStorage.setItem(STORAGE_KEY, "1"); } catch { /* ignore */ }
   };
   const startTour   = () => { setStep(0); setOpen(true); };
 
