@@ -659,13 +659,20 @@ export default function Walkthrough() {
           targetY = window.scrollY + r.top - window.innerHeight / 2 + r.height / 2;
         }
         window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
-        positionTimer.current = setTimeout(() => { lockScroll(); updatePositions(); }, 300);
+        positionTimer.current = setTimeout(() => {
+          lockScroll();
+          updatePositions();
+          // Second pass after layout settles to correct any post-scroll shift
+          setTimeout(updatePositions, 120);
+        }, 300);
         return;
       }
     }
 
     lockScroll();
     updatePositions();
+    // Second pass for centered steps in case content hasn't fully painted
+    setTimeout(updatePositions, 80);
     return () => clearTimeout(positionTimer.current);
   }, [step, open, updatePositions]);
 
