@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { X, ChevronRight, ChevronLeft, Map } from "lucide-react";
 import useStore from "@/components/network/lib/store";
 
-const STORAGE_KEY = "nn-viz-tour-v3";
 
 type Placement = "top" | "bottom" | "left" | "right" | "center";
 
@@ -511,8 +510,9 @@ export default function Walkthrough() {
   // ── Mount: auto-open on first visit ───────────────────────────────────────
   useEffect(() => {
     setMounted(true);
+    if (/bot|crawl|spider|google|baidu|bing|yandex/i.test(navigator.userAgent)) return;
     let seen = false;
-    try { seen = !!localStorage.getItem(STORAGE_KEY); } catch { /* ignore */ }
+    try { seen = !!localStorage.getItem("nn-viz-tour-v3"); } catch { /* ignore */ }
     if (!seen) {
       const t = setTimeout(() => setOpen(true), 200);
       return () => clearTimeout(t);
@@ -713,7 +713,7 @@ export default function Walkthrough() {
     unlockScroll();
     setOpen(false);
     setSpotlight(null);
-    try { localStorage.setItem(STORAGE_KEY, "1"); } catch { /* ignore */ }
+    try { localStorage.setItem("nn-viz-tour-v3", "1"); } catch { /* ignore */ }
   };
   const startTour   = () => { setStep(0); setOpen(true); };
 
