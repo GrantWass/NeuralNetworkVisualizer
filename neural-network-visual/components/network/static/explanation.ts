@@ -154,7 +154,7 @@ Binary cross-entropy measures how far each sigmoid output is from the true 0 or 
 
 **What to try:** ${metric >= 100 ? "XOR is solved. Try re-initializing with fewer hidden neurons to see the minimum architecture required, or switch to a harder dataset." : "XOR converges most reliably around LR 0.2–0.4. If stuck at 75%, re-initialize — the sigmoid activations mean no dead neurons, but some random seeds land near saddle points that are hard to escape."}
 
-**Tip:** If the loss curve has flattened, switch to the **Compute Gradients** tab and inspect the dW values — when they're near zero, weight updates have effectively stalled. The dZ column at the output layer tells you why: large dZ means the network is confidently wrong, while dZ near zero means predictions are close to the decision boundary. For XOR, a plateau at 75% usually means the weights settled near a saddle point where gradients from the four patterns nearly cancel each other out — a fresh re-initialization is often all it takes to escape.`;
+**Tip:** If the loss curve has flattened, switch to the **Compute Gradients** tab and inspect the dW values — when they're near zero, weight updates have effectively stalled. The dZ column at the output layer tells you why: large dZ means the network is confidently wrong, while dZ near zero means the prediction is close to the correct label. For XOR, a plateau at 75% usually means the weights settled near a saddle point where gradients from the four patterns nearly cancel each other out — a fresh re-initialization is often all it takes to escape.`;
   }
 
   if (dataset === "mnist") {
