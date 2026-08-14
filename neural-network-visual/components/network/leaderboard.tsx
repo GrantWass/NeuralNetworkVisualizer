@@ -68,7 +68,7 @@ export default function LeaderboardPanel() {
     setActiveTab(tab);
     setSubmitted(null);
     setSubmitError("");
-    if (!leaderboard[tab]) fetchLeaderboard(tab);
+    fetchLeaderboard(tab);
   };
 
   const isCurrentDataset = activeTab === dataset;
