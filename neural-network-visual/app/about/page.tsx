@@ -3,14 +3,16 @@ import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
 
 export const metadata: Metadata = {
-  title: "About NN-Visual",
+  title: {
+    absolute: "About NN-Visual — Interactive AI Learning Tools",
+  },
   description:
-    "Learn how NN-Visual started as a deep learning journey and became a tool for teaching neural networks and transformers.",
+    "Meet the creator of NN-Visual and learn how a neural network built from scratch became free, interactive teaching tools for neural networks and transformers.",
   alternates: { canonical: "https://nn-visual.com/about" },
   openGraph: {
-    title: "About NN-Visual",
+    title: "About NN-Visual — Interactive AI Learning Tools",
     description:
-      "Learn how NN-Visual started as a deep learning journey and became a tool for teaching neural networks and transformers.",
+      "Meet the creator of NN-Visual and learn how a neural network built from scratch became free, interactive teaching tools for neural networks and transformers.",
     url: "https://nn-visual.com/about",
   },
 };

@@ -3,14 +3,16 @@ import { JsonLd } from "@/components/JsonLd";
 import AttentionVizClient from "./AttentionVizClient";
 
 export const metadata: Metadata = {
-  title: "How Attention Works | Interactive Visualization",
+  title: {
+    absolute: "Self-Attention Visualizer — See How Attention Works",
+  },
   description:
-    "Explore self-attention, the mechanism behind GPT, Claude, BERT, and every modern language model. Click through real attention patterns and see how transformers handle pronouns, agreement, and long-range dependencies.",
+    "Explore self-attention step by step with real BERT weights. See QKV scoring, multiple heads, and encoder vs. decoder masking in a free interactive visualizer.",
   alternates: { canonical: "https://nn-visual.com/attention" },
   openGraph: {
-    title: "How Attention Works | Interactive Visualization",
+    title: "Self-Attention Visualizer — See How Attention Works",
     description:
-      "Explore self-attention, the mechanism behind GPT, Claude, BERT, and every modern language model. Click through real attention patterns and see how transformers handle pronouns, agreement, and long-range dependencies.",
+      "Explore self-attention step by step with real BERT weights. See QKV scoring, multiple heads, and encoder vs. decoder masking in a free interactive visualizer.",
     url: "https://nn-visual.com/attention",
   },
 };
