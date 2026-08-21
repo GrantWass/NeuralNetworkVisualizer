@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://nn-visual.com"),
+  metadataBase: new URL("https://www.nn-visual.com"),
   title: {
     template: "%s | Neural Network Visual",
     default: "Neural Network Visual — Interactive ML Visualizations",
