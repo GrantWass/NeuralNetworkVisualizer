@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/transformer",
-        destination: "/attention",
+        destination: "/transformers",
         permanent: true,
       },
     ];
