@@ -263,12 +263,12 @@ export const metadata: Metadata = {
   title: "Interactive Neural Network Visualizer — See How Each Layer Activates",
   description:
     "An interactive tool for understanding how neural networks learn. Configure hidden layers, train on real data, and watch forward and backpropagation step by step.",
-  alternates: { canonical: "https://nn-visual.com" },
+  alternates: { canonical: "https://www.nn-visual.com" },
   openGraph: {
     title: "Interactive Neural Network Visualizer — See How Each Layer Activates",
     description:
       "An interactive tool for understanding how neural networks learn. Configure hidden layers, train on real data, and watch forward and backpropagation step by step.",
-    url: "https://nn-visual.com",
+    url: "https://www.nn-visual.com",
   },
 };
 
@@ -278,7 +278,7 @@ const learningResourceLd = {
   name: "Interactive Neural Network Visualization",
   description:
     "An interactive tool for understanding how neural networks learn. Configure hidden layers, train on real data, and watch forward and backpropagation step by step.",
-  url: "https://nn-visual.com",
+  url: "https://www.nn-visual.com",
   learningResourceType: "Interactive simulation",
   educationalLevel: "Undergraduate",
   teaches: [
@@ -307,7 +307,7 @@ const articleLd = {
   headline: "How Neural Networks Learn: An Interactive Explanation",
   description:
     "A walkthrough of how neural networks represent and learn from data, paired with an interactive visualization.",
-  url: "https://nn-visual.com",
+  url: "https://www.nn-visual.com",
   author: {
     "@type": "Person",
     name: "Grant Wasserman",

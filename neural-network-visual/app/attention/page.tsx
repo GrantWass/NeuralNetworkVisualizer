@@ -6,12 +6,12 @@ export const metadata: Metadata = {
   title: "How Attention Works | Interactive Visualization",
   description:
     "Explore self-attention, the mechanism behind GPT, Claude, BERT, and every modern language model. Click through real attention patterns and see how transformers handle pronouns, agreement, and long-range dependencies.",
-  alternates: { canonical: "https://nn-visual.com/attention" },
+  alternates: { canonical: "https://www.nn-visual.com/attention" },
   openGraph: {
     title: "How Attention Works | Interactive Visualization",
     description:
       "Explore self-attention, the mechanism behind GPT, Claude, BERT, and every modern language model. Click through real attention patterns and see how transformers handle pronouns, agreement, and long-range dependencies.",
-    url: "https://nn-visual.com/attention",
+    url: "https://www.nn-visual.com/attention",
   },
 };
 
@@ -21,7 +21,7 @@ const learningResourceLd = {
   name: "How Attention Works — Interactive Visualization",
   description:
     "Explore self-attention, the mechanism behind every major language model. Click through attention patterns and see how transformers handle pronouns, agreement, and long-range dependencies.",
-  url: "https://nn-visual.com/attention",
+  url: "https://www.nn-visual.com/attention",
   learningResourceType: "Interactive simulation",
   educationalLevel: "Undergraduate",
   teaches: [
@@ -51,7 +51,7 @@ const articleLd = {
   headline: "How Attention Works: An Interactive Transformer Visualization",
   description:
     "A hands-on explanation of self-attention, the core mechanism behind transformer models like GPT, Claude, and BERT.",
-  url: "https://nn-visual.com/attention",
+  url: "https://www.nn-visual.com/attention",
   author: {
     "@type": "Person",
     name: "Grant Wasserman",
