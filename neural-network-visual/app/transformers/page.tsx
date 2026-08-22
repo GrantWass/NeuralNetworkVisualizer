@@ -3,14 +3,14 @@ import { JsonLd } from "@/components/JsonLd";
 import TransformersClient from "./TransformersClient";
 
 export const metadata: Metadata = {
-  title: "How Transformers Work | Interactive Visualization",
+  title: { absolute: "Transformer Architecture Visualizer: GPT & BERT" },
   description:
-    "An interactive diagram of the transformer architecture — embeddings, attention blocks, and output. Explore how GPT and BERT are built, with real attention weights and step-by-step explanations.",
+    "Explore transformer architecture step by step. Trace tokens through embeddings, multi-head attention, feed-forward blocks, and GPT-2 output predictions.",
   alternates: { canonical: "https://www.nn-visual.com/transformers" },
   openGraph: {
-    title: "How Transformers Work | Interactive Visualization",
+    title: "Transformer Architecture Visualizer: GPT & BERT",
     description:
-      "An interactive diagram of the transformer architecture — embeddings, attention blocks, and output. Explore how GPT and BERT are built, with real attention weights and step-by-step explanations.",
+      "Explore transformer architecture step by step. Trace tokens through embeddings, multi-head attention, feed-forward blocks, and GPT-2 output predictions.",
     url: "https://www.nn-visual.com/transformers",
   },
 };
