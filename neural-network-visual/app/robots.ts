@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
       },
     ],
-    sitemap: "https://nn-visual.com/sitemap.xml",
-    host: "https://nn-visual.com",
+    sitemap: "https://www.nn-visual.com/sitemap.xml",
+    host: "https://www.nn-visual.com",
   };
 }

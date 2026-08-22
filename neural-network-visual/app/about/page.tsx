@@ -6,12 +6,12 @@ export const metadata: Metadata = {
   title: "About NN-Visual",
   description:
     "Learn how NN-Visual started as a deep learning journey and became a tool for teaching neural networks and transformers.",
-  alternates: { canonical: "https://nn-visual.com/about" },
+  alternates: { canonical: "https://www.nn-visual.com/about" },
   openGraph: {
     title: "About NN-Visual",
     description:
       "Learn how NN-Visual started as a deep learning journey and became a tool for teaching neural networks and transformers.",
-    url: "https://nn-visual.com/about",
+    url: "https://www.nn-visual.com/about",
   },
 };
 
@@ -28,17 +28,17 @@ const personLd = {
     {
       "@type": "WebApplication",
       name: "Interactive Neural Network Visualization",
-      url: "https://nn-visual.com",
+      url: "https://www.nn-visual.com",
     },
     {
       "@type": "WebApplication",
       name: "How Attention Works — Interactive Visualization",
-      url: "https://nn-visual.com/attention",
+      url: "https://www.nn-visual.com/attention",
     },
     {
       "@type": "WebApplication",
       name: "How Transformers Work — Interactive Architecture Diagram",
-      url: "https://nn-visual.com/transformers",
+      url: "https://www.nn-visual.com/transformers",
     },
   ],
 };
@@ -50,7 +50,7 @@ const articleLd = {
     "About NN-Visual: How an Interactive Neural Network Visualizer Came to Be",
   description:
     "The origin story of NN-Visual — from building a neural network from scratch to creating a teaching tool used in university classrooms.",
-  url: "https://nn-visual.com/about",
+  url: "https://www.nn-visual.com/about",
   author: {
     "@type": "Person",
     name: "Grant Wasserman",
