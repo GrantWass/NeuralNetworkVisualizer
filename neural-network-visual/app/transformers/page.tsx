@@ -6,12 +6,12 @@ export const metadata: Metadata = {
   title: { absolute: "Transformer Architecture Visualizer: GPT & BERT" },
   description:
     "Explore transformer architecture step by step. Trace tokens through embeddings, multi-head attention, feed-forward blocks, and GPT-2 output predictions.",
-  alternates: { canonical: "https://nn-visual.com/transformers" },
+  alternates: { canonical: "https://www.nn-visual.com/transformers" },
   openGraph: {
     title: "Transformer Architecture Visualizer: GPT & BERT",
     description:
       "Explore transformer architecture step by step. Trace tokens through embeddings, multi-head attention, feed-forward blocks, and GPT-2 output predictions.",
-    url: "https://nn-visual.com/transformers",
+    url: "https://www.nn-visual.com/transformers",
   },
 };
 
@@ -21,7 +21,7 @@ const learningResourceLd = {
   name: "How Transformers Work — Interactive Architecture Diagram",
   description:
     "An interactive diagram of the transformer architecture with real attention weights. Explore embeddings, attention blocks, and output distributions for GPT and BERT.",
-  url: "https://nn-visual.com/transformers",
+  url: "https://www.nn-visual.com/transformers",
   learningResourceType: "Interactive simulation",
   educationalLevel: "Undergraduate",
   teaches: [
@@ -53,7 +53,7 @@ const articleLd = {
   headline: "How Transformers Work: An Interactive Architecture Visualization",
   description:
     "A visual walkthrough of the transformer — the architecture behind GPT, Claude, and BERT. Includes an interactive pipeline diagram with real attention weights.",
-  url: "https://nn-visual.com/transformers",
+  url: "https://www.nn-visual.com/transformers",
   author: {
     "@type": "Person",
     name: "Grant Wasserman",
