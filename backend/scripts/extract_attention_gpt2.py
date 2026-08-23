@@ -25,8 +25,9 @@ Layer choice:
 """
 
 import json
+
 import torch
-from transformers import GPT2Tokenizer, GPT2Model
+from transformers import GPT2Model, GPT2Tokenizer
 
 MODEL_NAME = "gpt2"
 LAYER = 5

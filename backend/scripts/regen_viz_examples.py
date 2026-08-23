@@ -2,20 +2,22 @@
 regen_viz_examples.py
 
 Re-runs the GPT-2 viz examples through the updated ONNX model (which now
-exports ffn_in / ffn_hidden / ffn_out per layer) and writes a fresh
-gpt2-viz-examples.json.
+exports ffn_in / ffn_hidden / ffn_out per layer) and writes one JSON file
+per example plus a manifest, into neural-network-visual/public/data/gpt2-examples/.
 
 Usage:
     python3.13 regen_viz_examples.py
 """
 
-import json, math
+import json
+import os
+
 import numpy as np
 import onnxruntime as ort
 from transformers import GPT2Tokenizer
 
 MODEL_PATH  = "/Users/grantwasserman/Documents/GitHub/NeuralNetworkVisualizer/neural-network-visual/public/models/gpt2-viz-q8.onnx"
-OUT_PATH    = "/Users/grantwasserman/Documents/GitHub/NeuralNetworkVisualizer/neural-network-visual/app/transformers/gpt2-viz-examples.json"
+OUT_DIR     = "/Users/grantwasserman/Documents/GitHub/NeuralNetworkVisualizer/neural-network-visual/public/data/gpt2-examples"
 
 N_LAYERS  = 12
 N_HEADS   = 12
@@ -113,9 +115,17 @@ for ex in EXAMPLES:
     })
     print(f"  done. top token: {nwp[0]['token']!r} ({nwp[0]['prob']:.3f})")
 
-print(f"\nWriting {OUT_PATH} …")
-with open(OUT_PATH, "w") as f:
-    json.dump(results, f, separators=(",", ":"))
+os.makedirs(OUT_DIR, exist_ok=True)
+manifest = []
+for ex in results:
+    fname = f"{ex['id']}.json"
+    path = os.path.join(OUT_DIR, fname)
+    with open(path, "w") as f:
+        json.dump(ex, f, separators=(",", ":"))
+    manifest.append({"id": ex["id"], "label": ex["label"], "file": f"/data/gpt2-examples/{fname}"})
+    print(f"  wrote {fname} ({os.path.getsize(path) / 1e6:.1f} MB)")
 
-size_mb = len(open(OUT_PATH).read()) / 1e6
-print(f"Done. {size_mb:.1f} MB")
+manifest_path = os.path.join(OUT_DIR, "manifest.json")
+with open(manifest_path, "w") as f:
+    json.dump(manifest, f, indent=1)
+print(f"Wrote manifest ({len(manifest)} examples) → {manifest_path}")

@@ -1,0 +1,10 @@
+line-length = 165
+target-version = "py312"
+extend-exclude = [".venv"]
+
+[lint]
+select = ["E", "F", "W", "I"]
+
+[lint.per-file-ignores]
+"tests/*" = ["E501"]
+"scripts/*" = ["E501"]

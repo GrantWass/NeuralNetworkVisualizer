@@ -30,7 +30,7 @@ for ex in data:
     print(f"{ex['id']}  |  {ex['label']}")
     print(f"  sentence : {ex['sentence']}")
     print(f"  tokens   : {tokens}")
-    print(f"  top pairs:")
+    print("  top pairs:")
     for w, src, tgt in pairs[:6]:
         print(f"    {src:14s} -> {tgt:14s}  {w:.3f}")
     print()

@@ -1,6 +1,9 @@
 import os
+
 import numpy as np
-from utils import one_hot_encode, train_test_split_np, StandardScalerNP
+
+from utils import StandardScalerNP, one_hot_encode, train_test_split_np
+
 
 def load_dataset(dataset_name):
     if dataset_name == "iris":
@@ -38,7 +41,7 @@ def load_auto_mpg_dataset():
     X = X[mask]
     y = y[mask]
 
-    X_train, X_test, y_train, y_test = train_test_split_np(X, y, test_size=0.2, random_state=42) #type: ignore
+    X_train, X_test, y_train, y_test = train_test_split_np(X, y, test_size=0.25, random_state=42) #type: ignore
     original_train_data = np.hstack((X_train, y_train)).tolist()
 
     scaler = StandardScalerNP()
@@ -61,7 +64,7 @@ def load_mnist_dataset():
     y = raw[:, 784].astype(int)
     Y = one_hot_encode(y, num_classes=10)
 
-    X_train, X_test, Y_train, Y_test = train_test_split_np(X, Y, test_size=0.1, random_state=42)  # type: ignore
+    X_train, X_test, Y_train, Y_test = train_test_split_np(X, Y, test_size=0.15, random_state=42)  # type: ignore
     original_train_data = np.hstack((X_train[:30], Y_train[:30])).tolist()
     return X_train, X_test, Y_train, Y_test, 784, 10, "softmax", original_train_data
 
@@ -77,7 +80,7 @@ def load_iris_dataset():
     y = raw[:, 4].astype(int)
     Y = one_hot_encode(y, num_classes=3)
 
-    X_train, X_test, Y_train, Y_test = train_test_split_np(X, Y, test_size=0.2, random_state=42)  # type: ignore
+    X_train, X_test, Y_train, Y_test = train_test_split_np(X, Y, test_size=0.3, random_state=42)  # type: ignore
     original_train_data = np.hstack((X_train, Y_train)).tolist()
 
     scaler = StandardScalerNP()

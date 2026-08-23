@@ -21,8 +21,9 @@ Why this is separate:
 
 import json
 import math
+
 import torch
-from transformers import BertTokenizer, BertModel
+from transformers import BertModel, BertTokenizer
 
 MODEL_NAME = "bert-base-uncased"
 LAYER = 6
@@ -173,7 +174,7 @@ def main():
         json.dump(results, f, indent=2)
 
     print(f"\nWrote {output_path}")
-    print(f"Drop this into your Next.js project (e.g. app/transformer/data.json)")
+    print("Drop this into your Next.js project (e.g. app/transformer/data.json)")
 
 
 if __name__ == "__main__":

@@ -1,37 +1,67 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import numpy as np
+import hmac
+import json
+import os
 import re
+import secrets
+import time
+import uuid
+from collections import OrderedDict
 from decimal import Decimal
+from typing import List, Optional, Union
+
+import numpy as np
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
+from pydantic import BaseModel, Field
+
+from datasets import load_dataset  # Assume a function to load the dataset
+
 # import math  # re-enable with /attention endpoint (used for sqrt(HEAD_DIM))
 from NeuralNetwork import NeuralNetwork
-from datasets import load_dataset  # Assume a function to load the dataset
-import uuid
-import pickle
-import base64
-import time
-from collections import OrderedDict
-import boto3
-from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Optional, Union
-from mangum import Mangum
+from utils import calculate_metric, loss_function
+
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("ALLOWED_ORIGINS", "*").split(",")
+    if origin.strip()
+]
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this to allow specific domains (e.g., ["http://localhost:3000"])
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS,
+    # Browsers reject credentials with wildcard origins; only enable for explicit origins
+    allow_credentials="*" not in ALLOWED_ORIGINS,
     allow_methods=["*"],  # Allow all HTTP methods like GET, POST, OPTIONS
     allow_headers=["*"],  # Allow all headers
 )
 
-_dynamodb = boto3.resource("dynamodb", region_name="us-east-2")
-_sessions_table = _dynamodb.Table("nn-sessions")
-_leaderboard_table = _dynamodb.Table("nn-leaderboard")
-_s3 = boto3.client("s3", region_name="us-east-2")
+AWS_REGION = "us-east-2"
 SESSION_BUCKET = "nn-sessions-data"
 SESSION_TTL_SECONDS = 3 * 60 * 60  # 3 hours
+
+# "local" keeps sessions in-process (no AWS calls) — used for local dev & tests
+SESSION_BACKEND = os.environ.get("SESSION_BACKEND", "aws")
+
+_aws = None
+
+
+def _get_aws():
+    # Lazy-init so importing this module never touches AWS config/credentials
+    global _aws
+    if _aws is None:
+        import boto3
+        dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
+        _aws = {
+            "sessions": dynamodb.Table("nn-sessions"),
+            "leaderboard": dynamodb.Table("nn-leaderboard"),
+            "assignments": dynamodb.Table("nn-assignments"),
+            "submissions": dynamodb.Table("nn-submissions"),
+            "s3": boto3.client("s3", region_name=AWS_REGION),
+        }
+    return _aws
 
 LEADERBOARD_CONFIG = {
     "xor":      {"higher_is_better": False, "display": "Fewest epochs to 100%",     "epoch_cap": None},
@@ -40,10 +70,13 @@ LEADERBOARD_CONFIG = {
     "mnist":    {"higher_is_better": True,  "display": "Accuracy at epoch 300 (%)", "epoch_cap": 300},
 }
 
-# In-process LRU cache (L1) — avoids a DynamoDB round-trip when the same
+# In-process LRU cache (L1) — avoids a round-trip when the same
 # Lambda instance handles back-to-back requests for the same session.
 _CACHE_MAX = 32
 _session_cache: OrderedDict = OrderedDict()
+
+# In-process store for SESSION_BACKEND=local
+_local_sessions: dict = {}
 
 
 def _cache_get(session_id: str) -> Optional[dict]:
@@ -65,6 +98,37 @@ def _cache_evict(session_id: str) -> None:
 
 
 # ── Leaderboard helpers ───────────────────────────────────────────────────────
+
+def _leaderboard_read(dataset: str) -> tuple[list, Optional[int]]:
+    if SESSION_BACKEND == "local":
+        entries = _local_sessions.get(f"leaderboard:{dataset}", [])
+        return [dict(e) for e in entries], None
+    resp = _get_aws()["leaderboard"].get_item(Key={"dataset": dataset})
+    item = resp.get("Item", {})
+    return item.get("entries", []), item.get("updated_at")
+
+
+def _leaderboard_write(dataset: str, raw_entries: list, prev_updated_at: Optional[int]) -> bool:
+    # Conditional write so concurrent submissions can't clobber each other;
+    # returns False when another writer modified the entry in the meantime.
+    updated_at = int(time.time())
+    if SESSION_BACKEND == "local":
+        _local_sessions[f"leaderboard:{dataset}"] = raw_entries
+        return True
+    leaderboard_table = _get_aws()["leaderboard"]
+    try:
+        leaderboard_table.put_item(
+            Item={
+                "dataset": dataset,
+                "entries": raw_entries,
+                "updated_at": updated_at,
+            },
+            ConditionExpression="attribute_not_exists(updated_at) OR updated_at = :prev",
+            ExpressionAttributeValues={":prev": prev_updated_at},
+        )
+        return True
+    except leaderboard_table.meta.client.exceptions.ConditionalCheckFailedException:
+        return False
 
 def _is_better(dataset: str, new_score: float, existing_score: float) -> bool:
     return new_score > existing_score if LEADERBOARD_CONFIG[dataset]["higher_is_better"] else new_score < existing_score
@@ -109,9 +173,20 @@ class LeaderboardSubmitResponse(BaseModel):
 
 def _save_session(session_id: str, session: dict) -> None:
     _cache_put(session_id, session)
-    s3_key = f"sessions/{session_id}.pkl"
-    _s3.put_object(Bucket=SESSION_BUCKET, Key=s3_key, Body=pickle.dumps(session))
-    _sessions_table.put_item(Item={
+    # Store only serialized state (JSON, not pickle). epochs_trained is
+    # server-side bookkeeping so epoch caps can be enforced authoritatively.
+    payload = json.dumps({
+        "network": session["network"].to_state(),
+        "dataset": session["dataset"],
+        "epochs_trained": session.get("epochs_trained", 0),
+    }).encode()
+    if SESSION_BACKEND == "local":
+        _local_sessions[session_id] = payload
+        return
+    aws = _get_aws()
+    s3_key = f"sessions/{session_id}.json"
+    aws["s3"].put_object(Bucket=SESSION_BUCKET, Key=s3_key, Body=payload)
+    aws["sessions"].put_item(Item={
         "session_id": session_id,
         "s3_key": s3_key,
         "ttl": int(time.time()) + SESSION_TTL_SECONDS,
@@ -122,22 +197,37 @@ def _load_session(session_id: str) -> Optional[dict]:
     cached = _cache_get(session_id)
     if cached is not None:
         return cached
-    resp = _sessions_table.get_item(Key={"session_id": session_id})
-    item = resp.get("Item")
-    if item is None:
+    if SESSION_BACKEND == "local":
+        payload = _local_sessions.get(session_id)
+    else:
+        aws = _get_aws()
+        resp = aws["sessions"].get_item(Key={"session_id": session_id})
+        item = resp.get("Item")
+        if item is None:
+            return None
+        s3_key = item.get("s3_key")
+        if s3_key is None:
+            return None
+        payload = aws["s3"].get_object(Bucket=SESSION_BUCKET, Key=s3_key)["Body"].read()
+
+    if payload is None:
         return None
-    s3_key = item.get("s3_key")
-    if s3_key is None:
-        return None
-    obj = _s3.get_object(Bucket=SESSION_BUCKET, Key=s3_key)
-    session = pickle.loads(obj["Body"].read())
+    data = json.loads(payload)
+    session = {
+        "network": NeuralNetwork.from_state(data["network"]),
+        "dataset": data["dataset"],
+        "epochs_trained": data.get("epochs_trained", 0),
+    }
     _cache_put(session_id, session)
     return session
 
 
 def _delete_session(session_id: str) -> None:
     _cache_evict(session_id)
-    _sessions_table.delete_item(Key={"session_id": session_id})
+    if SESSION_BACKEND == "local":
+        _local_sessions.pop(session_id, None)
+        return
+    _get_aws()["sessions"].delete_item(Key={"session_id": session_id})
 
 # ------------------ Model Initialization Request ------------------ #
 class InitModelRequest(BaseModel):
@@ -174,6 +264,7 @@ def init_model(request: InitModelRequest):
     _save_session(session_id, {
         "network": network,
         "dataset": request.dataset,
+        "epochs_trained": 0,
     })
 
     return InitModelResponse(
@@ -190,8 +281,8 @@ def init_model(request: InitModelRequest):
 # ------------------ Training Request ------------------ #
 class TrainRequest(BaseModel):
     session_id: str  # User's session ID
-    learning_rate: float = 0.01
-    epochs: int = 10
+    learning_rate: float = Field(default=0.01, gt=0, le=100)
+    epochs: int = Field(default=10, ge=1, le=999)
 
 class LayerDetail(BaseModel):
     weights: list
@@ -209,10 +300,14 @@ class TrainResult(BaseModel):
     loss: float
     name: str  # Metric name (e.g., accuracy, mae)
     metric: Union[float, str]  # Metric could be accuracy or mae
+    test_loss: float
+    test_name: str
+    test_metric: Union[float, str]
     layers: List[LayerDetail]
 
 class TrainResponse(BaseModel):
     training_results: List[TrainResult]
+    epochs_trained: int  # cumulative for this session (server-side bookkeeping)
 
 @app.post("/train", response_model=TrainResponse)
 def train_model(request: TrainRequest):
@@ -221,7 +316,7 @@ def train_model(request: TrainRequest):
         raise HTTPException(status_code=404, detail="Session not found. Call /init_model first.")
 
     network = session["network"]
-    X_train, _, Y_train, _, _, _, _, _, _, _ = load_dataset(session["dataset"])
+    X_train, X_test, Y_train, Y_test, _, _, output_activation, _, _, _ = load_dataset(session["dataset"])
 
     training_results = []
 
@@ -262,17 +357,26 @@ def train_model(request: TrainRequest):
         metric_name = "accuracy" if "accuracy" in result else "mae"
         metric_value = result.get("accuracy") if "accuracy" in result else result.get("mae")
 
+        # Held-out test metrics so the UI can plot generalization, not just fit
+        Y_test_hat = network.forward(X_test)
+        test_loss = loss_function(Y_test_hat, Y_test, "mse" if output_activation == "linear" else "cross-entropy")
+        test_metric = calculate_metric(Y_test_hat, Y_test, output_activation)
+
         training_results.append(TrainResult(
             epoch=epoch + 1,
             input=X_train[:30].tolist() if is_last else [],
             loss=result["loss"],
             name=metric_name,
             metric=metric_value,
+            test_loss=test_loss,
+            test_name=metric_name,
+            test_metric=test_metric,
             layers=layers
         ))
 
+    session["epochs_trained"] = session.get("epochs_trained", 0) + request.epochs
     _save_session(request.session_id, session)
-    return TrainResponse(training_results=training_results)
+    return TrainResponse(training_results=training_results, epochs_trained=session["epochs_trained"])
 
 
 # ------------------ Set Weight ------------------ #
@@ -308,15 +412,15 @@ def set_weight(request: SetWeightRequest):
 
     layers = [
         LayerDetail(
-            activation=l.activation,
-            Z=l.Z[:30].astype(np.float32).tolist(),
-            A=l.A[:30].astype(np.float32).tolist(),
-            dW=l.dW.astype(np.float32).tolist() if l.dW is not None else [],
-            db=l.db.astype(np.float32).tolist() if l.db is not None else [],
-            dZ=l.dZ[:30].astype(np.float32).tolist() if l.dZ is not None else [],
-            weights=l.weights.astype(np.float32).tolist(),
-            biases=l.biases.astype(np.float32).tolist(),
-        ) for l in network.layers
+            activation=lyr.activation,
+            Z=lyr.Z[:30].astype(np.float32).tolist(),
+            A=lyr.A[:30].astype(np.float32).tolist(),
+            dW=lyr.dW.astype(np.float32).tolist() if lyr.dW is not None else [],
+            db=lyr.db.astype(np.float32).tolist() if lyr.db is not None else [],
+            dZ=lyr.dZ[:30].astype(np.float32).tolist() if lyr.dZ is not None else [],
+            weights=lyr.weights.astype(np.float32).tolist(),
+            biases=lyr.biases.astype(np.float32).tolist(),
+        ) for lyr in network.layers
     ]
 
     _save_session(request.session_id, session)
@@ -359,13 +463,15 @@ def clear_session(session_id: str):
 
 
 # ------------------ Leaderboard ------------------ #
+MAX_LEADERBOARD_ENTRIES = 10
+LEADERBOARD_WRITE_RETRIES = 3
+
 @app.get("/leaderboard/{dataset}", response_model=LeaderboardResponse)
 def get_leaderboard(dataset: str):
     if dataset not in LEADERBOARD_CONFIG:
         raise HTTPException(status_code=400, detail=f"Unknown dataset: {dataset}")
     cfg = LEADERBOARD_CONFIG[dataset]
-    resp = _leaderboard_table.get_item(Key={"dataset": dataset})
-    raw_entries = resp.get("Item", {}).get("entries", [])
+    raw_entries, _ = _leaderboard_read(dataset)
     entries = [
         LeaderboardEntry(rank=i + 1, **e)
         for i, e in enumerate(raw_entries)
@@ -388,31 +494,251 @@ def submit_leaderboard(request: LeaderboardSubmitRequest):
     if not username or len(username) > 32 or not re.fullmatch(r"[a-zA-Z0-9_-]+", username):
         raise HTTPException(status_code=400, detail="Username must be 1–32 characters: letters, digits, _ or -")
 
-    resp = _leaderboard_table.get_item(Key={"dataset": request.dataset})
-    raw_entries = resp.get("Item", {}).get("entries", [])
+    # Retry on contention so concurrent submissions can't silently drop entries
+    for _ in range(LEADERBOARD_WRITE_RETRIES):
+        raw_entries, prev_updated_at = _leaderboard_read(request.dataset)
 
-    insert_idx = _qualifies_for_top10(request.dataset, request.score, raw_entries)
-    if insert_idx is None:
-        entries = [LeaderboardEntry(rank=i + 1, **e) for i, e in enumerate(raw_entries)]
-        return LeaderboardSubmitResponse(accepted=False, rank=None, entries=entries)
+        insert_idx = _qualifies_for_top10(request.dataset, request.score, raw_entries)
+        if insert_idx is None:
+            entries = [LeaderboardEntry(rank=i + 1, **e) for i, e in enumerate(raw_entries)]
+            return LeaderboardSubmitResponse(accepted=False, rank=None, entries=entries)
 
-    new_entry = {
-        "username": username,
-        "score": Decimal(str(request.score)),
-        "epoch": request.epoch,
-        "submitted_at": int(time.time()),
-    }
-    raw_entries.insert(insert_idx, new_entry)
-    raw_entries = raw_entries[:10]
+        new_entry = {
+            "username": username,
+            "score": Decimal(str(request.score)),
+            "epoch": request.epoch,
+            "submitted_at": int(time.time()),
+        }
+        raw_entries.insert(insert_idx, new_entry)
+        raw_entries = raw_entries[:MAX_LEADERBOARD_ENTRIES]
 
-    _leaderboard_table.put_item(Item={
+        if _leaderboard_write(request.dataset, raw_entries, prev_updated_at):
+            entries = [LeaderboardEntry(rank=i + 1, **e) for i, e in enumerate(raw_entries)]
+            return LeaderboardSubmitResponse(accepted=True, rank=insert_idx + 1, entries=entries)
+
+    raise HTTPException(status_code=503, detail="Leaderboard is busy, please retry.")
+
+
+# ------------------ Assignments (classroom) ------------------ #
+# Instructors create an assignment (dataset + metric target + epoch cap) and
+# share the join code. Students train a model and submit their session; the
+# SERVER evaluates the stored network on the held-out test set, so scores are
+# authoritative and can't be fabricated client-side.
+
+def _metric_info(output_activation: str) -> tuple[str, bool]:
+    """Returns (metric_name, higher_is_better) for an output activation."""
+    if output_activation == "linear":
+        return "mae", False
+    return "accuracy", True
+
+
+def _official_metric(network: NeuralNetwork, dataset: str) -> tuple[str, float]:
+    """Server-side evaluation of a session's network on the held-out test set."""
+    _, X_test, _, Y_test, _, _, output_activation, _, y_mean, y_std = load_dataset(dataset)
+    Y_hat = network.forward(X_test)
+    value = calculate_metric(Y_hat, Y_test, output_activation)
+    metric_name, _ = _metric_info(output_activation)
+    if metric_name == "mae" and y_std is not None:
+        # Report MAE in original units (targets are standardized for auto_mpg)
+        value *= y_std
+    return metric_name, float(value)
+
+
+class AssignmentCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=100)
+    dataset: str
+    metric_target: float
+    epoch_cap: int = Field(ge=1, le=100_000)
+
+
+class AssignmentInfo(BaseModel):
+    assignment_code: str
+    title: str
+    dataset: str
+    metric_target: float
+    epoch_cap: int
+    metric_name: str
+    higher_is_better: bool
+
+class AssignmentCreatedResponse(AssignmentInfo):
+    instructor_key: str  # secret — required to view submissions; shown once at creation
+
+class AssignmentSubmitRequest(BaseModel):
+    session_id: str
+    student_name: str
+
+class AssignmentSubmitResponse(BaseModel):
+    metric: float
+    metric_name: str
+    epochs_used: int
+    target_met: bool
+    personal_best: bool
+
+class SubmissionEntry(BaseModel):
+    student_name: str
+    metric: float
+    epochs_used: int
+    target_met: bool
+    submitted_at: int
+
+
+@app.post("/assignments/create", response_model=AssignmentCreatedResponse)
+def create_assignment(request: AssignmentCreateRequest):
+    if request.dataset not in LEADERBOARD_CONFIG:
+        raise HTTPException(status_code=400, detail=f"Unknown dataset: {request.dataset}")
+
+    assignments_table = _get_aws()["assignments"]
+    if SESSION_BACKEND != "local":
+        existing_codes = set()
+        resp = assignments_table.scan(ProjectionExpression="assignment_code")
+        existing_codes = {i["assignment_code"] for i in resp.get("Items", [])}
+
+    for _ in range(10):  # collision retries
+        code = "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(6))
+        if SESSION_BACKEND == "local" or code not in existing_codes:
+            break
+    else:
+        raise HTTPException(status_code=503, detail="Could not allocate an assignment code, please retry.")
+
+    instructor_key = uuid.uuid4().hex
+    metric_name, higher_is_better = _metric_info(load_dataset(request.dataset)[6])
+    item = {
+        "assignment_code": code,
+        "instructor_key": instructor_key,
+        "title": request.title.strip(),
         "dataset": request.dataset,
-        "entries": raw_entries,
-        "updated_at": int(time.time()),
-    })
+        "metric_name": metric_name,
+        "higher_is_better": higher_is_better,
+        "metric_target": Decimal(str(request.metric_target)),
+        "epoch_cap": request.epoch_cap,
+        "created_at": int(time.time()),
+    }
+    if SESSION_BACKEND == "local":
+        _local_sessions[f"assignment:{code}"] = item
+    else:
+        assignments_table.put_item(Item=item)
 
-    entries = [LeaderboardEntry(rank=i + 1, **e) for i, e in enumerate(raw_entries)]
-    return LeaderboardSubmitResponse(accepted=True, rank=insert_idx + 1, entries=entries)
+    return AssignmentCreatedResponse(**item)
+
+
+def _get_assignment(code: str) -> Optional[dict]:
+    if SESSION_BACKEND == "local":
+        return _local_sessions.get(f"assignment:{code}")
+    resp = _get_aws()["assignments"].get_item(Key={"assignment_code": code})
+    return resp.get("Item")
+
+
+@app.get("/assignments/{code}", response_model=AssignmentInfo)
+def get_assignment(code: str):
+    item = _get_assignment(code.upper())
+    if item is None:
+        raise HTTPException(status_code=404, detail="Assignment not found.")
+    return AssignmentInfo(**item)
+
+
+@app.post("/assignments/{code}/submit", response_model=AssignmentSubmitResponse)
+def submit_assignment(code: str, request: AssignmentSubmitRequest):
+    code = code.upper()
+    item = _get_assignment(code)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Assignment not found.")
+
+    session = _load_session(request.session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found. Train a model first.")
+    if session["dataset"] != item["dataset"]:
+        raise HTTPException(status_code=400, detail=(
+            f"This assignment uses the '{item['dataset']}' dataset, but your session was trained on '{session['dataset']}'."
+        ))
+
+    epochs_used = session.get("epochs_trained", 0)
+    epoch_cap = int(item["epoch_cap"])
+    if epochs_used > epoch_cap:
+        raise HTTPException(status_code=400, detail=(
+            f"Your session has used {epochs_used} epochs; this assignment allows {epoch_cap}. "
+            "Re-initialize the model and try again."
+        ))
+
+    # Server-authoritative scoring: evaluate the STORED network on the test set.
+    metric_name, metric_value = _official_metric(session["network"], item["dataset"])
+    higher_is_better = bool(item.get("higher_is_better", metric_name == "accuracy"))
+    target_met = (
+        metric_value >= float(item["metric_target"]) if higher_is_better
+        else metric_value <= float(item["metric_target"])
+    )
+
+    student_name = request.student_name.strip()
+    if not student_name or len(student_name) > 32 or not re.fullmatch(r"[a-zA-Z0-9_-]+", student_name):
+        raise HTTPException(status_code=400, detail="Student name must be 1–32 characters: letters, digits, _ or -")
+
+    now = int(time.time())
+    submitted_item = {
+        "student_name": student_name,
+        "metric": Decimal(str(round(metric_value, 4))),
+        "epochs_used": epochs_used,
+        "target_met": target_met,
+        "submitted_at": now,
+    }
+
+    # Atomic best-score upsert: overwrite only when strictly better.
+    comparison = "<" if higher_is_better else ">"  # new must beat old in the useful direction
+    condition = f"attribute_not_exists(metric) OR metric {comparison} :m"
+    if SESSION_BACKEND == "local":
+        board = _local_sessions.setdefault(f"submissions:{code}", {})
+        prev = board.get(student_name)
+        personal_best = prev is None or (
+            metric_value > float(prev["metric"]) if higher_is_better
+            else metric_value < float(prev["metric"])
+        )
+        if personal_best:
+            board[student_name] = submitted_item
+    else:
+        submissions_table = _get_aws()["submissions"]
+        try:
+            submissions_table.update_item(
+                Key={"assignment_code": code, "student_name": student_name},
+                UpdateExpression="SET metric = :m, epochs_used = :e, target_met = :t, submitted_at = :ts",
+                ConditionExpression=condition,
+                ExpressionAttributeValues={
+                    ":m": submitted_item["metric"],
+                    ":e": epochs_used,
+                    ":t": target_met,
+                    ":ts": now,
+                },
+            )
+            personal_best = True
+        except submissions_table.meta.client.exceptions.ConditionalCheckFailedException:
+            personal_best = False
+
+    return AssignmentSubmitResponse(
+        metric=round(metric_value, 4),
+        metric_name=metric_name,
+        epochs_used=epochs_used,
+        target_met=target_met,
+        personal_best=personal_best,
+    )
+
+
+@app.get("/assignments/{code}/submissions", response_model=List[SubmissionEntry])
+def list_submissions(code: str, instructor_key: str):
+    code = code.upper()
+    item = _get_assignment(code)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Assignment not found.")
+    if not hmac.compare_digest(str(item["instructor_key"]), instructor_key):
+        raise HTTPException(status_code=403, detail="Invalid instructor key.")
+
+    if SESSION_BACKEND == "local":
+        entries = list(_local_sessions.get(f"submissions:{code}", {}).values())
+    else:
+        from boto3.dynamodb.conditions import Key as DynamoKey
+        resp = _get_aws()["submissions"].query(
+            KeyConditionExpression=DynamoKey("assignment_code").eq(code),
+        )
+        entries = resp.get("Items", [])
+    entries.sort(key=lambda e: (-float(e["metric"])) if item.get("higher_is_better", True)
+                 else float(e["metric"]))
+    return [SubmissionEntry(**e) for e in entries]
 
 
 # AWS Lambda entrypoint (API Gateway / ALB compatible)

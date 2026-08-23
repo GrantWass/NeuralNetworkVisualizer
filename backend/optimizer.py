@@ -1,8 +1,16 @@
 import numpy as np
 
+
 class Optimizer:
     def step(self, layer, learning_rate):
         raise NotImplementedError("Must be implemented by subclass")
+
+    def state_dict(self, layers):
+        # JSON-serializable state, aligned with the given layer list (or None if stateless)
+        return None
+
+    def load_state_dict(self, layers, state):
+        pass
 
 
 class Batch(Optimizer):
@@ -10,6 +18,7 @@ class Batch(Optimizer):
     def step(self, layer, learning_rate):
         layer.weights -= learning_rate * layer.dW
         layer.biases -= learning_rate * layer.db
+
 
 class Adam(Optimizer):
     def __init__(self, beta1=0.9, beta2=0.999, epsilon=1e-8):
@@ -24,6 +33,7 @@ class Adam(Optimizer):
         if layer not in self.m:
             self.m[layer] = {'w': np.zeros_like(layer.weights), 'b': np.zeros_like(layer.biases)}
             self.v[layer] = {'w': np.zeros_like(layer.weights), 'b': np.zeros_like(layer.biases)}
+
 
         self.t += 1
         m, v = self.m[layer], self.v[layer]
@@ -44,34 +54,28 @@ class Adam(Optimizer):
         layer.weights -= learning_rate * m_hat_w / (np.sqrt(v_hat_w) + self.epsilon)
         layer.biases -= learning_rate * m_hat_b / (np.sqrt(v_hat_b) + self.epsilon)
 
-class RMSprop(Optimizer):
-    def __init__(self, beta=0.9, epsilon=1e-8):
-        self.beta = beta
-        self.epsilon = epsilon
-        self.v = {}
+    def state_dict(self, layers):
+        return {
+            "t": self.t,
+            "m": [
+                {k: v.tolist() for k, v in self.m[layer].items()} if layer in self.m else None
+                for layer in layers
+            ],
+            "v": [
+                {k: v.tolist() for k, v in self.v[layer].items()} if layer in self.v else None
+                for layer in layers
+            ],
+        }
 
-    def step(self, layer, learning_rate):
-        if layer not in self.v:
-            self.v[layer] = {'w': np.zeros_like(layer.weights), 'b': np.zeros_like(layer.biases)}
-
-        self.v[layer]['w'] = self.beta * self.v[layer]['w'] + (1 - self.beta) * (layer.dW ** 2)
-        self.v[layer]['b'] = self.beta * self.v[layer]['b'] + (1 - self.beta) * (layer.db ** 2)
-
-        layer.weights -= learning_rate * layer.dW / (np.sqrt(self.v[layer]['w']) + self.epsilon)
-        layer.biases -= learning_rate * layer.db / (np.sqrt(self.v[layer]['b']) + self.epsilon)
-
-
-class Adagrad(Optimizer):
-    def __init__(self, epsilon=1e-8):
-        self.epsilon = epsilon
-        self.g = {}
-
-    def step(self, layer, learning_rate):
-        if layer not in self.g:
-            self.g[layer] = {'w': np.zeros_like(layer.weights), 'b': np.zeros_like(layer.biases)}
-
-        self.g[layer]['w'] += layer.dW ** 2
-        self.g[layer]['b'] += layer.db ** 2
-
-        layer.weights -= learning_rate * layer.dW / (np.sqrt(self.g[layer]['w']) + self.epsilon)
-        layer.biases -= learning_rate * layer.db / (np.sqrt(self.g[layer]['b']) + self.epsilon)
+    def load_state_dict(self, layers, state):
+        self.t = state["t"]
+        self.m = {
+            layer: {k: np.array(vals) for k, vals in m.items()}
+            for layer, m in zip(layers, state["m"])
+            if m is not None
+        }
+        self.v = {
+            layer: {k: np.array(vals) for k, vals in v.items()}
+            for layer, v in zip(layers, state["v"])
+            if v is not None
+        }

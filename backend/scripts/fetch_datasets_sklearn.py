@@ -1,9 +1,9 @@
-import os
 import csv
+import os
 from typing import Tuple
 
 # Requires: scikit-learn (and pandas used internally by OpenML when as_frame=True)
-from sklearn.datasets import load_iris, fetch_openml
+from sklearn.datasets import fetch_openml, load_iris
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 

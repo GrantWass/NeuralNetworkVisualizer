@@ -5,6 +5,7 @@ Pixel values are stored as integers 0-255.
 Run from the backend/ directory: python scripts/fetch_mnist.py
 """
 import os
+
 import numpy as np
 from sklearn.datasets import fetch_openml
 

@@ -22,10 +22,14 @@ Setup:
 """
 
 import json
+
 import torch
 from transformers import (
-    BertTokenizer, BertModel,
-    GPT2Tokenizer, GPT2Model, GPT2LMHeadModel,
+    BertModel,
+    BertTokenizer,
+    GPT2LMHeadModel,
+    GPT2Model,
+    GPT2Tokenizer,
 )
 
 BERT_LAYER = 6
@@ -46,7 +50,7 @@ def clean_gpt2_token(t: str) -> str:
 # ── Encoder (BERT) ────────────────────────────────────────────────────────────
 
 def extract_bert_attention(sentence: str, layer: int):
-    print(f"  Loading bert-base-uncased...")
+    print("  Loading bert-base-uncased...")
     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
     model = BertModel.from_pretrained("bert-base-uncased", output_attentions=True)
     model.eval()
@@ -68,7 +72,7 @@ def extract_bert_attention(sentence: str, layer: int):
 # ── Decoder (GPT-2) ───────────────────────────────────────────────────────────
 
 def extract_gpt2_attention(sentence: str, layer: int, head: int):
-    print(f"  Loading gpt2 (attention)...")
+    print("  Loading gpt2 (attention)...")
     tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
     model = GPT2Model.from_pretrained("gpt2", output_attentions=True)
     model.eval()
@@ -97,7 +101,7 @@ def extract_gpt2_attention(sentence: str, layer: int, head: int):
 # ── Generation steps (GPT-2 LM) ──────────────────────────────────────────────
 
 def extract_generation_steps(prompt: str, steps: int, top_k: int):
-    print(f"  Loading gpt2 (LM head)...")
+    print("  Loading gpt2 (LM head)...")
     tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
     model = GPT2LMHeadModel.from_pretrained("gpt2")
     model.eval()

@@ -1,15 +1,16 @@
 import numpy as np
+
 # import matplotlib.pyplot as plt
 
 
 def activation_function(x, activation="sigmoid"):
     """
     Apply an activation function to the input.
-    
+
     Args:
         x (numpy.ndarray): Input array.
         activation (str): Type of activation function ("relu", "sigmoid", "tanh", "softmax").
-    
+
     Returns:
         numpy.ndarray: Activated output.
     """
@@ -40,7 +41,7 @@ def activation_derivative(Z, activation, Y=None):
             softmax = activation_function(Z, activation="softmax")
             return softmax - Y # Derivative of softmax with respect to cross-entropy loss
         raise ValueError("Softmax derivative requires Y (one-hot labels).")
-    elif activation == "linear": 
+    elif activation == "linear":
         return np.ones_like(Z)  # Derivative of linear function is always 1
     else:
         raise ValueError(f"Unsupported activation function: {activation}")
@@ -48,12 +49,12 @@ def activation_derivative(Z, activation, Y=None):
 def loss_function(predictions, targets, type= "cross-entropy"):
     """
     Calculate the loss between predictions and actual targets.
-    
+
     Args:
         predictions (numpy.ndarray): Model predictions .
         targets (numpy.ndarray): Ground truth labels .
         type (string): Type of loss function.
-    
+
     Returns:
         float: Loss value.
     """
@@ -72,17 +73,17 @@ def loss_function(predictions, targets, type= "cross-entropy"):
         return np.mean(squared_errors)
     else:
         raise ValueError("Unsupported loss function type.")
-    
-    
+
+
 def calculate_metric(predictions, targets, activation):
     """
     Calculate an appropriate evaluation metric based on the output activation.
-    
+
     Args:
         predictions (numpy.ndarray): Predicted outputs.
         targets (numpy.ndarray): Actual target outputs.
         activation (str): Activation function of the output layer.
-    
+
     Returns:
         float: Accuracy for classification, MAE for regression.
     """
@@ -90,15 +91,15 @@ def calculate_metric(predictions, targets, activation):
         y_pred = np.argmax(predictions, axis=1)
         y_true = np.argmax(targets, axis=1)
         return np.mean(y_pred == y_true) * 100  # Accuracy in percentage
-    
+
     elif activation == "sigmoid":  # Binary classification case
         y_pred = (predictions > 0.5).astype(int)
         y_true = targets.astype(int)
         return np.mean(y_pred == y_true) * 100  # Accuracy in percentage
-    
+
     elif activation == "linear":  # Regression case
         return np.mean(np.abs(predictions - targets))  # Mean Absolute Error (MAE)
-    
+
     else:
         raise ValueError(f"Unsupported output activation: {activation}")
 
@@ -150,7 +151,7 @@ class StandardScalerNP:
         self.fit(X)
         return self.transform(X)
 
-    
+
 # def plot_metrics(losses, accuracies, epochs):
 #     plt.figure(figsize=(12, 5))
 

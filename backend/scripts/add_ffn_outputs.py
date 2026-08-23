@@ -15,7 +15,7 @@ Usage:
 """
 
 import onnx
-from onnx import helper, TensorProto
+from onnx import TensorProto, helper
 
 MODEL_IN  = "/Users/grantwasserman/Documents/GitHub/NeuralNetworkVisualizer/neural-network-visual/public/models/gpt2-viz-q8.onnx"
 MODEL_OUT = MODEL_IN  # overwrite in-place (model is in git so it's recoverable)
