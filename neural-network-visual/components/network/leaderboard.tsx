@@ -4,7 +4,7 @@ import { useState } from "react";
 import { X, Trophy, Star } from "lucide-react";
 import useStore from "@/components/network/lib/store";
 import { LeaderboardEntry } from "@/components/network/lib/store";
-import { isValidUsername, sanitizeUsername, USERNAME_MAX_LENGTH } from "@/components/network/lib/username";
+import { containsProfanity, isValidUsername, sanitizeUsername, USERNAME_MAX_LENGTH } from "@/components/network/lib/username";
 
 const DATASET_LABELS: Record<string, string> = {
   xor: "XOR",
@@ -91,6 +91,10 @@ export default function LeaderboardPanel() {
     setSubmitError("");
     if (!isValidUsername(username)) {
       setSubmitError("Letters, digits, _ and - only (1–32 chars)");
+      return;
+    }
+    if (containsProfanity(username)) {
+      setSubmitError("That name isn't allowed — please pick a different one.");
       return;
     }
     const result = await submitLeaderboardScore(username.trim());

@@ -65,32 +65,86 @@ def _cache_evict(session_id: str) -> None:
 
 
 # ── Leaderboard username guardrails ──────────────────────────────────────────
-# Allowlist approach: a name may only contain letters, digits, _ and -.
-# That single rule blocks HTML/script injection (<script>, quotes, &),
-# control characters, unicode look-alikes, and absurd lengths in one go.
+# Two layers:
+#   1. Allowlist — a name may only contain letters, digits, _ and -.
+#      That single rule blocks HTML/script injection (<script>, quotes, &),
+#      control characters, unicode look-alikes, and absurd lengths in one go.
+#   2. Profanity blocklist — names are normalized (lowercase, common digit
+#      substitutions reversed, separators removed, repeated letters collapsed)
+#      so "Sh1t", "f-u-c-k" and "fuuuck" all reduce to something we can match
+#      against words that are never acceptable as a name. Submissions are
+#      rejected; entries stored before this filter existed are masked on read.
 
 USERNAME_MAX_LENGTH = 32
 _USERNAME_DISALLOWED = re.compile(r"[^a-zA-Z0-9_-]")
 
+# Words never allowed in a leaderboard name. Must stay in sync with
+# PROFANITY_BLOCKLIST in neural-network-visual/components/network/lib/username.ts.
+# Mild-but-ambiguous words ("ass", "hell", "damn") are deliberately left out:
+# substring matching would wrongly reject names like "class" or "shell". Words
+# that shrink to ~3 letters when repeats are collapsed ("piss" → "pis") are
+# excluded for the same reason — they'd match unrelated names like "Pisa".
+PROFANITY_BLOCKLIST = frozenset({
+    "fuck", "shit", "bitch", "bastard", "cunt", "whore", "slut",
+    "wanker", "twat", "bullshit", "dickhead", "asshole",
+    "arsehole", "jackass", "dumbass",
+    # slurs
+    "nigger", "nigga", "faggot", "chink", "kike", "tranny",
+    "wetback", "towelhead", "retard",
+    # crude anatomy/harassment terms
+    "penis", "dildo",
+})
+
+# Reverse common letter/digit look-alikes before matching ("sh1t" → "shit").
+_PROFANITY_LEET = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "8": "b"})
+
+
+def normalize_for_profanity_check(name: str) -> str:
+    """Reduce a name to its 'letter skeleton' so evasions collapse to the word."""
+    lowered = name.lower().translate(_PROFANITY_LEET)
+    without_separators = lowered.replace("-", "").replace("_", "")
+    return re.sub(r"(.)\1+", r"\1", without_separators)
+
+
+# Pre-collapse the list too, so needles match the collapsed haystack
+# (e.g. "asshole" is searched for as "ashole" once repeats are collapsed).
+_PROFANITY_BLOCKLIST_NORMALIZED = frozenset(
+    normalize_for_profanity_check(word) for word in PROFANITY_BLOCKLIST
+)
+
+
+def contains_profanity(name: str) -> bool:
+    skeleton = normalize_for_profanity_check(name)
+    return any(word in skeleton for word in _PROFANITY_BLOCKLIST_NORMALIZED)
+
 
 def validate_username(raw: str) -> str:
-    """Reject anything outside the allowlist; return the cleaned name."""
+    """Reject anything outside the allowlist or on the blocklist; return the cleaned name."""
     username = raw.strip()
     if not username or len(username) > USERNAME_MAX_LENGTH or _USERNAME_DISALLOWED.search(username):
         raise HTTPException(
             status_code=400,
             detail="Username must be 1–32 characters: letters, digits, _ or -",
         )
+    if contains_profanity(username):
+        raise HTTPException(
+            status_code=400,
+            detail="Please choose a different username — offensive names aren't allowed.",
+        )
     return username
 
 
 def sanitize_username(raw: str) -> str:
-    """Strip disallowed characters from a name read back from storage.
+    """Clean a name read back from storage before display.
 
     Entries written before these rules existed (or edited directly in
-    DynamoDB) may still hold odd characters — clean them before display.
+    DynamoDB) may still hold odd characters — strip them. Names that trip
+    the profanity filter are masked rather than shown.
     """
-    return _USERNAME_DISALLOWED.sub("", raw.strip())[:USERNAME_MAX_LENGTH]
+    cleaned = _USERNAME_DISALLOWED.sub("", raw.strip())[:USERNAME_MAX_LENGTH]
+    if contains_profanity(cleaned):
+        return "***"
+    return cleaned
 
 
 # ── Leaderboard helpers ───────────────────────────────────────────────────────
