@@ -567,9 +567,9 @@ const Config = () => {
           {/* Row 3: Sample stepper · epochs per click */}
           <div className="flex items-center gap-3 px-4 py-2 border-t border-gray-100 bg-gray-50">
             <span className="text-[9px] text-gray-500 font-medium shrink-0">Sample</span>
-            <button onClick={() => setSampleIndex(Math.max(0, sampleIndex - 1))} disabled={sampleIndex === 0} className="w-5 h-5 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-25 text-gray-700 text-xs font-bold leading-none shrink-0">‹</button>
+            <button onClick={() => setSampleIndex(Math.max(0, sampleIndex - 1))} disabled={sampleIndex === 0} aria-label="Previous sample" className="w-5 h-5 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-25 text-gray-700 text-xs font-bold leading-none shrink-0">‹</button>
             <span className="font-mono text-xs font-semibold text-gray-900 w-4 text-center shrink-0">{sampleIndex}</span>
-            <button onClick={() => setSampleIndex(Math.min(dataset === "xor" ? 3 : 25, sampleIndex + 1))} disabled={sampleIndex === (dataset === "xor" ? 3 : 25)} className="w-5 h-5 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-25 text-gray-700 text-xs font-bold leading-none shrink-0">›</button>
+            <button onClick={() => setSampleIndex(Math.min(dataset === "xor" ? 3 : 25, sampleIndex + 1))} disabled={sampleIndex === (dataset === "xor" ? 3 : 25)} aria-label="Next sample" className="w-5 h-5 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-25 text-gray-700 text-xs font-bold leading-none shrink-0">›</button>
             <div className="w-px h-3 bg-gray-200 shrink-0" />
             <span className="text-[9px] text-gray-500 font-medium shrink-0">Epochs / click</span>
             <input type="number" min={1} max={999} value={trainingEpochs} onChange={(e) => setTrainingEpochs(Math.max(1, Math.min(999, parseInt(e.target.value) || 1)))} className="w-12 text-[9px] border border-gray-200 rounded px-1.5 py-0.5 font-mono outline-none focus:ring-1 focus:ring-gray-300 text-center bg-white ml-auto" />
