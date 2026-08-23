@@ -46,3 +46,8 @@ __pycache__/
 ./
 neural-network-visual/.next/
 neural-network-visual/node_modules/
+
+# python
+backend/.venv/
+.pytest_cache/
+.ruff_cache/
