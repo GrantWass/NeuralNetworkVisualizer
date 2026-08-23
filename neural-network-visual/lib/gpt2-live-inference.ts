@@ -16,7 +16,7 @@
 
 import type { LayerData, VizExample } from "@/components/transformer/TransformerArchitectureViz";
 
-const MODEL_URL = "https://nn-models-public.s3.us-east-2.amazonaws.com/gpt2-viz-q8.onnx"; // bump when model file changes
+const MODEL_URL = "https://dm8g8td24lur.cloudfront.net/gpt2-viz-q8.onnx"; // bump when model file changes
 const MAX_TOKENS = 8;
 const N_LAYERS   = 12;
 const N_HEADS    = 12;
@@ -35,6 +35,18 @@ async function loadAll(onProgress?: (p: number) => void): Promise<void> {
   if (_loadPromise) return _loadPromise;
 
   _loadPromise = (async () => {
+    try {
+      await loadAllInner(onProgress);
+    } catch (e) {
+      // Don't cache the failure — clear so a retry can actually re-attempt the download
+      _loadPromise = null;
+      throw e;
+    }
+  })();
+  return _loadPromise;
+}
+
+async function loadAllInner(onProgress?: (p: number) => void): Promise<void> {
     // ── 1. ORT must be configured before @xenova/transformers loads it ─────
     const ort = await import("onnxruntime-web");
     ort.env.wasm.wasmPaths = "/ort-wasm/";  // served from public/ort-wasm/
@@ -73,9 +85,6 @@ async function loadAll(onProgress?: (p: number) => void): Promise<void> {
       executionProviders: ["wasm"],
     });
     onProgress?.(100);
-  })();
-
-  return _loadPromise;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -124,6 +133,7 @@ export async function runGPT2Inference(
   const rawData  = input_ids.data as BigInt64Array | Int32Array;
   const allIds: number[] = [];
   for (let i = 0; i < rawData.length; i++) allIds.push(Number(rawData[i]));
+  const truncatedFromTokenCount = allIds.length > MAX_TOKENS ? allIds.length : undefined;
   const tokenIds = allIds.slice(0, MAX_TOKENS);
   const n        = tokenIds.length;
   const tokens   = tokenIds.map((id) => (_tokenizer.decode([id]) as string).trim() || `[${id}]`);
@@ -155,6 +165,12 @@ export async function runGPT2Inference(
   const EMBED_DIM      = 768;
 
   const layers: LayerData[] = Array.from({ length: N_LAYERS }, (_, layerIdx) => {
+    // Fail with a diagnosable message if the ONNX export is missing expected outputs
+    for (const key of [`l${layerIdx}.q`, `l${layerIdx}.k`, `l${layerIdx}.v`, `l${layerIdx}.attn`]) {
+      if (!results[key]) {
+        throw new Error(`Model output is missing "${key}" — the ONNX export may be out of date.`);
+      }
+    }
     const qVecs = extractHeads(results[`l${layerIdx}.q`].data as Float32Array, n);
     const kVecs = extractHeads(results[`l${layerIdx}.k`].data as Float32Array, n);
     const vVecs = extractHeads(results[`l${layerIdx}.v`].data as Float32Array, n);
@@ -185,5 +201,12 @@ export async function runGPT2Inference(
     };
   });
 
-  return { id: "custom", label: `"${sentence}"`, tokens, layers, nextWordProbs };
+  return {
+    id: "custom",
+    label: `"${sentence}"`,
+    tokens,
+    layers,
+    nextWordProbs,
+    truncatedFromTokenCount,
+  };
 }

@@ -106,9 +106,6 @@ const MnistConnections: React.FC<{
   hiddenSize: number;
   stepLayerHighlight?: number | null;
 }> = ({ inputWeights, inputCx, SVGWIDTH, SVGHEIGHT, layerSpacing, SHIFT, hiddenSize, stepLayerHighlight }) => {
-  const GRID = 28;
-  const CELL = Math.max(2, Math.min(5, Math.floor((inputCx - 8) / GRID)));
-  const SIZE = GRID * CELL;
   const gridRight = inputCx; // right edge of grid is flush with input column
   const inStepMode = stepLayerHighlight !== null && stepLayerHighlight !== undefined;
   const isActive = !inStepMode || stepLayerHighlight === 0 || stepLayerHighlight === 1;
@@ -143,7 +140,16 @@ const MnistConnections: React.FC<{
 // --------------------
 // Subcomponents
 // --------------------
-const ConnectionLines = React.memo<{
+const ConnectionLines = React.memo(function ConnectionLines({
+  network,
+  SVGWIDTH,
+  SVGHEIGHT,
+  onClick,
+  flashConnections = [],
+  flashKey = 0,
+  stepLayerHighlight,
+  dataset,
+}: {
   network: NetworkState;
   SVGWIDTH: number;
   SVGHEIGHT: number;
@@ -152,7 +158,7 @@ const ConnectionLines = React.memo<{
   flashKey?: number;
   stepLayerHighlight?: number | null;
   dataset?: string;
-}>(({ network, SVGWIDTH, SVGHEIGHT, onClick, flashConnections = [], flashKey = 0, stepLayerHighlight, dataset }) => {
+}) {
   const { layerSpacing, SHIFT } = computeLayout(SVGWIDTH, network.layers.length);
   const inStepMode = stepLayerHighlight !== null && stepLayerHighlight !== undefined;
 
@@ -230,8 +236,6 @@ const ConnectionLines = React.memo<{
     </>
   );
 });
-
-
 const NodeCircles: React.FC<{
   network: NetworkState;
   SVGWIDTH: number;
@@ -244,7 +248,7 @@ const NodeCircles: React.FC<{
   yMean?: number | null;
   yStd?: number | null;
   drawnDigitPresent?: boolean;
-}> = ({ network, SVGWIDTH, SVGHEIGHT, dataset, sampleIndex, original, onNodeClick, stepLayerHighlight, yMean, yStd, drawnDigitPresent }) => {
+}> = ({ network, SVGWIDTH, SVGHEIGHT, dataset, sampleIndex, original, onNodeClick, stepLayerHighlight, yMean, yStd }) => {
   const { layerSpacing, SHIFT } = computeLayout(SVGWIDTH, network.layers.length);
   const fontSize = fontSizeForWidth(SVGWIDTH);
   const features = featureList(dataset, SVGWIDTH);

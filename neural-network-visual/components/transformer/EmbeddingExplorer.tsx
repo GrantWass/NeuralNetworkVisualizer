@@ -189,7 +189,10 @@ export function EmbeddingExplorer() {
     runCompute(parseWords(inputValue));
   }, [inputValue, runCompute]);
 
+  // Compute the default example once on mount — runCompute drives async model
+  // loading and store updates, so an effect is required here.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial computation on mount
     runCompute(parseWords(DEFAULT_WORDS));
   }, [runCompute]);
 

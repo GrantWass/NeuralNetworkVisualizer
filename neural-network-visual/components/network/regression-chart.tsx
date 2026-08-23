@@ -86,7 +86,7 @@ export function RegressionChart({ network, originalData, yMean, yStd }: Regressi
     ctx.fillText(maxV.toFixed(0), CANVAS - 2, CANVAS - 3);
     ctx.textAlign = "right";
     ctx.fillText(maxV.toFixed(0), CANVAS - 2, 10);
-  }, [network.layers, originalData, yMean, yStd]);
+  }, [network, network.layers, originalData, yMean, yStd]);
 
   const points = buildPoints(network, originalData, yMean, yStd);
   const initialized = points.length > 0;

@@ -21,6 +21,8 @@ export type VizExample = {
   tokens: string[];
   layers: LayerData[];
   nextWordProbs: Array<{ token: string; prob: number }>;
+  /** Set when the input was longer than the visualization supports */
+  truncatedFromTokenCount?: number;
 };
 
 // ─── Layout constants ────────────────────────────────────────────────────────
@@ -190,7 +192,6 @@ export function TransformerArchitectureViz({ example }: { example: VizExample })
   const [hoveredBlock,          setHoveredBlock]           = useState<number | null>(null);
   const [hoverPos,         setHoverPos]          = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [hoverY,           setHoverY]            = useState(0);
 
   const layer = layers[activeBlock];
   const attn  = layer.multiHeadAttention[activeHead];
@@ -564,10 +565,7 @@ export function TransformerArchitectureViz({ example }: { example: VizExample })
 
             {/* FFN token stepper — below FFN box, centered on GELU column */}
       {(() => {
-        const geluCx  = ffnGeluX + FFN_GELU_STRIP_W / 2;
-        const navY    = ffnBoxBot + 26;
         const labelY  = L.cardTop - 18;
-        const ry      = navY - 11;
         const rh      = 14;
         const tokLabel = tokens[activeFocusToken] ?? `#${activeFocusToken}`;
         return (

@@ -59,8 +59,12 @@ const Graph = () => {
     const [flashConnections, setFlashConnections] = useState<typeof changedConnections>([]);
     const [flashKey, setFlashKey] = useState(0);
 
+    // Flash changed connections for 2s after each training cycle.
+    // Intentional reaction to a store change that needs a timer with cleanup,
+    // which requires an effect rather than render-time adjustment.
     useEffect(() => {
         if (changedConnections.length > 0) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setFlashConnections(changedConnections);
             setFlashKey(k => k + 1);
             const timer = setTimeout(() => setFlashConnections([]), 2000);

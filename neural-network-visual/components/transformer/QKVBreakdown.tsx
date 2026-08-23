@@ -164,7 +164,7 @@ export const QKVBreakdown: React.FC<QKVBreakdownProps> = ({
             </p>
             <p className="text-xs text-muted-foreground">
               Each cell is one dimension of the 64-d Query vector. Indigo = positive, slate = negative.
-              Dimensions where this Query and a token's Key share the same sign contribute
+              Dimensions where this Query and a token’s Key share the same sign contribute
               positively to the similarity score.
             </p>
             <div className="overflow-x-auto">
@@ -185,7 +185,7 @@ export const QKVBreakdown: React.FC<QKVBreakdownProps> = ({
               <Gloss term="Keys">
                 Each token projects itself into a 64-d Key vector encoding what it contains
                 and is willing to share. Matching Q against K is how the model decides who
-                attends to whom — it's entirely learned from data, not hand-coded rules.
+                attends to whom — it’s entirely learned from data, not hand-coded rules.
               </Gloss>
               {" "}— all tokens
             </p>
@@ -289,7 +289,7 @@ export const QKVBreakdown: React.FC<QKVBreakdownProps> = ({
               embedding — the same vector regardless of sentence. After it, the representation
               is a weighted blend of all Value vectors. The same word produces a different
               output in every sentence because the weights change with context. This is how
-              "it" comes to encode that it refers to an animal rather than a street.
+              “it” comes to encode that it refers to an animal rather than a street.
             </Gloss>
           </p>
           <p className="text-xs text-muted-foreground max-w-prose">
@@ -302,8 +302,8 @@ export const QKVBreakdown: React.FC<QKVBreakdownProps> = ({
               are separate learned behaviors.
             </Gloss>{" "}
             vector. The output for <em>{tokens[selectedTokenIdx]}</em> is the weighted sum of
-            all Value vectors using the weights above — the token's new representation is no
-            longer just itself, it's a mixture of the whole sentence weighted by relevance.
+            all Value vectors using the weights above — the token’s new representation is no
+            longer just itself, it’s a mixture of the whole sentence weighted by relevance.
           </p>
 
           {/* Equation */}

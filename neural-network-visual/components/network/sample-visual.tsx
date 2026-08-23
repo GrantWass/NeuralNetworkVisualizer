@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState } from "react";
 import { NetworkState } from "@/components/network/static/types";
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
@@ -507,8 +507,6 @@ interface SampleVisualProps {
   sampleIndex: number;
   yMean: number | null;
   yStd: number | null;
-  isDrawn?: boolean;
-  onDrawOwn?: () => void;
 }
 
 export const SampleVisual: React.FC<SampleVisualProps> = ({
@@ -518,8 +516,6 @@ export const SampleVisual: React.FC<SampleVisualProps> = ({
   sampleIndex,
   yMean,
   yStd,
-  isDrawn,
-  onDrawOwn,
 }) => {
   if (!original || original.length === 0) return null;
 

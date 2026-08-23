@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import InfoPopup from "@/components/network/popup";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import useStore from "@/components/network/lib/store";
-import { DATASETS, ACTIVATION_FUNCTIONS, DATASET_INPUT_FEATURES } from "@/components/network/static/constants";
+import { DATASETS, ACTIVATION_FUNCTIONS } from "@/components/network/static/constants";
 import { HIDDEN_LAYER_LEARN_MORE } from "@/components/network/static/explanation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -498,14 +498,9 @@ const Config = () => {
     initModelFrontend();
   }, [initModelFrontend]);
 
-  // Advance to step 4 once the model is initialized (session exists)
-  useEffect(() => {
-    if (sessionId) setWizardStep(4);
-  }, [sessionId]);
-
   const handleInitialize = async () => {
     await initModel();
-    // setWizardStep(4) is handled by the sessionId effect above
+    if (useStore.getState().sessionId) setWizardStep(4);
   };
 
   const handleChangeModel = () => {
@@ -532,7 +527,7 @@ const Config = () => {
               <span className="text-[9px] text-gray-400 mt-0.5">epochs</span>
             </div>
             <div className="flex flex-col items-center justify-center px-3 py-2 flex-1">
-              <span className="text-base font-bold text-gray-900 leading-none tabular-nums">{epoch > 0 ? loss.toFixed(3) : "—"}</span>
+              <span className="text-base font-bold text-gray-900 leading-none tabular-nums">{epoch > 0 ? loss.toFixed(4) : "—"}</span>
               <span className="text-[9px] text-gray-400 mt-0.5">loss</span>
             </div>
             <div className="flex flex-col items-center justify-center px-3 py-2 flex-1">
@@ -567,12 +562,12 @@ const Config = () => {
           {/* Row 3: Sample stepper · epochs per click */}
           <div className="flex items-center gap-3 px-4 py-2 border-t border-gray-100 bg-gray-50">
             <span className="text-[9px] text-gray-500 font-medium shrink-0">Sample</span>
-            <button onClick={() => setSampleIndex(Math.max(0, sampleIndex - 1))} disabled={sampleIndex === 0} className="w-5 h-5 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-25 text-gray-700 text-xs font-bold leading-none shrink-0">‹</button>
+            <button aria-label="Previous sample" onClick={() => setSampleIndex(Math.max(0, sampleIndex - 1))} disabled={sampleIndex === 0} className="w-5 h-5 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-25 text-gray-700 text-xs font-bold leading-none shrink-0">‹</button>
             <span className="font-mono text-xs font-semibold text-gray-900 w-4 text-center shrink-0">{sampleIndex}</span>
-            <button onClick={() => setSampleIndex(Math.min(dataset === "xor" ? 3 : 25, sampleIndex + 1))} disabled={sampleIndex === (dataset === "xor" ? 3 : 25)} className="w-5 h-5 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-25 text-gray-700 text-xs font-bold leading-none shrink-0">›</button>
+            <button aria-label="Next sample" onClick={() => setSampleIndex(Math.min(dataset === "xor" ? 3 : 25, sampleIndex + 1))} disabled={sampleIndex === (dataset === "xor" ? 3 : 25)} className="w-5 h-5 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-25 text-gray-700 text-xs font-bold leading-none shrink-0">›</button>
             <div className="w-px h-3 bg-gray-200 shrink-0" />
-            <span className="text-[9px] text-gray-500 font-medium shrink-0">Epochs / click</span>
-            <input type="number" min={1} max={999} value={trainingEpochs} onChange={(e) => setTrainingEpochs(Math.max(1, Math.min(999, parseInt(e.target.value) || 1)))} className="w-12 text-[9px] border border-gray-200 rounded px-1.5 py-0.5 font-mono outline-none focus:ring-1 focus:ring-gray-300 text-center bg-white ml-auto" />
+            <label htmlFor="training-epochs-input" className="text-[9px] text-gray-500 font-medium shrink-0">Epochs / click</label>
+            <input id="training-epochs-input" type="number" min={1} max={999} value={trainingEpochs} onChange={(e) => setTrainingEpochs(Math.max(1, Math.min(999, parseInt(e.target.value) || 1)))} className="w-12 text-[9px] border border-gray-200 rounded px-1.5 py-0.5 font-mono outline-none focus:ring-1 focus:ring-gray-300 text-center bg-white ml-auto" />
           </div>
         </div>,
         document.body

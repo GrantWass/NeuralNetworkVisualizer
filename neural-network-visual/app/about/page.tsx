@@ -117,7 +117,7 @@ export default function AboutPage() {
             such as handwritten digits or car fuel economy data.
           </p>
           <p className="text-muted-foreground leading-relaxed">
-            The transformer visualizer came later, when the same professor challanged me to 
+            The transformer visualizer came later, when the same professor challenged me to 
             create an intuitive visualization of attention mechanisms as they became the
             concept everyone wanted to understand but few could explain concretely. The same
             principle applied: take the intermediate state of query and key vectors, raw attention

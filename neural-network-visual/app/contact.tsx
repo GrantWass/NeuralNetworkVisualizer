@@ -9,9 +9,16 @@ export default function ContactInfo() {
   const [isOpen, setIsOpen] = useState(false)
 
   const copyEmail = () => {
-    navigator.clipboard.writeText("grantmwasserman@gmail.com")
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    navigator.clipboard
+      .writeText("grantmwasserman@gmail.com")
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+      .catch(() => {
+        // Clipboard unavailable (non-HTTPS / permission denied) — don't show false success
+        window.location.href = "mailto:grantmwasserman@gmail.com"
+      })
   }
 
   return (

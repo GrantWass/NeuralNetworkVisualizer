@@ -2,7 +2,7 @@
 
 import useStore from "@/components/network/lib/store";
 import { NeuronLayer, NetworkState } from "@/components/network/static/types";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { Play, X } from "lucide-react";
 import { Line } from "react-chartjs-2";
@@ -39,6 +39,13 @@ ChartJS.register(
 );
 
 type PropagationView = 'forward' | 'backward' | 'calculation';
+
+// Viewport-derived font size for dense matrix labels (SSR-safe via getServerSnapshot)
+const narrowViewportSubscribe = (cb: () => void) => {
+  const mq = window.matchMedia("(max-width: 999px)");
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+};
 
 // ----------------------------------------------------------------
 // Value tracer — types, styles, and connection map
@@ -285,6 +292,8 @@ const Explain = () => {
       dataset,
       losses,
       accuracies,
+      testLosses,
+      testAccuracies,
       learningRate,
       sampleIndex,
       originalData,
@@ -317,7 +326,12 @@ const Explain = () => {
     const di = getDisplayIndex(sampleIndex);
 
     const [view, setView] = useState<PropagationView>('forward');
-    const [fontSize, setFontSize] = useState("md");
+    const isNarrowViewport = useSyncExternalStore(
+      narrowViewportSubscribe,
+      () => window.matchMedia("(max-width: 999px)").matches,
+      () => false,
+    );
+    const fontSize = isNarrowViewport ? "sm" : "md";
 
     // Inline leaderboard submit state
     const [lbUsername, setLbUsername] = useState("");
@@ -383,7 +397,7 @@ const Explain = () => {
         };
         document.addEventListener('click', handleDocClick);
         return () => document.removeEventListener('click', handleDocClick);
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);
 
     const jumpToView = (targetView: PropagationView) => {
         jumpLockRef.current = true;
@@ -449,13 +463,16 @@ const Explain = () => {
     const weightInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-      setEditingWeight(false);
-      if (hoveredConnection) setWeightInput(hoveredConnection.weight.toFixed(4));
-    }, [hoveredConnection]);
-
-    useEffect(() => {
       if (editingWeight) weightInputRef.current?.focus();
     }, [editingWeight]);
+
+    // Reset inline weight editor when the hover target changes (render-time adjustment)
+    const [prevHoveredConnection, setPrevHoveredConnection] = useState(hoveredConnection);
+    if (prevHoveredConnection !== hoveredConnection) {
+      setPrevHoveredConnection(hoveredConnection);
+      setEditingWeight(false);
+      if (hoveredConnection) setWeightInput(hoveredConnection.weight.toFixed(4));
+    }
 
     const handleWeightSubmit = async () => {
       if (!hoveredConnection) return;
@@ -473,11 +490,9 @@ const Explain = () => {
     // Update weights: one step per layer that has weights (skip the last reversed = first original)
     const backStepCount = network ? network.layers.length - 1 : 0;
 
-    useEffect(() => {
-      setFontSize(window.innerWidth < 1000 ? "sm" : "md");
-    }, []);
-
-    // Sync step highlight to store so SVG can dim non-active layers
+    // Sync step highlight to store so SVG can dim non-active layers.
+    // Writes to the external zustand store (not component state), so this
+    // can't cascade renders in this component — effect is the right tool here.
     useEffect(() => {
       if (stepMode && network) {
         setStepLayerHighlight(stepIndex);
@@ -486,16 +501,18 @@ const Explain = () => {
       }
     }, [stepMode, stepIndex, network, setStepLayerHighlight]);
 
-    // Exit step modes when switching views
-    useEffect(() => {
+    // Exit step modes when switching views (render-time adjustment)
+    const [prevView, setPrevView] = useState(view);
+    if (prevView !== view) {
+      setPrevView(view);
       if (view !== 'forward') setStepMode(false);
       if (view !== 'calculation') { setCalcStepMode(false); setCalcStepIndex(0); }
       if (view !== 'backward') { setBackStepMode(false); setBackStepIndex(0); }
-    }, [view]);
+    }
 
     useEffect(() => {
       if (!leaderboard[dataset]) fetchLeaderboard(dataset);
-    }, [dataset]);
+    }, [dataset, leaderboard, fetchLeaderboard]);
 
     const enterStepMode = () => { setStepMode(true); setStepIndex(0); };
     const exitStepMode = () => { setStepMode(false); setStepLayerHighlight(null); };
@@ -512,13 +529,23 @@ const Explain = () => {
         labels: losses.map((_, i) => i + 1),
         datasets: [
             {
-                label: `η=${learningRate}`,
+                label: `train η=${learningRate}`,
                 data: losses,
                 borderColor: 'rgb(99, 102, 241)',
                 backgroundColor: 'rgba(99, 102, 241, 0.08)',
                 borderWidth: 2,
                 tension: 0.4,
                 fill: true,
+                ...pointSettings,
+            },
+            {
+                label: 'test',
+                data: testLosses,
+                borderColor: 'rgb(236, 72, 153)',
+                borderWidth: 1.5,
+                borderDash: [5, 4],
+                tension: 0.4,
+                fill: false,
                 ...pointSettings,
             },
         ]
@@ -534,6 +561,16 @@ const Explain = () => {
             borderWidth: 2,
             tension: 0.4,
             fill: true,
+            ...pointSettings,
+        },
+        {
+            label: 'test',
+            data: testAccuracies,
+            borderColor: 'rgb(245, 158, 11)',
+            borderWidth: 1.5,
+            borderDash: [5, 4],
+            tension: 0.4,
+            fill: false,
             ...pointSettings,
         }]
     };
@@ -1498,10 +1535,15 @@ const Explain = () => {
                     <div className="flex items-baseline gap-2 mb-0.5">
                         <h3 className="text-sm font-semibold text-gray-800">Training Loss</h3>
                         {losses.length > 0 && (
-                            <span className="text-xs font-mono text-gray-500">{losses[losses.length - 1].toFixed(4)}</span>
+                            <span className="text-xs font-mono text-gray-500">
+                                {losses[losses.length - 1].toFixed(4)}
+                                {testLosses.length > 0 && (
+                                    <span className="text-pink-500"> · test {testLosses[testLosses.length - 1].toFixed(4)}</span>
+                                )}
+                            </span>
                         )}
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5 mb-3">Decreasing = network is learning</p>
+                    <p className="text-xs text-gray-400 mt-0.5 mb-3">Decreasing = network is learning · dashed = held-out test set</p>
                     <div className="h-40 sm:h-48 lg:h-56">
                         <Line data={lossData} options={lossChartOptions} />
                     </div>
@@ -1516,6 +1558,13 @@ const Explain = () => {
                                 {name === "accuracy"
                                     ? `${accuracies[accuracies.length - 1].toFixed(1)}%`
                                     : accuracies[accuracies.length - 1].toFixed(3)}
+                                {testAccuracies.length > 0 && (
+                                    <span className="text-amber-500">
+                                        {' '}· test {name === "accuracy"
+                                            ? `${testAccuracies[testAccuracies.length - 1].toFixed(1)}%`
+                                            : testAccuracies[testAccuracies.length - 1].toFixed(3)}
+                                    </span>
+                                )}
                             </span>
                         )}
                     </div>
@@ -1585,6 +1634,9 @@ const Explain = () => {
                                                 <span className="text-xs text-gray-400 shrink-0">here</span>
                                             ) : (
                                                 <button
+                                                    // False positive: jumpToView only touches refs inside
+                                                    // this click handler, never during render.
+                                                    // eslint-disable-next-line react-hooks/refs
                                                     onClick={() => jumpToView(conn.view)}
                                                     className={`text-xs font-bold ${styles.text} hover:underline shrink-0`}
                                                 >

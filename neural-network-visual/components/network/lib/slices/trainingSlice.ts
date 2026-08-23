@@ -25,6 +25,20 @@ const EPOCH_CAPS: Record<string, number | null> = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function serverErrorMessage(data: any): string {
+  // FastAPI errors use "detail", older paths used "error"
+  return data?.detail || data?.error || "";
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function handleSessionExpired(set: any): void {
+  set({ sessionId: null });
+  toast.error("Session expired", {
+    description: "Training sessions last 3 hours. Please re-initialize the model (step 3) to continue.",
+  });
+}
+
 export interface TrainingSlice {
   sessionId: string | null;
   epoch: number;
@@ -42,6 +56,9 @@ export interface TrainingSlice {
   name: string;
   losses: number[];
   accuracies: number[];
+  testLosses: number[];
+  testAccuracies: number[];
+  requestToken: number;
   sampleIndex: number;
   sampleIndexMap: number[];
   originalData: number[][];
@@ -94,6 +111,9 @@ export const createTrainingSlice: StateCreator<any, [], [], TrainingSlice> = (se
   name: "",
   losses: [],
   accuracies: [],
+  testLosses: [],
+  testAccuracies: [],
+  requestToken: 0,
   sampleIndex: 0,
   sampleIndexMap: [],
   originalData: [],
@@ -129,8 +149,12 @@ export const createTrainingSlice: StateCreator<any, [], [], TrainingSlice> = (se
   },
 
   initModel: async () => {
-    const { hiddenLayers, activations, dataset } = get();
-    set({ isInitializing: true });
+    const { hiddenLayers, activations, dataset, sessionId: prevSessionId } = get();
+    // Don't orphan the previous Lambda session (3h TTL) when re-initializing
+    if (prevSessionId) {
+      fetch(`${API_URL}/clear_session?session_id=${prevSessionId}`, { method: "POST" }).catch(() => {});
+    }
+    set({ isInitializing: true, requestToken: get().requestToken + 1 });
     try {
       const response = await fetchWithTimeout(`${API_URL}/init_model`, {
         method: "POST",
@@ -166,18 +190,30 @@ export const createTrainingSlice: StateCreator<any, [], [], TrainingSlice> = (se
           configOpen: false,
           yMean: data.y_mean ?? null,
           yStd: data.y_std ?? null,
+          // A fresh model means a fresh training history
+          epoch: 0,
+          loss: 0,
+          prevLoss: 0,
+          metric: 0,
+          losses: [],
+          accuracies: [],
+          testLosses: [],
+          testAccuracies: [],
+          submittableScore: null,
+          xorEpochsTo100: null,
         });
         const arch = data.layer_sizes.join(" → ");
         if (!get().tourActive) toast.success("Model ready", {
           description: `Architecture: ${arch} · ${data.layer_sizes.reduce((a: number, b: number, i: number, arr: number[]) => i < arr.length - 1 ? a + arr[i] * arr[i + 1] + arr[i + 1] : a, 0)} parameters`,
         });
       } else {
-        throw new Error(data.error || "Failed to initialize model");
+        throw new Error(serverErrorMessage(data) || "Failed to initialize model");
       }
     } catch (error) {
       console.error("Error initializing model:", error);
+      const msg = error instanceof Error ? error.message : "";
       toast.error("Initialization failed", {
-        description: "Could not connect to the backend. Make sure the server is running.",
+        description: msg || "Could not connect to the backend. Make sure the server is running.",
       });
     } finally {
       set({ isInitializing: false });
@@ -217,41 +253,48 @@ export const createTrainingSlice: StateCreator<any, [], [], TrainingSlice> = (se
 
   clearSessionAndReset: async () => {
     const { sessionId, dataset } = get();
-    if (!sessionId) return;
     const resetDefaults = dataset === "xor"
       ? { learningRate: 0.3, activations: ["tanh", "tanh"], hiddenLayers: [4, 4] }
       : { learningRate: 0.1, activations: ["relu", "relu"], hiddenLayers: [4, 4] };
+    // Always reset local state — even without a live session — so switching
+    // datasets or architecture can't leave stale losses/metrics behind
     try {
-      await fetchWithTimeout(`${API_URL}/clear_session?session_id=${sessionId}`, { method: "POST" });
-      set({
-        sessionId: null,
-        configOpen: true,
-        hoveredConnection: null,
-        hoveredNode: null,
-        epoch: 0,
-        losses: [],
-        accuracies: [],
-        originalData: [],
-        sampleIndexMap: [],
-        yMean: null,
-        yStd: null,
-        submittableScore: null,
-        xorEpochsTo100: null,
-        trainingEpochs: 1,
-        ...resetDefaults,
-      });
-      toast("Model reset");
-      get().setSessionId(null);
+      if (sessionId) {
+        await fetchWithTimeout(`${API_URL}/clear_session?session_id=${sessionId}`, { method: "POST" });
+      }
     } catch (error) {
+      // Orphaned server sessions expire via TTL; the local reset still proceeds
       console.error("Error clearing session:", error);
-      toast.error("Reset failed", {
-        description: "Could not clear the session. Please try again.",
-      });
     }
+    set({
+      sessionId: null,
+      configOpen: true,
+      hoveredConnection: null,
+      hoveredNode: null,
+      epoch: 0,
+      loss: 0,
+      prevLoss: 0,
+      metric: 0,
+      losses: [],
+      accuracies: [],
+      testLosses: [],
+      testAccuracies: [],
+      originalData: [],
+      sampleIndexMap: [],
+      yMean: null,
+      yStd: null,
+      submittableScore: null,
+      xorEpochsTo100: null,
+      trainingEpochs: 1,
+      requestToken: get().requestToken + 1,
+      ...resetDefaults,
+    });
+    if (sessionId) toast("Model reset");
   },
 
   runTrainingCycle: async () => {
     const { sessionId, learningRate, yStd, trainingEpochs } = get();
+    if (get().runModel) return; // guard against double-fire while a cycle is in flight
     if (!sessionId) {
       toast.error("No model initialized", {
         description: "Complete step 3 to initialize the model before training.",
@@ -261,28 +304,36 @@ export const createTrainingSlice: StateCreator<any, [], [], TrainingSlice> = (se
 
     get().setRunModel(true);
     const prevLossValue = get().loss;
+    const requestToken = get().requestToken;
 
     try {
-      const epochs = trainingEpochs;
       const response = await fetchWithTimeout(`${API_URL}/train`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           session_id: sessionId,
           learning_rate: learningRate,
-          epochs: epochs,
+          epochs: trainingEpochs,
         }),
-      });
+      }, 120_000); // large epoch counts on MNIST can exceed the default 15s
 
       const data = await response.json();
-      if (response.ok) {
-        const result = data.training_results[epochs - 1];
-        const resultPrev = epochs > 1 ? data.training_results[epochs - 2] : null;
+      // Config changed while this request was in flight — discard the stale result
+      if (get().requestToken !== requestToken) return;
 
-        const batchMetrics: number[] = data.training_results.map((r: { metric: number; name: string }) =>
-          r.name === "mae" && yStd !== null ? r.metric * yStd : r.metric
-        );
-        const batchLosses: number[] = data.training_results.map((r: { loss: number }) => r.loss);
+      if (response.ok) {
+        // Trust what the server returned rather than assuming `epochs` results
+        const results = data.training_results;
+        const result = results[results.length - 1];
+        const resultPrev = results.length > 1 ? results[results.length - 2] : null;
+        const appliedEpochs = results.length;
+
+        const scaleMetric = (value: number, metricName: string) =>
+          metricName === "mae" && yStd !== null ? value * yStd : value;
+        const batchMetrics: number[] = results.map((r: { metric: number; name: string }) => scaleMetric(r.metric, r.name));
+        const batchLosses: number[] = results.map((r: { loss: number }) => r.loss);
+        const batchTestLosses: number[] = results.map((r: { test_loss: number }) => r.test_loss);
+        const batchTestMetrics: number[] = results.map((r: { test_metric: number; test_name: string }) => scaleMetric(r.test_metric, r.test_name));
 
         set((state: TrainingSlice) => {
           const updatedLayers = state.network?.layers.map((layer, index) => {
@@ -321,23 +372,30 @@ export const createTrainingSlice: StateCreator<any, [], [], TrainingSlice> = (se
           });
           changedConns.sort((a, b) => b.delta - a.delta);
 
-          const newEpoch = state.epoch + epochs;
+          // Server-side bookkeeping is authoritative (assignment epoch caps are
+          // enforced against it) — fall back to local accumulation if absent
+          const newEpoch = typeof data.epochs_trained === "number"
+            ? data.epochs_trained
+            : state.epoch + appliedEpochs;
           const cap = EPOCH_CAPS[state.dataset];
           const newAccuracies = [...state.accuracies, ...batchMetrics];
+          const newTestAccuracies = [...state.testAccuracies, ...batchTestMetrics];
 
           let newXorEpochsTo100 = state.xorEpochsTo100;
           if (state.dataset === "xor" && newXorEpochsTo100 === null) {
-            const hitIdx = batchMetrics.findIndex((m) => m >= 100);
+            // xor's test set equals its train set, so either series works
+            const hitIdx = batchTestMetrics.findIndex((m) => m >= 100);
             if (hitIdx !== -1) newXorEpochsTo100 = state.epoch + hitIdx + 1;
           }
 
           let newSubmittableScore: number | null = null;
           if (state.dataset === "xor") {
             newSubmittableScore = newXorEpochsTo100;
-          } else {
+          } else if (newTestAccuracies.length === newEpoch) {
+            // Score on the held-out test set — the same basis the backend uses
+            // to verify submissions and grade assignments
             const scoreEpoch = cap !== null ? Math.min(newEpoch, cap) : newEpoch;
-            const rawMetric = newAccuracies[scoreEpoch - 1] ?? null;
-            if (rawMetric !== null) newSubmittableScore = rawMetric;
+            newSubmittableScore = newTestAccuracies[scoreEpoch - 1] ?? null;
           }
 
           return {
@@ -355,6 +413,8 @@ export const createTrainingSlice: StateCreator<any, [], [], TrainingSlice> = (se
             name: result.name,
             losses: [...state.losses, ...batchLosses],
             accuracies: newAccuracies,
+            testLosses: [...state.testLosses, ...batchTestLosses],
+            testAccuracies: newTestAccuracies,
             changedConnections: changedConns.slice(0, 5),
             xorEpochsTo100: newXorEpochsTo100,
             submittableScore: newSubmittableScore,
@@ -364,20 +424,29 @@ export const createTrainingSlice: StateCreator<any, [], [], TrainingSlice> = (se
         const lossArrow = prevLossValue > 0
           ? result.loss < prevLossValue ? "↓" : result.loss > prevLossValue ? "↑" : "→"
           : "";
+        // Same scaling as the store/chart: MAE must be shown in original units
+        const displayMetric = scaleMetric(result.metric, result.name);
         const metricLabel = result.name === "accuracy"
-          ? `${result.metric.toFixed(1)}% accuracy`
-          : `MAE ${result.metric.toFixed(3)}`;
+          ? `${displayMetric.toFixed(1)}% accuracy`
+          : `MAE ${displayMetric.toFixed(3)}`;
         const { epoch: currentEpoch } = get();
         if (!get().tourActive) toast.success(`Epoch ${currentEpoch}`, {
           description: `Loss ${result.loss.toFixed(4)} ${lossArrow} · ${metricLabel}`,
         });
       } else {
-        throw new Error(data.error || "Failed to run training cycle");
+        if (response.status === 404) {
+          handleSessionExpired(set);
+          return;
+        }
+        throw new Error(serverErrorMessage(data) || "Failed to run training cycle");
       }
     } catch (error) {
       console.error("Error running training cycle:", error);
+      const msg = error instanceof Error ? error.message : "";
       toast.error("Training failed", {
-        description: "Could not complete the training cycle. Please try again.",
+        description: msg.startsWith("Failed to") || !msg
+          ? "Could not complete the training cycle. Please try again."
+          : msg,
       });
     } finally {
       get().setRunModel(false);
@@ -474,10 +543,15 @@ export const createTrainingSlice: StateCreator<any, [], [], TrainingSlice> = (se
           description: `Layer ${layerIndex}, neuron ${fromIndex} → ${toIndex} set to ${newValue.toFixed(4)}`,
         });
       } else {
-        throw new Error(data.error);
+        if (response.status === 404) {
+          handleSessionExpired(set);
+          return;
+        }
+        throw new Error(serverErrorMessage(data) || "Failed to update weight");
       }
-    } catch {
-      toast.error("Weight update failed", { description: "Could not apply the new weight value." });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "";
+      toast.error("Weight update failed", { description: msg.startsWith("Failed to") || !msg ? "Could not apply the new weight value." : msg });
     }
   },
 
@@ -522,11 +596,16 @@ export const createTrainingSlice: StateCreator<any, [], [], TrainingSlice> = (se
           };
         });
       } else {
-        throw new Error(data.error || "Prediction failed");
+        if (response.status === 404) {
+          handleSessionExpired(set);
+          return;
+        }
+        throw new Error(serverErrorMessage(data) || "Prediction failed");
       }
     } catch (error) {
       console.error("Prediction error:", error);
-      toast.error("Prediction failed", { description: "Could not run prediction." });
+      const msg = error instanceof Error ? error.message : "";
+      toast.error("Prediction failed", { description: msg.startsWith("Prediction") || !msg ? "Could not run prediction." : msg });
     }
   },
 

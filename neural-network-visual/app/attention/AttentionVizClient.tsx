@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import encDecTrace from "./enc_dec_trace.json";
+import type { TransformerExample } from "./types";
+import { useAttentionManifest, useAttentionExample, ExamplesError, ExamplesLoading } from "./useAttentionExamples";
 import Link from "next/link";
 import ContactInfo from "../contact";
 import { HeatmapSVG } from "@/components/transformer/HeatmapSVG";
@@ -16,10 +17,7 @@ import {
 // import { Input } from "@/components/ui/input";      // live inference disabled
 import { Gloss } from "@/components/transformer/Gloss";
 import { EmbeddingExplorer } from "@/components/transformer/EmbeddingExplorer";
-import type { TransformerExample } from "./types";
-import examplesData from "./data.json";
-
-const examples = examplesData as TransformerExample[];
+import encDecTrace from "./enc_dec_trace.json";
 
 // Sentence used in sections 1 and 2
 const SECTION1_SENTENCE = "The animal didn't cross the street because it was too tired";
@@ -70,9 +68,9 @@ function Section1() {
     <section className="space-y-4">
       <h2 className="text-xl font-semibold">The Problem Attention Solves</h2>
       <p className="text-muted-foreground leading-relaxed max-w-2xl">
-        Read this sentence: <em>"{SECTION1_SENTENCE}."</em> What does "it" refer
+        Read this sentence: <em>“{SECTION1_SENTENCE}.”</em> What does “it” refer
         to — the animal or the street? You resolved that instantly, but how?
-        Your brain didn't scan every word equally. It attended selectively,
+        Your brain didn’t scan every word equally. It attended selectively,
         weighting <strong>animal</strong> and <strong>tired</strong> heavily
         when interpreting <strong>it</strong>.
       </p>
@@ -99,11 +97,11 @@ function Section1() {
       </div>
       <p className="text-muted-foreground leading-relaxed max-w-2xl">
         Older architectures like RNNs read words one at a time, left to right.
-        By the time the model reached "it," the signal from "animal" had passed
+        By the time the model reached “it,” the signal from “animal” had passed
         through many intermediate steps and faded. The transformer fixes this
         with <strong>self-attention</strong>: every token computes a direct
-        connection to every other token simultaneously, so "it" can attend to
-        "animal" in a single step regardless of how far apart they are.
+        connection to every other token simultaneously, so “it” can attend to
+        “animal” in a single step regardless of how far apart they are.
       </p>
     </section>
   );
@@ -185,6 +183,7 @@ function SectionProjections() {
 // ─── Section 2 ────────────────────────────────────────────────────────────────
 
 function Section2({
+  exampleLabels,
   tokens,
   attentionMatrix,
   rawScoresMatrix,
@@ -196,6 +195,7 @@ function Section2({
   selectedIdx,
   onSelectChange,
 }: {
+  exampleLabels: { id: string; label: string }[];
   tokens: string[];
   attentionMatrix: number[][];
   rawScoresMatrix?: number[][];
@@ -270,7 +270,7 @@ function Section2({
             <SelectValue placeholder="Pick an example" />
           </SelectTrigger>
           <SelectContent>
-            {examples.map((ex, i) => (
+            {exampleLabels.map((ex, i) => (
               <SelectItem key={ex.id} value={String(i)} className="text-xs">
                 {ex.label}
               </SelectItem>
@@ -551,8 +551,8 @@ function detectHeadPattern(rawMatrix: number[][], rawTokens: string[]): HeadPatt
 
 // ─── Section 3 + 4 ────────────────────────────────────────────────────────────
 
-function SectionMultiHead({ selectedIdx }: { selectedIdx: number }) {
-  const activeExample = examples[selectedIdx];
+function SectionMultiHead({ example }: { example: TransformerExample }) {
+  const activeExample = example;
 
   return (
     <>
@@ -575,7 +575,7 @@ function SectionMultiHead({ selectedIdx }: { selectedIdx: number }) {
             const headNumber = activeExample.headIndices
               ? (activeExample.headIndices![hi] ?? hi) + 1
               : hi + 1;
-            const curated = HEAD_ANALYSIS[examples[selectedIdx].id]?.[hi];
+            const curated = HEAD_ANALYSIS[example.id]?.[hi];
             const { label, description } = curated || detectHeadPattern(headMatrix, activeExample.tokens);
             return (
               <div key={hi}>
@@ -815,12 +815,13 @@ function Section5and6() {
 // ─── Section 7: Token-by-Token Generation ────────────────────────────────────
 
 type VocabEntry = { token: string; prob: number };
-type SamplerStatus = "idle" | "loading" | "ready" | "running";
+type SamplerStatus = "idle" | "loading" | "ready" | "running" | "error";
 
 function TokenSampler() {
   const [selected, setSelected] = useState<string[]>([]);
   const [dist, setDist] = useState<VocabEntry[] | null>(null);
   const [status, setStatus] = useState<SamplerStatus>("idle");
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [loadProgress, setLoadProgress] = useState(0);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tokenizerRef = useRef<any>(null);
@@ -830,13 +831,22 @@ function TokenSampler() {
   const promptTokens = GENERATION_PROMPT.split(" ");
   const done = selected.length >= 5;
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { init(); }, []);
   const maxProb = dist ? Math.max(...dist.map((e) => e.prob)) : 1;
   const totalShown = dist ? dist.reduce((s, e) => s + e.prob, 0) : 0;
 
   async function infer(tokens: string[]) {
+    if (!tokenizerRef.current || !modelRef.current) return;
     setStatus("running");
+    try {
+      await runForwardPass(tokens);
+    } catch (e) {
+      console.error("Inference failed:", e);
+      setLoadError(e instanceof Error ? e.message : "Forward pass failed. Please restart the demo.");
+      setStatus("error");
+    }
+  }
+
+  async function runForwardPass(tokens: string[]) {
     const ctx = [...promptTokens, ...tokens].join(" ");
     const { input_ids } = tokenizerRef.current(ctx);
     const { logits } = await modelRef.current({ input_ids });
@@ -872,16 +882,39 @@ function TokenSampler() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       modelRef.current = await (AutoModelForCausalLM as any).from_pretrained("Xenova/gpt2", {
         dtype: "q4",
-        progress_callback: (d: any) => {
+        progress_callback: (d: { progress?: number }) => {
           if (typeof d.progress === "number") setLoadProgress(Math.round(d.progress));
         },
       });
       await infer([]);
     } catch (e) {
       console.error(e);
-      setStatus("idle");
+      setLoadError(
+        e instanceof Error && e.message
+          ? e.message
+          : "Couldn't load GPT-2. Check your connection (download is ~40 MB) and try again."
+      );
+      setStatus("error");
     }
   }
+
+  const restart = () => {
+    setSelected([]);
+    setDist(null);
+    if (tokenizerRef.current && modelRef.current) {
+      infer([]);
+    } else {
+      setLoadError(null);
+      init();
+    }
+  };
+
+  // Kick off model load once on mount (declared after `init` so the
+  // reference exists when the effect is created)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- init() flips status to "loading" synchronously by design
+    init();
+  }, []);
 
   async function pick(token: string) {
     const next = [...selected, token];
@@ -929,6 +962,19 @@ function TokenSampler() {
         <p className="text-xs text-muted-foreground animate-pulse">Running forward pass…</p>
       )}
 
+      {/* Load / inference failure */}
+      {status === "error" && loadError && (
+        <div className="space-y-2">
+          <p className="text-xs text-red-500">{loadError}</p>
+          <button
+            className="text-xs underline underline-offset-4 hover:text-foreground transition-colors"
+            onClick={() => { setLoadError(null); init(); }}
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
       {/* Distribution */}
       {status === "ready" && dist && !done && (
         <div className="space-y-1">
@@ -970,7 +1016,7 @@ function TokenSampler() {
       {(status === "ready" || done) && (
         <button
           className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
-          onClick={() => { setSelected([]); infer([]); }}
+          onClick={restart}
         >
           ↺ Restart
         </button>
@@ -984,7 +1030,7 @@ function Section7() {
     <section className="space-y-4">
       <h2 className="text-xl font-semibold">Generating One Token at a Time</h2>
       <p className="text-muted-foreground leading-relaxed max-w-2xl">
-        A decoder doesn't output a whole sentence at once. At every step it runs a real{" "}
+        A decoder doesn’t output a whole sentence at once. At every step it runs a real{" "}
         <strong>forward pass over the full context</strong> and produces a probability
         distribution over the entire vocabulary. Click any bar to sample that token — the
         next distribution is computed live from GPT-2 running in your browser. To see how
@@ -1053,18 +1099,42 @@ function FurtherReading() {
 
 export default function TransformerVizClient() {
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const { manifest, error: manifestError, retry: retryManifest } = useAttentionManifest();
+  const activeEntry = manifest?.[selectedIdx] ?? null;
+  const { example, error: exampleError, retry: retryExample } = useAttentionExample(activeEntry);
   // live inference disabled — re-enable when BERT is back in the build
   // const [liveResult, setLiveResult] = useState<AttentionResult | null>(null);
   // const [userInput, setUserInput] = useState("");
   // const [inferenceStatus, setInferenceStatus] = useState<"idle" | "loading" | "error">("idle");
   // async function handleCompute() { ... }
 
-  const rawTokens = examples[selectedIdx].tokens;
+  if (!manifest || !example) {
+    return (
+      <div className="p-4 max-w-6xl mx-auto space-y-12">
+        <header className="space-y-4 py-6 border-b border-border">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-500" />
+            Interactive Visualization
+          </span>
+          <h1 className="text-3xl font-bold tracking-tight">How Attention Works</h1>
+        </header>
+        {manifestError ? (
+          <ExamplesError message={manifestError} onRetry={retryManifest} />
+        ) : exampleError ? (
+          <ExamplesError message={exampleError} onRetry={retryExample} />
+        ) : (
+          <ExamplesLoading />
+        )}
+      </div>
+    );
+  }
+
+  const rawTokens = example.tokens;
   const keepIndices = rawTokens
     .map((t, i) => (!/^\[.*\]$/.test(t) ? i : -1))
     .filter((i) => i >= 0);
   const tokens = keepIndices.map((i) => rawTokens[i]);
-  const ex = examples[selectedIdx];
+  const ex = example;
 
   // Strip [CLS]/[SEP] from 2-D matrices
   const strip2 = (m: number[][]) => keepIndices.map((i) => keepIndices.map((j) => m[i][j]));
@@ -1103,6 +1173,7 @@ export default function TransformerVizClient() {
       <SectionProjections />
 
       <Section2
+        exampleLabels={manifest}
         tokens={tokens}
         attentionMatrix={attentionMatrix}
         rawScoresMatrix={rawScoresMatrix}
@@ -1114,7 +1185,7 @@ export default function TransformerVizClient() {
         selectedIdx={selectedIdx}
         onSelectChange={setSelectedIdx}
       />
-      <SectionMultiHead selectedIdx={selectedIdx} />
+      <SectionMultiHead example={example} />
       <Section5and6 />
       <Section7 />
       <FurtherReading />

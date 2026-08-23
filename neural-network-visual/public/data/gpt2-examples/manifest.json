@@ -1,0 +1,26 @@
+[
+ {
+  "id": "shakespeare",
+  "label": "to be or not to",
+  "file": "/data/gpt2-examples/shakespeare.json",
+  "tokens": 5
+ },
+ {
+  "id": "starwars",
+  "label": "\"May the force be with\"",
+  "file": "/data/gpt2-examples/starwars.json",
+  "tokens": 5
+ },
+ {
+  "id": "nursery",
+  "label": "\"Jack and Jill went up the\"",
+  "file": "/data/gpt2-examples/nursery.json",
+  "tokens": 6
+ },
+ {
+  "id": "fairytale",
+  "label": "\"once upon a\"",
+  "file": "/data/gpt2-examples/fairytale.json",
+  "tokens": 3
+ }
+]

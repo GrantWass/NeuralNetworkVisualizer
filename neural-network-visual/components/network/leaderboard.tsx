@@ -111,6 +111,7 @@ export default function LeaderboardPanel() {
           </div>
           <button
             onClick={() => setLeaderboardOpen(false)}
+            aria-label="Close leaderboard"
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <X size={16} />
@@ -205,6 +206,7 @@ export default function LeaderboardPanel() {
                     type="text"
                     maxLength={32}
                     placeholder="Enter username"
+                    aria-label="Username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSubmit()}

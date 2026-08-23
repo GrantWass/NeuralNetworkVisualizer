@@ -52,9 +52,16 @@ export const createLeaderboardSlice: StateCreator<any, [], [], LeaderboardSlice>
       const data = await res.json();
       if (res.ok) {
         set((state: LeaderboardSlice) => ({ leaderboard: { ...state.leaderboard, [dataset]: data.entries } }));
+      } else {
+        toast.error("Couldn't load the leaderboard", {
+          description: data?.detail || `Server responded with ${res.status}. Please try again.`,
+        });
       }
     } catch (e) {
       console.error("Failed to fetch leaderboard:", e);
+      toast.error("Couldn't load the leaderboard", {
+        description: "Could not reach the server. Check your connection and try again.",
+      });
     } finally {
       set({ leaderboardLoading: false });
     }
@@ -77,8 +84,15 @@ export const createLeaderboardSlice: StateCreator<any, [], [], LeaderboardSlice>
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dataset, score, epoch: submittedEpoch, username }),
       });
-      const data: LeaderboardSubmitResponse = await res.json();
-      if (res.ok && data.accepted) {
+      const data: LeaderboardSubmitResponse & { detail?: string } = await res.json();
+      if (!res.ok) {
+        // Don't report a server failure as a qualification miss
+        toast.error("Submission failed", {
+          description: data?.detail || `Server responded with ${res.status}. Please try again.`,
+        });
+        return null;
+      }
+      if (data.accepted) {
         set((state: LeaderboardSlice) => ({ leaderboard: { ...state.leaderboard, [dataset]: data.entries } }));
       }
       return data;

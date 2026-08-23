@@ -1,12 +1,66 @@
 "use client";
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { TransformerArchitectureViz, type VizExample } from "@/components/transformer/TransformerArchitectureViz";
 import { runGPT2Inference } from "@/lib/gpt2-live-inference";
-import vizExamplesData from "./gpt2-viz-examples.json";
 import ContactInfo from "../contact";
 
-const DEFAULT_EXAMPLE = (vizExamplesData as unknown as VizExample[])[0]; // "to be or not to"
+// Precomputed examples are split into per-example files under /data/gpt2-examples/
+// and fetched on demand (each ~1–1.5 MB gzipped) instead of being bundled into the
+// page JS. A tiny manifest lists what's available.
+type ExampleManifestEntry = { id: string; label: string; file: string };
+
+let manifestCache: ExampleManifestEntry[] | null = null;
+let manifestPending: Promise<ExampleManifestEntry[]> | null = null;
+const exampleCache = new Map<string, VizExample>();
+const examplePending = new Map<string, Promise<VizExample>>();
+
+function fetchManifest(): Promise<ExampleManifestEntry[]> {
+  if (manifestCache) return Promise.resolve(manifestCache);
+  if (!manifestPending) {
+    manifestPending = fetch("/data/gpt2-examples/manifest.json")
+      .then((res) => {
+        if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+        return res.json() as Promise<ExampleManifestEntry[]>;
+      })
+      .then((data) => {
+        if (!Array.isArray(data) || data.length === 0) throw new Error("Example data is empty");
+        manifestCache = data;
+        return data;
+      })
+      .catch((e) => {
+        manifestPending = null; // allow retry
+        throw e;
+      });
+  }
+  return manifestPending;
+}
+
+function fetchExample(entry: ExampleManifestEntry): Promise<VizExample> {
+  const cached = exampleCache.get(entry.id);
+  if (cached) return Promise.resolve(cached);
+  let pending = examplePending.get(entry.id);
+  if (!pending) {
+    pending = fetch(entry.file)
+      .then((res) => {
+        if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+        return res.json() as Promise<VizExample>;
+      })
+      .then((example) => {
+        exampleCache.set(entry.id, example);
+        examplePending.delete(entry.id);
+        return example;
+      })
+      .catch((e) => {
+        examplePending.delete(entry.id); // allow retry
+        throw e;
+      });
+    examplePending.set(entry.id, pending);
+  }
+  return pending;
+}
+
+const DEFAULT_PLACEHOLDER = "to be or not to be ...";
 
 // ─── Static SVG: single transformer block internals ───────────────────────────
 
@@ -88,12 +142,59 @@ function BlockDiagram() {
 type InferenceStatus = "idle" | "loading" | "error";
 
 export default function TransformersClient() {
-  const [activeExample, setActiveExample] = useState<VizExample>(DEFAULT_EXAMPLE);
+  const [manifest, setManifest] = useState<ExampleManifestEntry[] | null>(manifestCache);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeExample, setActiveExample] = useState<VizExample | null>(null);
+  const [exampleError, setExampleError] = useState("");
+  const [attempt, setAttempt] = useState(0);
   const [inputText, setInputText]         = useState("");
   const [status, setStatus]               = useState<InferenceStatus>("idle");
   const [loadProgress, setLoadProgress]   = useState(0);
   const [errorMsg, setErrorMsg]           = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Load the manifest (tiny), then the selected example's precomputed tensors
+  useEffect(() => {
+    let cancelled = false;
+    fetchManifest()
+      .then((entries) => {
+        if (cancelled) return;
+        setManifest(entries);
+        setActiveId((current) => current ?? entries[0].id);
+      })
+      .catch((e) => {
+        console.error(e);
+        if (!cancelled) setExampleError("Couldn't load the example list. Please try again.");
+      });
+    return () => { cancelled = true; };
+  }, [attempt]);
+
+  useEffect(() => {
+    if (!manifest || !activeId) return;
+    const entry = manifest.find((m) => m.id === activeId);
+    if (!entry) return;
+    let cancelled = false;
+    fetchExample(entry)
+      .then((example) => {
+        if (!cancelled) setActiveExample(example);
+      })
+      .catch((e) => {
+        console.error(e);
+        if (!cancelled) setExampleError("Couldn't load this example. Please try again.");
+      });
+    return () => { cancelled = true; };
+  }, [manifest, activeId, attempt]);
+
+  const retryExamples = () => {
+    setExampleError("");
+    setAttempt((n) => n + 1);
+  };
+
+  const selectExample = (entry: ExampleManifestEntry) => {
+    setActiveId(entry.id);
+    setActiveExample(null); // show skeleton while the new tensors stream in
+    setExampleError("");
+  };
 
   const tokenCount = inputText.trim().split(/\s+/).filter(Boolean).length;
   const tooShort   = tokenCount < 3;
@@ -106,6 +207,7 @@ export default function TransformersClient() {
     setErrorMsg("");
     try {
       const result = await runGPT2Inference(text, setLoadProgress);
+      setActiveId(null); // custom inference — no precomputed example is selected
       setActiveExample(result);
       setStatus("idle");
     } catch (e) {
@@ -145,7 +247,7 @@ export default function TransformersClient() {
               value={inputText}
               onChange={e => setInputText(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleAnalyze()}
-              placeholder={`${DEFAULT_EXAMPLE.label}`}
+              placeholder={DEFAULT_PLACEHOLDER}
               className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               disabled={status === "loading"}
             />
@@ -166,7 +268,7 @@ export default function TransformersClient() {
             <div className="space-y-1 max-w-lg">
               <p className="text-xs text-muted-foreground">
                 {loadProgress < 100
-                  ? `Downloading GPT-2 model… ${loadProgress}%`
+                  ? `Downloading GPT-2 model (~125 MB, cached after first load)… ${loadProgress}%`
                   : "Running inference…"}
               </p>
               <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
@@ -182,8 +284,58 @@ export default function TransformersClient() {
           )}
         </div>
 
+        {exampleError && (
+          <div className="space-y-2">
+            <p className="text-xs text-red-500">{exampleError}</p>
+            <button
+              onClick={retryExamples}
+              className="text-xs underline underline-offset-4 hover:text-foreground"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+        {manifest && !exampleError && (
+          <div className="flex items-center gap-2 flex-wrap px-4" role="group" aria-label="Example sentences">
+            <span className="text-xs text-muted-foreground shrink-0">Precomputed examples:</span>
+            {manifest.map((entry) => {
+              const isActive = entry.id === activeId;
+              return (
+                <button
+                  key={entry.id}
+                  onClick={() => selectExample(entry)}
+                  aria-pressed={isActive}
+                  className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                    isActive
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-background text-muted-foreground border-border hover:border-indigo-400 hover:text-foreground"
+                  }`}
+                >
+                  {entry.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
         <div className="px-4">
-          <TransformerArchitectureViz example={activeExample} />
+          {activeExample ? (
+            <>
+              {activeExample.truncatedFromTokenCount && (
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Showing the first {activeExample.tokens.length} of{" "}
+                  {activeExample.truncatedFromTokenCount} tokens — longer inputs are truncated to keep the
+                  visualization readable.
+                </p>
+              )}
+              <TransformerArchitectureViz example={activeExample} />
+            </>
+          ) : (
+            !exampleError && (
+              <div className="h-64 rounded-lg border border-border bg-muted/40 animate-pulse flex items-center justify-center">
+                <p className="text-sm text-muted-foreground">Loading example visualization…</p>
+              </div>
+            )
+          )}
         </div>
 
         <p className="max-w-6xl mx-auto px-4 text-sm text-muted-foreground leading-relaxed">

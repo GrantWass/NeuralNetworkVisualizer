@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronRight, ChevronLeft, Map } from "lucide-react";
 import useStore from "@/components/network/lib/store";
 
 
 type Placement = "top" | "bottom" | "left" | "right" | "center";
+
+// Never fires — used only so `mounted` flips false (server) → true (client)
+const subscribeNever = () => () => {};
 
 // ─── Static mini previews (fake data, used in tour overlays) ──────────────────
 
@@ -493,7 +496,8 @@ export default function Walkthrough() {
   const [spotlight,     setSpotlight]     = useState<SpotlightRect | null>(null);
   const [tooltipStyle,  setTooltipStyle]  = useState<React.CSSProperties>({});
   const [positioned,    setPositioned]    = useState(false);
-  const [mounted,       setMounted]       = useState(false);
+  // SSR-safe "mounted" flag without setState-in-effect
+  const mounted = useSyncExternalStore(subscribeNever, () => true, () => false);
   const positionTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Store actions for auto-training
@@ -509,7 +513,6 @@ export default function Walkthrough() {
 
   // ── Mount: auto-open on first visit ───────────────────────────────────────
   useEffect(() => {
-    setMounted(true);
     if (/bot|crawl|spider|google|baidu|bing|yandex/i.test(navigator.userAgent)) return;
     let seen = false;
     try { seen = !!localStorage.getItem("nn-viz-tour-v3"); } catch { /* ignore */ }
@@ -632,8 +635,11 @@ export default function Walkthrough() {
   }, [step]);
 
   // ── Scroll to target then lock scroll ─────────────────────────────────────
+  // Intentionally measures the DOM after render and stores the result — this
+  // can only happen in an effect, never during render.
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPositioned(false);
     clearTimeout(positionTimer.current);
 
@@ -693,6 +699,18 @@ export default function Walkthrough() {
     return () => window.removeEventListener("resize", h);
   }, [open, updatePositions]);
 
+  // ── Handlers ─────────────────────────────────────────────────────────────
+  // (Declared before the keyboard effect below so the handlers exist when it binds)
+  const handleClose = () => {
+    unlockScroll();
+    setOpen(false);
+    setSpotlight(null);
+    try { localStorage.setItem("nn-viz-tour-v3", "1"); } catch { /* ignore */ }
+  };
+  const handleNext  = () => step < STEPS.length - 1 ? setStep(s => s + 1) : handleClose();
+  const handlePrev  = () => { if (step > 0) setStep(s => s - 1); };
+  const startTour   = () => { setStep(0); setOpen(true); };
+
   // ── Keyboard navigation ───────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
@@ -705,17 +723,6 @@ export default function Walkthrough() {
     return () => window.removeEventListener("keydown", h);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, step]);
-
-  // ── Handlers ─────────────────────────────────────────────────────────────
-  const handleNext  = () => step < STEPS.length - 1 ? setStep(s => s + 1) : handleClose();
-  const handlePrev  = () => { if (step > 0) setStep(s => s - 1); };
-  const handleClose = () => {
-    unlockScroll();
-    setOpen(false);
-    setSpotlight(null);
-    try { localStorage.setItem("nn-viz-tour-v3", "1"); } catch { /* ignore */ }
-  };
-  const startTour   = () => { setStep(0); setOpen(true); };
 
   if (!mounted) return null;
 

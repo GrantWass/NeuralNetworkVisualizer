@@ -1,0 +1,42 @@
+[
+ {
+  "id": "anaphora",
+  "label": "Anaphora resolution",
+  "file": "/data/attention-examples/anaphora.json"
+ },
+ {
+  "id": "modifier",
+  "label": "PP attachment",
+  "file": "/data/attention-examples/modifier.json"
+ },
+ {
+  "id": "ditransitive",
+  "label": "Semantic roles",
+  "file": "/data/attention-examples/ditransitive.json"
+ },
+ {
+  "id": "winograd",
+  "label": "Pronoun resolution",
+  "file": "/data/attention-examples/winograd.json"
+ },
+ {
+  "id": "agreement",
+  "label": "Subject-verb agreement",
+  "file": "/data/attention-examples/agreement.json"
+ },
+ {
+  "id": "negation",
+  "label": "Negation",
+  "file": "/data/attention-examples/negation.json"
+ },
+ {
+  "id": "reflexive",
+  "label": "Reflexive pronoun",
+  "file": "/data/attention-examples/reflexive.json"
+ },
+ {
+  "id": "coordination",
+  "label": "Coordination",
+  "file": "/data/attention-examples/coordination.json"
+ }
+]
