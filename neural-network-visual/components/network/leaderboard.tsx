@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X, Trophy, Star } from "lucide-react";
 import useStore from "@/components/network/lib/store";
 import { LeaderboardEntry } from "@/components/network/lib/store";
+import { isValidUsername, sanitizeUsername, USERNAME_MAX_LENGTH } from "@/components/network/lib/username";
 
 const DATASET_LABELS: Record<string, string> = {
   xor: "XOR",
@@ -88,7 +89,7 @@ export default function LeaderboardPanel() {
 
   const handleSubmit = async () => {
     setSubmitError("");
-    if (!username.trim() || !/^[a-zA-Z0-9_-]+$/.test(username.trim())) {
+    if (!isValidUsername(username)) {
       setSubmitError("Letters, digits, _ and - only (1–32 chars)");
       return;
     }
@@ -174,7 +175,7 @@ export default function LeaderboardPanel() {
                         entry.rank
                       )}
                     </td>
-                    <td className="px-3 py-2 font-medium text-gray-800">{entry.username}</td>
+                    <td className="px-3 py-2 font-medium text-gray-800">{sanitizeUsername(entry.username)}</td>
                     <td className="px-3 py-2 text-right font-mono text-gray-700">
                       {formatScore(activeTab, entry.score)}
                     </td>
@@ -203,7 +204,7 @@ export default function LeaderboardPanel() {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    maxLength={32}
+                    maxLength={USERNAME_MAX_LENGTH}
                     placeholder="Enter username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
@@ -234,7 +235,7 @@ export default function LeaderboardPanel() {
             <p className="text-sm font-semibold text-emerald-600">
               🎉 You&apos;re ranked #{submitted.rank}!
             </p>
-            <p className="text-xs text-gray-400 mt-0.5">Score submitted as &ldquo;{username}&rdquo;</p>
+            <p className="text-xs text-gray-400 mt-0.5">Score submitted as &ldquo;{sanitizeUsername(username)}&rdquo;</p>
           </div>
         )}
       </div>

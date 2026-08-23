@@ -64,6 +64,35 @@ def _cache_evict(session_id: str) -> None:
     _session_cache.pop(session_id, None)
 
 
+# ── Leaderboard username guardrails ──────────────────────────────────────────
+# Allowlist approach: a name may only contain letters, digits, _ and -.
+# That single rule blocks HTML/script injection (<script>, quotes, &),
+# control characters, unicode look-alikes, and absurd lengths in one go.
+
+USERNAME_MAX_LENGTH = 32
+_USERNAME_DISALLOWED = re.compile(r"[^a-zA-Z0-9_-]")
+
+
+def validate_username(raw: str) -> str:
+    """Reject anything outside the allowlist; return the cleaned name."""
+    username = raw.strip()
+    if not username or len(username) > USERNAME_MAX_LENGTH or _USERNAME_DISALLOWED.search(username):
+        raise HTTPException(
+            status_code=400,
+            detail="Username must be 1–32 characters: letters, digits, _ or -",
+        )
+    return username
+
+
+def sanitize_username(raw: str) -> str:
+    """Strip disallowed characters from a name read back from storage.
+
+    Entries written before these rules existed (or edited directly in
+    DynamoDB) may still hold odd characters — clean them before display.
+    """
+    return _USERNAME_DISALLOWED.sub("", raw.strip())[:USERNAME_MAX_LENGTH]
+
+
 # ── Leaderboard helpers ───────────────────────────────────────────────────────
 
 def _is_better(dataset: str, new_score: float, existing_score: float) -> bool:
@@ -105,6 +134,19 @@ class LeaderboardSubmitResponse(BaseModel):
     accepted: bool
     rank: Optional[int]
     entries: List[LeaderboardEntry]
+
+
+def _leaderboard_entries(raw_entries: list) -> List[LeaderboardEntry]:
+    return [
+        LeaderboardEntry(
+            rank=i + 1,
+            username=sanitize_username(e["username"]),
+            score=float(e["score"]),
+            epoch=int(e["epoch"]),
+            submitted_at=int(e["submitted_at"]),
+        )
+        for i, e in enumerate(raw_entries)
+    ]
 
 
 def _save_session(session_id: str, session: dict) -> None:
@@ -366,10 +408,7 @@ def get_leaderboard(dataset: str):
     cfg = LEADERBOARD_CONFIG[dataset]
     resp = _leaderboard_table.get_item(Key={"dataset": dataset})
     raw_entries = resp.get("Item", {}).get("entries", [])
-    entries = [
-        LeaderboardEntry(rank=i + 1, **e)
-        for i, e in enumerate(raw_entries)
-    ]
+    entries = _leaderboard_entries(raw_entries)
     return LeaderboardResponse(
         dataset=dataset,
         metric_display=cfg["display"],
@@ -384,16 +423,14 @@ def submit_leaderboard(request: LeaderboardSubmitRequest):
     if request.dataset not in LEADERBOARD_CONFIG:
         raise HTTPException(status_code=400, detail=f"Unknown dataset: {request.dataset}")
 
-    username = request.username.strip()
-    if not username or len(username) > 32 or not re.fullmatch(r"[a-zA-Z0-9_-]+", username):
-        raise HTTPException(status_code=400, detail="Username must be 1–32 characters: letters, digits, _ or -")
+    username = validate_username(request.username)
 
     resp = _leaderboard_table.get_item(Key={"dataset": request.dataset})
     raw_entries = resp.get("Item", {}).get("entries", [])
 
     insert_idx = _qualifies_for_top10(request.dataset, request.score, raw_entries)
     if insert_idx is None:
-        entries = [LeaderboardEntry(rank=i + 1, **e) for i, e in enumerate(raw_entries)]
+        entries = _leaderboard_entries(raw_entries)
         return LeaderboardSubmitResponse(accepted=False, rank=None, entries=entries)
 
     new_entry = {
@@ -411,7 +448,7 @@ def submit_leaderboard(request: LeaderboardSubmitRequest):
         "updated_at": int(time.time()),
     })
 
-    entries = [LeaderboardEntry(rank=i + 1, **e) for i, e in enumerate(raw_entries)]
+    entries = _leaderboard_entries(raw_entries)
     return LeaderboardSubmitResponse(accepted=True, rank=insert_idx + 1, entries=entries)
 
 
