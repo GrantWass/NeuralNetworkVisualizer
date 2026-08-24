@@ -97,6 +97,89 @@ def _cache_evict(session_id: str) -> None:
     _session_cache.pop(session_id, None)
 
 
+# ── Leaderboard username guardrails ──────────────────────────────────────────
+# Two layers:
+#   1. Allowlist — a name may only contain letters, digits, _ and -.
+#      That single rule blocks HTML/script injection (<script>, quotes, &),
+#      control characters, unicode look-alikes, and absurd lengths in one go.
+#   2. Profanity blocklist — names are normalized (lowercase, common digit
+#      substitutions reversed, separators removed, repeated letters collapsed)
+#      so "Sh1t", "f-u-c-k" and "fuuuck" all reduce to something we can match
+#      against words that are never acceptable as a name. Submissions are
+#      rejected; entries stored before this filter existed are masked on read.
+
+USERNAME_MAX_LENGTH = 32
+_USERNAME_DISALLOWED = re.compile(r"[^a-zA-Z0-9_-]")
+
+# Words never allowed in a leaderboard name. Must stay in sync with
+# PROFANITY_BLOCKLIST in neural-network-visual/components/network/lib/username.ts.
+# Mild-but-ambiguous words ("ass", "hell", "damn") are deliberately left out:
+# substring matching would wrongly reject names like "class" or "shell". Words
+# that shrink to ~3 letters when repeats are collapsed ("piss" → "pis") are
+# excluded for the same reason — they'd match unrelated names like "Pisa".
+PROFANITY_BLOCKLIST = frozenset({
+    "fuck", "shit", "bitch", "bastard", "cunt", "whore", "slut",
+    "wanker", "twat", "bullshit", "dickhead", "asshole",
+    "arsehole", "jackass", "dumbass",
+    # slurs
+    "nigger", "nigga", "faggot", "chink", "kike", "tranny",
+    "wetback", "towelhead", "retard",
+    # crude anatomy/harassment terms
+    "penis", "dildo",
+})
+
+# Reverse common letter/digit look-alikes before matching ("sh1t" → "shit").
+_PROFANITY_LEET = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "8": "b"})
+
+
+def normalize_for_profanity_check(name: str) -> str:
+    """Reduce a name to its 'letter skeleton' so evasions collapse to the word."""
+    lowered = name.lower().translate(_PROFANITY_LEET)
+    without_separators = lowered.replace("-", "").replace("_", "")
+    return re.sub(r"(.)\1+", r"\1", without_separators)
+
+
+# Pre-collapse the list too, so needles match the collapsed haystack
+# (e.g. "asshole" is searched for as "ashole" once repeats are collapsed).
+_PROFANITY_BLOCKLIST_NORMALIZED = frozenset(
+    normalize_for_profanity_check(word) for word in PROFANITY_BLOCKLIST
+)
+
+
+def contains_profanity(name: str) -> bool:
+    skeleton = normalize_for_profanity_check(name)
+    return any(word in skeleton for word in _PROFANITY_BLOCKLIST_NORMALIZED)
+
+
+def validate_username(raw: str) -> str:
+    """Reject anything outside the allowlist or on the blocklist; return the cleaned name."""
+    username = raw.strip()
+    if not username or len(username) > USERNAME_MAX_LENGTH or _USERNAME_DISALLOWED.search(username):
+        raise HTTPException(
+            status_code=400,
+            detail="Username must be 1–32 characters: letters, digits, _ or -",
+        )
+    if contains_profanity(username):
+        raise HTTPException(
+            status_code=400,
+            detail="Please choose a different username — offensive names aren't allowed.",
+        )
+    return username
+
+
+def sanitize_username(raw: str) -> str:
+    """Clean a name read back from storage before display.
+
+    Entries written before these rules existed (or edited directly in
+    DynamoDB) may still hold odd characters — strip them. Names that trip
+    the profanity filter are masked rather than shown.
+    """
+    cleaned = _USERNAME_DISALLOWED.sub("", raw.strip())[:USERNAME_MAX_LENGTH]
+    if contains_profanity(cleaned):
+        return "***"
+    return cleaned
+
+
 # ── Leaderboard helpers ───────────────────────────────────────────────────────
 
 def _leaderboard_read(dataset: str) -> tuple[list, Optional[int]]:
@@ -466,16 +549,30 @@ def clear_session(session_id: str):
 MAX_LEADERBOARD_ENTRIES = 10
 LEADERBOARD_WRITE_RETRIES = 3
 
+
+def _leaderboard_entries(raw_entries: list) -> List[LeaderboardEntry]:
+    # Sanitize on read: rows stored before validation existed (or edited
+    # directly in DynamoDB) get cleaned, and names that trip the profanity
+    # filter are masked instead of shown.
+    return [
+        LeaderboardEntry(
+            rank=i + 1,
+            username=sanitize_username(e["username"]),
+            score=float(e["score"]),
+            epoch=int(e["epoch"]),
+            submitted_at=int(e["submitted_at"]),
+        )
+        for i, e in enumerate(raw_entries)
+    ]
+
+
 @app.get("/leaderboard/{dataset}", response_model=LeaderboardResponse)
 def get_leaderboard(dataset: str):
     if dataset not in LEADERBOARD_CONFIG:
         raise HTTPException(status_code=400, detail=f"Unknown dataset: {dataset}")
     cfg = LEADERBOARD_CONFIG[dataset]
     raw_entries, _ = _leaderboard_read(dataset)
-    entries = [
-        LeaderboardEntry(rank=i + 1, **e)
-        for i, e in enumerate(raw_entries)
-    ]
+    entries = _leaderboard_entries(raw_entries)
     return LeaderboardResponse(
         dataset=dataset,
         metric_display=cfg["display"],
@@ -490,9 +587,7 @@ def submit_leaderboard(request: LeaderboardSubmitRequest):
     if request.dataset not in LEADERBOARD_CONFIG:
         raise HTTPException(status_code=400, detail=f"Unknown dataset: {request.dataset}")
 
-    username = request.username.strip()
-    if not username or len(username) > 32 or not re.fullmatch(r"[a-zA-Z0-9_-]+", username):
-        raise HTTPException(status_code=400, detail="Username must be 1–32 characters: letters, digits, _ or -")
+    username = validate_username(request.username)
 
     # Retry on contention so concurrent submissions can't silently drop entries
     for _ in range(LEADERBOARD_WRITE_RETRIES):
@@ -500,7 +595,7 @@ def submit_leaderboard(request: LeaderboardSubmitRequest):
 
         insert_idx = _qualifies_for_top10(request.dataset, request.score, raw_entries)
         if insert_idx is None:
-            entries = [LeaderboardEntry(rank=i + 1, **e) for i, e in enumerate(raw_entries)]
+            entries = _leaderboard_entries(raw_entries)
             return LeaderboardSubmitResponse(accepted=False, rank=None, entries=entries)
 
         new_entry = {
@@ -513,7 +608,7 @@ def submit_leaderboard(request: LeaderboardSubmitRequest):
         raw_entries = raw_entries[:MAX_LEADERBOARD_ENTRIES]
 
         if _leaderboard_write(request.dataset, raw_entries, prev_updated_at):
-            entries = [LeaderboardEntry(rank=i + 1, **e) for i, e in enumerate(raw_entries)]
+            entries = _leaderboard_entries(raw_entries)
             return LeaderboardSubmitResponse(accepted=True, rank=insert_idx + 1, entries=entries)
 
     raise HTTPException(status_code=503, detail="Leaderboard is busy, please retry.")
