@@ -103,20 +103,19 @@ def _cache_evict(session_id: str) -> None:
 #      That single rule blocks HTML/script injection (<script>, quotes, &),
 #      control characters, unicode look-alikes, and absurd lengths in one go.
 #   2. Profanity blocklist — names are normalized (lowercase, common digit
-#      substitutions reversed, separators removed, repeated letters collapsed)
-#      so "Sh1t", "f-u-c-k" and "fuuuck" all reduce to something we can match
-#      against words that are never acceptable as a name. Submissions are
-#      rejected; entries stored before this filter existed are masked on read.
+#      substitutions reversed, separators removed) and matched against
+#      repeat-tolerant patterns, so "Sh1t", "f-u-c-k" and "fuuuck" are all
+#      caught. Submissions are rejected; entries stored before this filter
+#      existed are masked on read.
 
 USERNAME_MAX_LENGTH = 32
 _USERNAME_DISALLOWED = re.compile(r"[^a-zA-Z0-9_-]")
 
 # Words never allowed in a leaderboard name. Must stay in sync with
 # PROFANITY_BLOCKLIST in neural-network-visual/components/network/lib/username.ts.
-# Mild-but-ambiguous words ("ass", "hell", "damn") are deliberately left out:
-# substring matching would wrongly reject names like "class" or "shell". Words
-# that shrink to ~3 letters when repeats are collapsed ("piss" → "pis") are
-# excluded for the same reason — they'd match unrelated names like "Pisa".
+# Mild-but-ambiguous words ("ass", "hell", "damn", "piss") are deliberately
+# left out: substring matching would wrongly reject names like "class",
+# "shell" or "Pisa".
 PROFANITY_BLOCKLIST = frozenset({
     "fuck", "shit", "bitch", "bastard", "cunt", "whore", "slut",
     "wanker", "twat", "bullshit", "dickhead", "asshole",
@@ -133,22 +132,26 @@ _PROFANITY_LEET = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s
 
 
 def normalize_for_profanity_check(name: str) -> str:
-    """Reduce a name to its 'letter skeleton' so evasions collapse to the word."""
+    """Reduce a name to its 'letter skeleton': lowercased, look-alike digits
+    reversed, separators dropped. Repeated letters are deliberately NOT
+    collapsed here — see _PROFANITY_PATTERNS."""
     lowered = name.lower().translate(_PROFANITY_LEET)
-    without_separators = lowered.replace("-", "").replace("_", "")
-    return re.sub(r"(.)\1+", r"\1", without_separators)
+    return lowered.replace("-", "").replace("_", "")
 
 
-# Pre-collapse the list too, so needles match the collapsed haystack
-# (e.g. "asshole" is searched for as "ashole" once repeats are collapsed).
-_PROFANITY_BLOCKLIST_NORMALIZED = frozenset(
-    normalize_for_profanity_check(word) for word in PROFANITY_BLOCKLIST
+# Match each word with every letter allowed to repeat ("fuuuck", "shiiit"),
+# rather than collapsing repeats on both sides. Collapsing the needles too
+# shortens them into legitimate substrings — "nigger" collapses to "niger",
+# which then rejects "Nigeria" — so the repetition is expressed in the
+# pattern and the name under test is left intact.
+_PROFANITY_PATTERNS = tuple(
+    re.compile("".join(f"{re.escape(c)}+" for c in word)) for word in PROFANITY_BLOCKLIST
 )
 
 
 def contains_profanity(name: str) -> bool:
     skeleton = normalize_for_profanity_check(name)
-    return any(word in skeleton for word in _PROFANITY_BLOCKLIST_NORMALIZED)
+    return any(pattern.search(skeleton) for pattern in _PROFANITY_PATTERNS)
 
 
 def validate_username(raw: str) -> str:

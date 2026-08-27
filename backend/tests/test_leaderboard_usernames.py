@@ -3,8 +3,12 @@
 Covers both layers:
   * the character allowlist (letters, digits, _ and -, 1-32 chars)
   * the profanity blocklist (including look-alike/separator/repeat evasions)
+  * benign names that merely resemble blocked words ("Nigeria", "Cassandra")
   * sanitize-on-read masking for entries stored before the filter existed
 """
+
+import pathlib
+import re
 
 import pytest
 from fastapi import HTTPException
@@ -74,10 +78,12 @@ def test_rejects_separator_and_repeat_evasions(name):
     rejects_with(name, "offensive")
 
 
-def test_normalization_collapses_skeletons():
+def test_normalization_reverses_leet_and_separators():
     assert normalize_for_profanity_check("Sh1t") == "shit"
     assert normalize_for_profanity_check("f-u-c-k") == "fuck"
-    assert normalize_for_profanity_check("fuuuck") == "fuck"
+    # Repeats are preserved: the patterns tolerate them, so the name under
+    # test is never shortened into an unrelated word.
+    assert normalize_for_profanity_check("fuuuck") == "fuuuck"
 
 
 @pytest.mark.parametrize("name", [
@@ -86,6 +92,37 @@ def test_normalization_collapses_skeletons():
 ])
 def test_keeps_benign_names_that_resemble_bad_words(name):
     assert_not_profane(name)
+
+
+@pytest.mark.parametrize("name", [
+    # Collapsing repeats on the blocklist shortened "nigger" to "niger",
+    # which rejected every one of these. Regression guard.
+    "Nigeria", "Nigerian", "NigerianDev", "Niger", "nigeria_2026",
+])
+def test_does_not_reject_nigeria(name):
+    assert_not_profane(name)
+    accepts(name)
+
+
+def test_still_rejects_the_slur_with_repeats():
+    for name in ["nigger", "niiigger", "n1gggerr"]:
+        assert contains_profanity(name), name
+
+
+def test_blocklist_matches_the_frontend_copy():
+    """The TS mirror in username.ts must stay in sync with PROFANITY_BLOCKLIST."""
+    ts_path = (
+        pathlib.Path(__file__).resolve().parents[2]
+        / "neural-network-visual/components/network/lib/username.ts"
+    )
+    source = ts_path.read_text()
+    block = re.search(r"const PROFANITY_BLOCKLIST = \[(.*?)\];", source, re.S)
+    assert block, "could not locate PROFANITY_BLOCKLIST in username.ts"
+    ts_words = set(re.findall(r'"([^"]+)"', block.group(1)))
+    assert ts_words == set(app.PROFANITY_BLOCKLIST), (
+        f"only in backend: {set(app.PROFANITY_BLOCKLIST) - ts_words}; "
+        f"only in frontend: {ts_words - set(app.PROFANITY_BLOCKLIST)}"
+    )
 
 
 # ── Display-side sanitization of legacy rows ─────────────────────────────────
