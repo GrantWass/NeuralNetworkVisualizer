@@ -61,7 +61,6 @@ export const createLeaderboardSlice: StateCreator<any, [], [], LeaderboardSlice>
       if (res.ok) {
         set((state: LeaderboardSlice) => ({
           leaderboard: { ...state.leaderboard, [dataset]: data.entries },
-          leaderboardFetchedAt: { ...state.leaderboardFetchedAt, [dataset]: Date.now() },
         }));
       } else {
         toast.error("Couldn't load the leaderboard", {
@@ -74,7 +73,13 @@ export const createLeaderboardSlice: StateCreator<any, [], [], LeaderboardSlice>
         description: "Could not reach the server. Check your connection and try again.",
       });
     } finally {
-      set({ leaderboardLoading: false });
+      // Stamp the attempt, not just the success: a failed fetch has to open the
+      // TTL window too, or maybeRefreshLeaderboard sees an empty timestamp and
+      // retries (plus toasts) on every epoch while the API is down.
+      set((state: LeaderboardSlice) => ({
+        leaderboardLoading: false,
+        leaderboardFetchedAt: { ...state.leaderboardFetchedAt, [dataset]: Date.now() },
+      }));
     }
   },
 
