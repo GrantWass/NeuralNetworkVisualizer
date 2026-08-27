@@ -26,6 +26,7 @@ import DigitCanvas from "@/components/network/digit-canvas";
 import { DecisionBoundary } from "@/components/network/decision-boundary";
 import { RegressionChart } from "@/components/network/regression-chart";
 import { SampleVisual } from "@/components/network/sample-visual";
+import { WeightHistogram } from "@/components/network/weight-histogram";
 
 // Register ChartJS components
 ChartJS.register(
@@ -1575,6 +1576,11 @@ const Explain = () => {
                         <Line data={accuracyData} options={metricChartOptions} />
                     </div>
                 </div>
+            </div>
+
+            {/* Weight Distribution Histogram — live, per-layer filter */}
+            <div className="mt-3 mx-2">
+                <WeightHistogram network={network} />
             </div>
 
             {/* Explanation panel */}
