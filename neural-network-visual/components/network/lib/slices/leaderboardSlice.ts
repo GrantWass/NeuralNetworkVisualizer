@@ -22,13 +22,20 @@ const EPOCH_CAPS: Record<string, number | null> = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+// How long a cached leaderboard stays fresh. While the user trains, ranking
+// refreshes at most once per window so entries stay current without spamming
+// the API on every training cycle.
+const LEADERBOARD_TTL_MS = 15_000;
+
 export interface LeaderboardSlice {
   leaderboardOpen: boolean;
   leaderboard: Record<string, LeaderboardEntry[]>;
+  leaderboardFetchedAt: Record<string, number>;
   leaderboardLoading: boolean;
   leaderboardSubmitting: boolean;
   setLeaderboardOpen: (open: boolean) => void;
   fetchLeaderboard: (dataset: string) => Promise<void>;
+  maybeRefreshLeaderboard: (dataset: string) => void;
   submitLeaderboardScore: (username: string) => Promise<LeaderboardSubmitResponse | null>;
   computeQualification: () => { qualifies: boolean; rank: number | null };
 }
@@ -37,6 +44,7 @@ export interface LeaderboardSlice {
 export const createLeaderboardSlice: StateCreator<any, [], [], LeaderboardSlice> = (set, get) => ({
   leaderboardOpen: false,
   leaderboard: {},
+  leaderboardFetchedAt: {},
   leaderboardLoading: false,
   leaderboardSubmitting: false,
 
@@ -51,7 +59,9 @@ export const createLeaderboardSlice: StateCreator<any, [], [], LeaderboardSlice>
       const res = await fetchWithTimeout(`${API_URL}/leaderboard/${dataset}`);
       const data = await res.json();
       if (res.ok) {
-        set((state: LeaderboardSlice) => ({ leaderboard: { ...state.leaderboard, [dataset]: data.entries } }));
+        set((state: LeaderboardSlice) => ({
+          leaderboard: { ...state.leaderboard, [dataset]: data.entries },
+        }));
       } else {
         toast.error("Couldn't load the leaderboard", {
           description: data?.detail || `Server responded with ${res.status}. Please try again.`,
@@ -63,8 +73,24 @@ export const createLeaderboardSlice: StateCreator<any, [], [], LeaderboardSlice>
         description: "Could not reach the server. Check your connection and try again.",
       });
     } finally {
-      set({ leaderboardLoading: false });
+      // Stamp the attempt, not just the success: a failed fetch has to open the
+      // TTL window too, or maybeRefreshLeaderboard sees an empty timestamp and
+      // retries (plus toasts) on every epoch while the API is down.
+      set((state: LeaderboardSlice) => ({
+        leaderboardLoading: false,
+        leaderboardFetchedAt: { ...state.leaderboardFetchedAt, [dataset]: Date.now() },
+      }));
     }
+  },
+
+  // Refetch only when the cache is empty or older than LEADERBOARD_TTL_MS.
+  // Called as training progresses so the inline ranking stays current;
+  // the TTL bounds it to one request per window per dataset.
+  maybeRefreshLeaderboard: (dataset: string) => {
+    if (get().leaderboardLoading) return;
+    const fetchedAt = get().leaderboardFetchedAt[dataset];
+    const isStale = fetchedAt === undefined || Date.now() - fetchedAt >= LEADERBOARD_TTL_MS;
+    if (isStale) get().fetchLeaderboard(dataset);
   },
 
   submitLeaderboardScore: async (username: string) => {

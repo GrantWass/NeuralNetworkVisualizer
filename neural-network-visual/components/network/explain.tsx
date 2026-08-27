@@ -316,6 +316,7 @@ const Explain = () => {
       leaderboardLoading,
       leaderboardSubmitting,
       fetchLeaderboard,
+      maybeRefreshLeaderboard,
       setLeaderboardOpen,
       submittableScore,
       xorEpochsTo100,
@@ -515,6 +516,12 @@ const Explain = () => {
     useEffect(() => {
       if (!leaderboard[dataset]) fetchLeaderboard(dataset);
     }, [dataset, leaderboard, fetchLeaderboard]);
+
+    // Bounded refresh: as the user trains, re-rank against fresh leaderboard
+    // entries. The slice's TTL throttles this to one fetch per window.
+    useEffect(() => {
+      if (epoch > 0) maybeRefreshLeaderboard(dataset);
+    }, [epoch, dataset, maybeRefreshLeaderboard]);
 
     const enterStepMode = () => { setStepMode(true); setStepIndex(0); };
     const exitStepMode = () => { setStepMode(false); setStepLayerHighlight(null); };
@@ -907,8 +914,8 @@ const Explain = () => {
                                     <p className="text-[10px] text-gray-300">{cap - epoch} epochs to go</p>
                                 )}
 
-                                {/* Entries */}
-                                {leaderboardLoading ? (
+                                {/* Entries — keep stale rows visible during a background refresh */}
+                                {entries.length === 0 && leaderboardLoading ? (
                                     <div className="space-y-1.5">{[1,2,3].map(i => <div key={i} className="h-3 bg-gray-100 rounded animate-pulse" />)}</div>
                                 ) : entries.length === 0 ? (
                                     <p className="text-xs text-gray-400">No entries yet — be the first!</p>
