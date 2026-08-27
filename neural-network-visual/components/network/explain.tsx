@@ -1,6 +1,7 @@
 "use client";
 
 import useStore from "@/components/network/lib/store";
+import { containsProfanity, isValidUsername, sanitizeUsername } from "@/components/network/lib/username";
 import { NeuronLayer, NetworkState } from "@/components/network/static/types";
 import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
@@ -876,8 +877,12 @@ const Explain = () => {
 
                         const handleSubmit = async () => {
                             setLbSubmitError("");
-                            if (!lbUsername.trim() || !/^[a-zA-Z0-9_-]+$/.test(lbUsername.trim())) {
-                                setLbSubmitError("Letters, digits, _ and - only");
+                            if (!isValidUsername(lbUsername)) {
+                                setLbSubmitError("Letters, digits, _ and - only (1–32 chars)");
+                                return;
+                            }
+                            if (containsProfanity(lbUsername)) {
+                                setLbSubmitError("That name isn't allowed — please pick a different one.");
                                 return;
                             }
                             const result = await submitLeaderboardScore(lbUsername.trim());
@@ -912,7 +917,7 @@ const Explain = () => {
                                         {entries.slice(0, 5).map((entry) => (
                                             <div key={entry.rank} className="flex items-center gap-2 text-xs">
                                                 <span className="w-4 text-gray-400 font-mono text-right flex-shrink-0">{entry.rank}</span>
-                                                <span className="flex-1 text-gray-700 font-medium truncate">{entry.username}</span>
+                                                <span className="flex-1 text-gray-700 font-medium truncate">{sanitizeUsername(entry.username)}</span>
                                                 <span className="font-mono text-gray-500 flex-shrink-0">{formatScore(entry.score)}</span>
                                             </div>
                                         ))}
