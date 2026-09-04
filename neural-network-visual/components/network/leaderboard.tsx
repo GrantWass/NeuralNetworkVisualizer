@@ -148,11 +148,16 @@ export default function LeaderboardPanel() {
               max {epochCap} epochs
             </span>
           )}
+          {leaderboardLoading && entries.length > 0 && (
+            <span role="status" aria-live="polite" className="text-[11px] text-gray-400 animate-pulse">
+              Updating…
+            </span>
+          )}
         </div>
 
         {/* Table */}
         <div className="overflow-y-auto flex-1 px-2">
-          <table className="w-full text-xs">
+          <table className="w-full text-xs" aria-busy={leaderboardLoading && entries.length > 0}>
             <thead>
               <tr className="text-left text-gray-400 border-b border-gray-100">
                 <th className="px-3 py-2 font-medium w-8">#</th>
@@ -161,8 +166,10 @@ export default function LeaderboardPanel() {
                 <th className="px-3 py-2 font-medium text-right">Date</th>
               </tr>
             </thead>
-            <tbody>
-              {leaderboardLoading ? (
+            {/* Keep stale rows visible during a background refresh;
+                skeletons only on initial load (empty cache). */}
+            <tbody className={leaderboardLoading && entries.length > 0 ? "opacity-60 transition-opacity" : undefined}>
+              {entries.length === 0 && leaderboardLoading ? (
                 [1, 2, 3].map((i) => <SkeletonRow key={i} />)
               ) : entries.length === 0 ? (
                 <tr>
