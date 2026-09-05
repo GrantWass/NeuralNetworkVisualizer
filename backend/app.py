@@ -590,6 +590,15 @@ def submit_leaderboard(request: LeaderboardSubmitRequest):
     if request.dataset not in LEADERBOARD_CONFIG:
         raise HTTPException(status_code=400, detail=f"Unknown dataset: {request.dataset}")
 
+    # Scores are only comparable at the cap epoch (the "at epoch N" label),
+    # so a mid-run score must finish training before it can be submitted.
+    cap = LEADERBOARD_CONFIG[request.dataset]["epoch_cap"]
+    if cap is not None and request.epoch < cap:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Train to epoch {cap} before submitting (at epoch {request.epoch} now).",
+        )
+
     username = validate_username(request.username)
 
     # Retry on contention so concurrent submissions can't silently drop entries

@@ -178,3 +178,40 @@ def test_api_masks_legacy_entries_on_read(client):
     resp = client.get("/leaderboard/iris")
     usernames = [e["username"] for e in resp.json()["entries"]]
     assert "***" in usernames, resp.text
+
+
+# ── Epoch-cap gating: mid-run scores are provisional, not submittable ─────────
+
+
+@pytest.mark.parametrize("dataset,cap", [
+    ("iris", 100), ("auto_mpg", 200), ("mnist", 300),
+])
+def test_api_rejects_pre_cap_submissions(client, dataset, cap):
+    resp = client.post(
+        "/leaderboard/submit",
+        json={"dataset": dataset, "score": 50.0, "epoch": cap - 1, "username": "EarlyBird"},
+    )
+    assert resp.status_code == 400, resp.text
+    assert f"epoch {cap}" in resp.json()["detail"], resp.text
+    # Nothing stored from the rejected submit
+    assert client.get(f"/leaderboard/{dataset}").json()["entries"] == []
+
+
+@pytest.mark.parametrize("dataset,cap", [
+    ("iris", 100), ("auto_mpg", 200), ("mnist", 300),
+])
+def test_api_accepts_cap_and_overshoot_submissions(client, dataset, cap):
+    for epoch in (cap, cap + 10):
+        resp = client.post(
+            "/leaderboard/submit",
+            json={"dataset": dataset, "score": 50.0, "epoch": epoch, "username": f"Runner{epoch}"},
+        )
+        assert resp.status_code == 200 and resp.json()["accepted"] is True, resp.text
+
+
+def test_api_xor_has_no_epoch_cap(client):
+    resp = client.post(
+        "/leaderboard/submit",
+        json={"dataset": "xor", "score": 50.0, "epoch": 5, "username": "XorFan"},
+    )
+    assert resp.status_code == 200 and resp.json()["accepted"] is True, resp.text
