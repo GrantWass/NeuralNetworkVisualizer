@@ -35,7 +35,7 @@ function formatDate(ts: number): string {
 function SkeletonRow() {
   return (
     <tr>
-      {[40, 80, 60, 50].map((w, i) => (
+      {[40, 80, 60, 50, 50].map((w, i) => (
         <td key={i} className="px-3 py-2">
           <div className="h-3 bg-gray-100 rounded animate-pulse" style={{ width: w }} />
         </td>
@@ -47,6 +47,7 @@ function SkeletonRow() {
 export default function LeaderboardPanel() {
   const {
     dataset,
+    epoch,
     leaderboard,
     leaderboardLoading,
     leaderboardSubmitting,
@@ -74,9 +75,6 @@ export default function LeaderboardPanel() {
 
   const isCurrentDataset = activeTab === dataset;
   const score = dataset === "xor" ? xorEpochsTo100 : submittableScore;
-  const { qualifies, rank: projectedRank } = isCurrentDataset && score !== null
-    ? computeQualification()
-    : { qualifies: false, rank: null };
 
   const metricInfo: Record<string, { display: string; cap: number | null }> = {
     xor:      { display: "Fewest epochs to 100%", cap: null },
@@ -86,6 +84,12 @@ export default function LeaderboardPanel() {
   };
 
   const { display: metricDisplay, cap: epochCap } = metricInfo[activeTab] ?? { display: "", cap: null };
+
+  // A mid-run score is provisional — only a cap-epoch score can qualify.
+  const atCap = epochCap === null || !isCurrentDataset || epoch >= epochCap;
+  const { qualifies, rank: projectedRank } = isCurrentDataset && score !== null && atCap
+    ? computeQualification()
+    : { qualifies: false, rank: null };
 
   const handleSubmit = async () => {
     setSubmitError("");
@@ -163,6 +167,7 @@ export default function LeaderboardPanel() {
                 <th className="px-3 py-2 font-medium w-8">#</th>
                 <th className="px-3 py-2 font-medium">Username</th>
                 <th className="px-3 py-2 font-medium text-right">Score</th>
+                <th className="px-3 py-2 font-medium text-right">Epoch</th>
                 <th className="px-3 py-2 font-medium text-right">Date</th>
               </tr>
             </thead>
@@ -173,7 +178,7 @@ export default function LeaderboardPanel() {
                 [1, 2, 3].map((i) => <SkeletonRow key={i} />)
               ) : entries.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-3 py-8 text-center text-gray-400 text-xs">
+                  <td colSpan={5} className="px-3 py-8 text-center text-gray-400 text-xs">
                     No entries yet — be the first!
                   </td>
                 </tr>
@@ -191,6 +196,7 @@ export default function LeaderboardPanel() {
                     <td className="px-3 py-2 text-right font-mono text-gray-700">
                       {formatScore(activeTab, entry.score)}
                     </td>
+                    <td className="px-3 py-2 text-right font-mono text-gray-400">@{entry.epoch}</td>
                     <td className="px-3 py-2 text-right text-gray-400">{formatDate(entry.submitted_at)}</td>
                   </tr>
                 ))
@@ -202,7 +208,12 @@ export default function LeaderboardPanel() {
         {/* Submit section */}
         {isCurrentDataset && score !== null && !submitted && (
           <div className="border-t border-gray-100 px-5 py-4">
-            {qualifies ? (
+            {!atCap && epochCap !== null ? (
+              <p className="text-[11px] text-gray-400 text-center">
+                Provisional score ({formatScore(activeTab, score)}) — train to epoch {epochCap} to submit
+                {epoch > 0 && <span> · at epoch {epoch} now, {epochCap - epoch} to go</span>}.
+              </p>
+            ) : qualifies ? (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-emerald-600">You qualify!</span>

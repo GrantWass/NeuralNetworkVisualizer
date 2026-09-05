@@ -878,7 +878,8 @@ const Explain = () => {
                         const METRIC_LABELS: Record<string, string> = { xor: "Fewest epochs to 100%", iris: "Accuracy at epoch 100", auto_mpg: "MAE at epoch 200", mnist: "Accuracy at epoch 300" };
                         const cap = EPOCH_CAPS[dataset] ?? null;
                         const score = dataset === "xor" ? xorEpochsTo100 : submittableScore;
-                        const { qualifies, rank: projectedRank } = score !== null ? computeQualification() : { qualifies: false, rank: null };
+                        const atCap = cap === null || epoch >= cap;
+                        const { qualifies, rank: projectedRank } = score !== null && atCap ? computeQualification() : { qualifies: false, rank: null };
                         const formatScore = (s: number) => dataset === "xor" ? `${s} ep` : dataset === "auto_mpg" ? s.toFixed(3) : `${s.toFixed(1)}%`;
                         const entries = leaderboard[dataset] ?? [];
 
@@ -925,6 +926,7 @@ const Explain = () => {
                                             <div key={entry.rank} className="flex items-center gap-2 text-xs">
                                                 <span className="w-4 text-gray-400 font-mono text-right flex-shrink-0">{entry.rank}</span>
                                                 <span className="flex-1 text-gray-700 font-medium truncate">{sanitizeUsername(entry.username)}</span>
+                                                <span className="font-mono text-gray-400 flex-shrink-0">@{entry.epoch}</span>
                                                 <span className="font-mono text-gray-500 flex-shrink-0">{formatScore(entry.score)}</span>
                                             </div>
                                         ))}
@@ -935,6 +937,8 @@ const Explain = () => {
                                 <div className="mt-auto pt-2 border-t border-gray-100">
                                     {lbSubmitted ? (
                                         <p className="text-xs font-semibold text-emerald-600 text-center">🎉 Ranked #{lbSubmitted.rank}!</p>
+                                    ) : score !== null && !atCap && cap !== null ? (
+                                        <p className="text-[10px] text-gray-400">Provisional score (<span className="font-mono font-medium text-gray-600">{formatScore(score)}</span>) — train to epoch <span className="font-mono font-medium text-gray-600">{cap}</span> to submit · at epoch {epoch} now</p>
                                     ) : score !== null ? (
                                         qualifies ? (
                                             <div className="space-y-1.5">

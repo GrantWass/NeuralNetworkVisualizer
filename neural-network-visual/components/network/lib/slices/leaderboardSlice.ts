@@ -99,6 +99,13 @@ export const createLeaderboardSlice: StateCreator<any, [], [], LeaderboardSlice>
     if (score === null) return null;
 
     const cap = EPOCH_CAPS[dataset];
+    // Mid-run scores are provisional — only a cap-epoch score is submittable.
+    if (cap !== null && epoch < cap) {
+      toast.error("Keep training", {
+        description: `Train to epoch ${cap} before submitting (at epoch ${epoch} now).`,
+      });
+      return null;
+    }
     const submittedEpoch = dataset === "xor"
       ? (xorEpochsTo100 ?? epoch)
       : cap !== null ? Math.min(epoch, cap) : epoch;
@@ -132,9 +139,14 @@ export const createLeaderboardSlice: StateCreator<any, [], [], LeaderboardSlice>
   },
 
   computeQualification: () => {
-    const { dataset, submittableScore, xorEpochsTo100, leaderboard } = get();
+    const { dataset, submittableScore, xorEpochsTo100, leaderboard, epoch } = get();
     const score = dataset === "xor" ? xorEpochsTo100 : submittableScore;
     if (score === null) return { qualifies: false, rank: null };
+
+    // A mid-run score is provisional, not a final result — no projected rank
+    // until training reaches the cap epoch the leaderboard label refers to.
+    const cap = EPOCH_CAPS[dataset];
+    if (cap !== null && epoch < cap) return { qualifies: false, rank: null };
 
     const entries = leaderboard[dataset] ?? [];
     const higherIsBetter = dataset === "iris" || dataset === "mnist";
