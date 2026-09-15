@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Trophy, Star } from "lucide-react";
 import useStore from "@/components/network/lib/store";
 import { LeaderboardEntry } from "@/components/network/lib/store";
@@ -54,6 +54,7 @@ export default function LeaderboardPanel() {
     submittableScore,
     xorEpochsTo100,
     fetchLeaderboard,
+    maybeRefreshLeaderboard,
     submitLeaderboardScore,
     computeQualification,
     setLeaderboardOpen,
@@ -63,6 +64,17 @@ export default function LeaderboardPanel() {
   const [username, setUsername] = useState("");
   const [submitted, setSubmitted] = useState<{ rank: number } | null>(null);
   const [submitError, setSubmitError] = useState("");
+
+  // Keep the visible tab on the current dataset: the panel mounts fresh on
+  // each open (so useState is correct there), but a dataset change while the
+  // modal is open would otherwise leave a stale tab selected. The refresh is
+  // TTL/loading-guarded, so opening the modal still costs at most one fetch.
+  useEffect(() => {
+    setActiveTab(dataset);
+    setSubmitted(null);
+    setSubmitError("");
+    maybeRefreshLeaderboard(dataset);
+  }, [dataset, maybeRefreshLeaderboard]);
 
   const entries: LeaderboardEntry[] = leaderboard[activeTab] ?? [];
 
