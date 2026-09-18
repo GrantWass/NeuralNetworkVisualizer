@@ -907,10 +907,17 @@ const Explain = () => {
                                 </div>
 
                                 {/* Metric + epoch cap info */}
-                                <p className="text-[10px] text-gray-400 leading-snug">
-                                    {METRIC_LABELS[dataset]}
-                                    {cap !== null && <span className="ml-1 text-gray-300">· train to epoch {cap}</span>}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-[10px] text-gray-400 leading-snug">
+                                        {METRIC_LABELS[dataset]}
+                                        {cap !== null && <span className="ml-1 text-gray-300">· train to epoch {cap}</span>}
+                                    </p>
+                                    {leaderboardLoading && entries.length > 0 && (
+                                        <span role="status" aria-live="polite" className="text-[10px] text-gray-400 animate-pulse">
+                                            Updating…
+                                        </span>
+                                    )}
+                                </div>
                                 {cap !== null && epoch > 0 && epoch < cap && (
                                     <p className="text-[10px] text-gray-300">{cap - epoch} epochs to go</p>
                                 )}
@@ -921,7 +928,7 @@ const Explain = () => {
                                 ) : entries.length === 0 ? (
                                     <p className="text-xs text-gray-400">No entries yet — be the first!</p>
                                 ) : (
-                                    <div className="space-y-1">
+                                    <div className={leaderboardLoading ? "space-y-1 opacity-60 transition-opacity" : "space-y-1"} aria-busy={leaderboardLoading && entries.length > 0}>
                                         {entries.slice(0, 5).map((entry) => (
                                             <div key={entry.rank} className="flex items-center gap-2 text-xs">
                                                 <span className="w-4 text-gray-400 font-mono text-right flex-shrink-0">{entry.rank}</span>
