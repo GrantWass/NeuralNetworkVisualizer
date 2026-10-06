@@ -882,6 +882,7 @@ const Explain = () => {
                         const { qualifies, rank: projectedRank } = score !== null && atCap ? computeQualification() : { qualifies: false, rank: null };
                         const formatScore = (s: number) => dataset === "xor" ? `${s} ep` : dataset === "auto_mpg" ? s.toFixed(3) : `${s.toFixed(1)}%`;
                         const entries = leaderboard[dataset] ?? [];
+                        const isRefreshing = leaderboardLoading && entries.length > 0;
 
                         const handleSubmit = async () => {
                             setLbSubmitError("");
@@ -903,7 +904,14 @@ const Explain = () => {
                                 {/* Header */}
                                 <div className="flex items-center justify-between">
                                     <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Leaderboard</p>
-                                    <button onClick={() => setLeaderboardOpen(true)} className="text-[10px] text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors">View all</button>
+                                    <div className="flex items-center gap-2">
+                                        {isRefreshing && (
+                                            <span role="status" aria-live="polite" className="text-[10px] text-gray-400 animate-pulse">
+                                                Updating…
+                                            </span>
+                                        )}
+                                        <button onClick={() => setLeaderboardOpen(true)} className="text-[10px] text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors">View all</button>
+                                    </div>
                                 </div>
 
                                 {/* Metric + epoch cap info */}
@@ -921,7 +929,7 @@ const Explain = () => {
                                 ) : entries.length === 0 ? (
                                     <p className="text-xs text-gray-400">No entries yet — be the first!</p>
                                 ) : (
-                                    <div className="space-y-1">
+                                    <div className={isRefreshing ? "space-y-1 opacity-60 transition-opacity" : "space-y-1"} aria-busy={isRefreshing}>
                                         {entries.slice(0, 5).map((entry) => (
                                             <div key={entry.rank} className="flex items-center gap-2 text-xs">
                                                 <span className="w-4 text-gray-400 font-mono text-right flex-shrink-0">{entry.rank}</span>
