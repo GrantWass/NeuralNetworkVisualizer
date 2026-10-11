@@ -532,7 +532,7 @@ const Config = () => {
             </div>
             <div className="flex flex-col items-center justify-center px-3 py-2 flex-1">
               <span className="text-base font-bold text-gray-900 leading-none tabular-nums">
-                {epoch > 0 ? (name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(2)) : "—"}
+                {epoch > 0 ? (name === "accuracy" ? `${metric.toFixed(1)}%` : metric.toFixed(3)) : "—"}
               </span>
               <span className="text-[9px] text-gray-400 mt-0.5">{name === "accuracy" ? "accuracy" : "MAE"}</span>
             </div>
