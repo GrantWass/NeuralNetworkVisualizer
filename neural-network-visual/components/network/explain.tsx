@@ -923,7 +923,7 @@ const Explain = () => {
                                 ) : (
                                     <div className="space-y-1">
                                         {entries.slice(0, 5).map((entry) => (
-                                            <div key={entry.rank} className="flex items-center gap-2 text-xs">
+                                            <div key={`${entry.username}-${entry.submitted_at}-${entry.score}`} className="flex items-center gap-2 text-xs">
                                                 <span className="w-4 text-gray-400 font-mono text-right flex-shrink-0">{entry.rank}</span>
                                                 <span className="flex-1 text-gray-700 font-medium truncate">{sanitizeUsername(entry.username)}</span>
                                                 <span className="font-mono text-gray-400 flex-shrink-0">@{entry.epoch}</span>
