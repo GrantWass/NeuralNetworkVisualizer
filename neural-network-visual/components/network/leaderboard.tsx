@@ -184,7 +184,7 @@ export default function LeaderboardPanel() {
                 </tr>
               ) : (
                 entries.map((entry) => (
-                  <tr key={entry.rank} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                  <tr key={`${entry.username}-${entry.score}-${entry.epoch}-${entry.submitted_at}`} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                     <td className="px-3 py-2 text-gray-500 font-mono">
                       {entry.rank === 1 ? (
                         <Star size={12} className="text-amber-400 fill-amber-400" />
