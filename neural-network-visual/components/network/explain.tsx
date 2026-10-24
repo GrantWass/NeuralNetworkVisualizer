@@ -909,10 +909,15 @@ const Explain = () => {
                                 {/* Metric + epoch cap info */}
                                 <p className="text-[10px] text-gray-400 leading-snug">
                                     {METRIC_LABELS[dataset]}
-                                    {cap !== null && <span className="ml-1 text-gray-300">· train to epoch {cap}</span>}
+                                    {cap !== null && <span className="ml-1 text-gray-500">· train to epoch {cap}</span>}
                                 </p>
                                 {cap !== null && epoch > 0 && epoch < cap && (
-                                    <p className="text-[10px] text-gray-300">{cap - epoch} epochs to go</p>
+                                    <div>
+                                        <p className="text-[10px] text-gray-600">{cap - epoch} epochs to go</p>
+                                        <div className="mt-1 h-1 bg-gray-100 rounded-full overflow-hidden" role="progressbar" aria-valuenow={epoch} aria-valuemin={0} aria-valuemax={cap} aria-label={`Training progress: epoch ${epoch} of ${cap}`}>
+                                            <div className="h-full bg-indigo-500 rounded-full transition-all" style={{ width: `${Math.min(100, (epoch / cap) * 100)}%` }} />
+                                        </div>
+                                    </div>
                                 )}
 
                                 {/* Entries — keep stale rows visible during a background refresh */}
@@ -938,7 +943,7 @@ const Explain = () => {
                                     {lbSubmitted ? (
                                         <p className="text-xs font-semibold text-emerald-600 text-center">🎉 Ranked #{lbSubmitted.rank}!</p>
                                     ) : score !== null && !atCap && cap !== null ? (
-                                        <p className="text-[10px] text-gray-400">Provisional score (<span className="font-mono font-medium text-gray-600">{formatScore(score)}</span>) — train to epoch <span className="font-mono font-medium text-gray-600">{cap}</span> to submit · at epoch {epoch} now</p>
+                                        <p className="text-[10px] text-gray-600">Provisional score (<span className="font-mono font-medium text-gray-600">{formatScore(score)}</span>) — train to epoch <span className="font-mono font-medium text-gray-600">{cap}</span> to submit · at epoch {epoch} now · {cap - epoch} to go</p>
                                     ) : score !== null ? (
                                         qualifies ? (
                                             <div className="space-y-1.5">
@@ -971,7 +976,7 @@ const Explain = () => {
                                     ) : cap !== null ? (
                                         <div className="space-y-0.5">
                                             <p className="text-[10px] text-gray-400">Train to epoch <span className="font-mono font-medium text-gray-600">{cap}</span> to submit</p>
-                                            {epoch > 0 && <p className="text-[10px] text-gray-300">at epoch {epoch} now · {cap - epoch} to go</p>}
+                                            {epoch > 0 && <p className="text-[10px] text-gray-600">at epoch {epoch} now · {cap - epoch} to go</p>}
                                         </div>
                                     ) : dataset === "xor" ? (
                                         <p className="text-[10px] text-gray-400">Reach 100% accuracy to submit a score</p>
