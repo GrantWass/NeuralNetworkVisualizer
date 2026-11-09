@@ -10,7 +10,7 @@ import type { LeaderboardSlice } from "./slices/leaderboardSlice";
 export { applyActivation, forwardPassSingle } from "./networkUtils";
 
 // Re-export leaderboard types so existing import paths are unchanged
-export type { LeaderboardEntry, LeaderboardSubmitResponse } from "./slices/leaderboardSlice";
+export type { LeaderboardEntry, LeaderboardSubmitResponse, LeaderboardMeta } from "./slices/leaderboardSlice";
 
 export type StoreState = TrainingSlice & UISlice & LeaderboardSlice;
 

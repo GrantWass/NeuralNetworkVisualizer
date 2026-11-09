@@ -49,6 +49,7 @@ export default function LeaderboardPanel() {
     dataset,
     epoch,
     leaderboard,
+    leaderboardMeta,
     leaderboardLoading,
     leaderboardSubmitting,
     submittableScore,
@@ -83,7 +84,21 @@ export default function LeaderboardPanel() {
     mnist:    { display: "Accuracy at epoch 300", cap: 300 },
   };
 
-  const { display: metricDisplay, cap: epochCap } = metricInfo[activeTab] ?? { display: "", cap: null };
+  // Server metadata wins when fetched; hardcoded rows are only the fallback
+  // for an older/cached response missing the new fields.
+  const meta = leaderboardMeta[activeTab];
+  const metricDisplay = meta?.metricDisplay ?? metricInfo[activeTab]?.display ?? "";
+  const epochCap = meta?.epochCap !== undefined ? meta.epochCap : (metricInfo[activeTab]?.cap ?? null);
+  const higherIsBetter: boolean | null =
+    typeof meta?.higherIsBetter === "boolean"
+      ? meta.higherIsBetter
+      : activeTab === "iris" || activeTab === "mnist"
+        ? true
+        : activeTab === "xor" || activeTab === "auto_mpg"
+          ? false
+          : null;
+  const directionLabel =
+    higherIsBetter === true ? "↑ higher wins" : higherIsBetter === false ? "↓ lower wins" : null;
 
   // A mid-run score is provisional — only a cap-epoch score can qualify.
   const atCap = epochCap === null || !isCurrentDataset || epoch >= epochCap;
@@ -146,7 +161,10 @@ export default function LeaderboardPanel() {
 
         {/* Metric subtitle */}
         <div className="px-5 pb-2 pt-1 flex items-center gap-2">
-          <p className="text-[11px] text-gray-400">{metricDisplay}</p>
+          <p className="text-[11px] text-gray-400">
+            {metricDisplay}
+            {directionLabel && <span className="ml-1 text-gray-500">· {directionLabel}</span>}
+          </p>
           {epochCap !== null && (
             <span className="text-[11px] font-medium text-gray-500 bg-gray-100 rounded px-1.5 py-0.5 whitespace-nowrap">
               max {epochCap} epochs
@@ -166,7 +184,7 @@ export default function LeaderboardPanel() {
               <tr className="text-left text-gray-400 border-b border-gray-100">
                 <th className="px-3 py-2 font-medium w-8">#</th>
                 <th className="px-3 py-2 font-medium">Username</th>
-                <th className="px-3 py-2 font-medium text-right">Score</th>
+                <th className="px-3 py-2 font-medium text-right">Score{directionLabel ? ` ${directionLabel}` : ""}</th>
                 <th className="px-3 py-2 font-medium text-right">Epoch</th>
                 <th className="px-3 py-2 font-medium text-right">Date</th>
               </tr>
