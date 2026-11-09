@@ -16,6 +16,15 @@ export interface LeaderboardSubmitResponse {
   entries: LeaderboardEntry[];
 }
 
+// Authoritative per-dataset display metadata from GET /leaderboard/{dataset}.
+// Absent/undefined fields mean the server response didn't include them
+// (older/cached payload) — callers must fall back to local labels.
+export interface LeaderboardMeta {
+  metricDisplay?: string | null;
+  higherIsBetter?: boolean | null;
+  epochCap?: number | null;
+}
+
 const EPOCH_CAPS: Record<string, number | null> = {
   xor: null, iris: 100, auto_mpg: 200, mnist: 300,
 };
@@ -30,6 +39,7 @@ const LEADERBOARD_TTL_MS = 15_000;
 export interface LeaderboardSlice {
   leaderboardOpen: boolean;
   leaderboard: Record<string, LeaderboardEntry[]>;
+  leaderboardMeta: Record<string, LeaderboardMeta>;
   leaderboardFetchedAt: Record<string, number>;
   leaderboardLoading: boolean;
   leaderboardSubmitting: boolean;
@@ -44,6 +54,7 @@ export interface LeaderboardSlice {
 export const createLeaderboardSlice: StateCreator<any, [], [], LeaderboardSlice> = (set, get) => ({
   leaderboardOpen: false,
   leaderboard: {},
+  leaderboardMeta: {},
   leaderboardFetchedAt: {},
   leaderboardLoading: false,
   leaderboardSubmitting: false,
@@ -59,8 +70,24 @@ export const createLeaderboardSlice: StateCreator<any, [], [], LeaderboardSlice>
       const res = await fetchWithTimeout(`${API_URL}/leaderboard/${dataset}`);
       const data = await res.json();
       if (res.ok) {
+        // Persist the server's display metadata alongside entries, so Score
+        // headers/subtitles render direction ("higher/lower wins") and caps
+        // from the backend instead of duplicated local constants. Every
+        // field is defensive: a missing/odd-typed value stays undefined and
+        // callers fall back to the existing hardcoded labels.
+        const meta: LeaderboardMeta = {
+          metricDisplay: typeof data?.metric_display === "string" ? data.metric_display : undefined,
+          higherIsBetter: typeof data?.higher_is_better === "boolean" ? data.higher_is_better : undefined,
+          epochCap:
+            typeof data?.epoch_cap === "number"
+              ? data.epoch_cap
+              : data?.epoch_cap === null
+                ? null
+                : undefined,
+        };
         set((state: LeaderboardSlice) => ({
           leaderboard: { ...state.leaderboard, [dataset]: data.entries },
+          leaderboardMeta: { ...state.leaderboardMeta, [dataset]: meta },
         }));
       } else {
         toast.error("Couldn't load the leaderboard", {
@@ -98,7 +125,10 @@ export const createLeaderboardSlice: StateCreator<any, [], [], LeaderboardSlice>
     const score = dataset === "xor" ? xorEpochsTo100 : submittableScore;
     if (score === null) return null;
 
-    const cap = EPOCH_CAPS[dataset];
+    // Prefer the server-provided cap when fetched; fall back to the local
+    // constant so submit gating still works before the first fetch.
+    const metaCap = get().leaderboardMeta?.[dataset]?.epochCap;
+    const cap = metaCap !== undefined ? metaCap : (EPOCH_CAPS[dataset] ?? null);
     // Mid-run scores are provisional — only a cap-epoch score is submittable.
     if (cap !== null && epoch < cap) {
       toast.error("Keep training", {
@@ -145,11 +175,17 @@ export const createLeaderboardSlice: StateCreator<any, [], [], LeaderboardSlice>
 
     // A mid-run score is provisional, not a final result — no projected rank
     // until training reaches the cap epoch the leaderboard label refers to.
-    const cap = EPOCH_CAPS[dataset];
+    const metaCapForQual = get().leaderboardMeta?.[dataset]?.epochCap;
+    const cap = metaCapForQual !== undefined ? metaCapForQual : (EPOCH_CAPS[dataset] ?? null);
     if (cap !== null && epoch < cap) return { qualifies: false, rank: null };
 
     const entries = leaderboard[dataset] ?? [];
-    const higherIsBetter = dataset === "iris" || dataset === "mnist";
+    // Prefer the server's direction when fetched; fall back to the
+    // long-standing local rule so qualification still works offline.
+    const metaHigher = get().leaderboardMeta?.[dataset]?.higherIsBetter;
+    const higherIsBetter = typeof metaHigher === "boolean"
+      ? metaHigher
+      : dataset === "iris" || dataset === "mnist";
 
     for (let i = 0; i < entries.length; i++) {
       const beats = higherIsBetter ? score > entries[i].score : score < entries[i].score;

@@ -313,6 +313,7 @@ const Explain = () => {
       setSampleIndex,
       getDisplayIndex,
       leaderboard,
+      leaderboardMeta,
       leaderboardLoading,
       leaderboardSubmitting,
       fetchLeaderboard,
@@ -876,7 +877,21 @@ const Explain = () => {
                     {(() => {
                         const EPOCH_CAPS: Record<string, number | null> = { xor: null, iris: 100, auto_mpg: 200, mnist: 300 };
                         const METRIC_LABELS: Record<string, string> = { xor: "Fewest epochs to 100%", iris: "Accuracy at epoch 100", auto_mpg: "MAE at epoch 200", mnist: "Accuracy at epoch 300" };
-                        const cap = EPOCH_CAPS[dataset] ?? null;
+                        // Server metadata wins when fetched; hardcoded rows are
+                        // only the fallback for an older/cached response.
+                        const lbMeta = leaderboardMeta[dataset];
+                        const metricLabel = lbMeta?.metricDisplay ?? METRIC_LABELS[dataset];
+                        const cap = lbMeta?.epochCap !== undefined ? lbMeta.epochCap : (EPOCH_CAPS[dataset] ?? null);
+                        const lbHigherIsBetter: boolean | null =
+                            typeof lbMeta?.higherIsBetter === "boolean"
+                                ? lbMeta.higherIsBetter
+                                : dataset === "iris" || dataset === "mnist"
+                                    ? true
+                                    : dataset === "xor" || dataset === "auto_mpg"
+                                        ? false
+                                        : null;
+                        const directionLabel =
+                            lbHigherIsBetter === true ? "↑ higher wins" : lbHigherIsBetter === false ? "↓ lower wins" : null;
                         const score = dataset === "xor" ? xorEpochsTo100 : submittableScore;
                         const atCap = cap === null || epoch >= cap;
                         const { qualifies, rank: projectedRank } = score !== null && atCap ? computeQualification() : { qualifies: false, rank: null };
@@ -908,7 +923,8 @@ const Explain = () => {
 
                                 {/* Metric + epoch cap info */}
                                 <p className="text-[10px] text-gray-400 leading-snug">
-                                    {METRIC_LABELS[dataset]}
+                                    {metricLabel}
+                                    {directionLabel && <span className="ml-1 text-gray-500">· {directionLabel}</span>}
                                     {cap !== null && <span className="ml-1 text-gray-300">· train to epoch {cap}</span>}
                                 </p>
                                 {cap !== null && epoch > 0 && epoch < cap && (
@@ -922,6 +938,7 @@ const Explain = () => {
                                     <p className="text-xs text-gray-400">No entries yet — be the first!</p>
                                 ) : (
                                     <div className="space-y-1">
+                                        <p className="text-[10px] font-medium text-gray-400 text-right">Score{directionLabel ? ` ${directionLabel}` : ""}</p>
                                         {entries.slice(0, 5).map((entry) => (
                                             <div key={entry.rank} className="flex items-center gap-2 text-xs">
                                                 <span className="w-4 text-gray-400 font-mono text-right flex-shrink-0">{entry.rank}</span>
